@@ -6,7 +6,7 @@ A lightweight macOS menu bar daemon that renders animated floating notifications
 
 1. Build the app:
    ```bash
-   cd DuckNotify
+   cd Floatify
    xcodegen generate
    xcodebuild -project Floatify.xcodeproj -scheme Floatify -configuration Release build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
    ```

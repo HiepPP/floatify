@@ -14,7 +14,7 @@ Two components:
 
 ```bash
 # Generate Xcode project
-cd DuckNotify && xcodegen generate
+cd Floatify && xcodegen generate
 
 # Build the app
 xcodebuild -project Floatify.xcodeproj -scheme Floatify -configuration Debug build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
@@ -39,7 +39,7 @@ Claude Code hooks → floatify CLI → FIFO pipe IPC → Floatify.app → NSPane
 ## Project Structure
 
 ```
-DuckNotify/
+Floatify/
 ├── project.yml              # XcodeGen config
 ├── Floatify.xcodeproj/     # Xcode project
 ├── Floatify/               # macOS App target
