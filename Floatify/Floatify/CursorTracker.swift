@@ -23,11 +23,21 @@ final class CursorTracker {
     private var trackedPanels: [FloatPanel] = []
     private var lastFrameTime: CFTimeInterval = 0
 
+    // Frame throttling for scroll performance
+    private var frameCounter: Int = 0
+    var frameSkip: Int = 1  // Update every 2nd frame (30Hz at 60Hz display)
+
     var currentPosition: CGPoint {
         NSEvent.mouseLocation
     }
 
     private init() {
+        // Load frameSkip from UserDefaults (default: 1 = every 2nd frame = 30Hz)
+        frameSkip = UserDefaults.standard.integer(forKey: "cursorFollowFrameSkip")
+        if frameSkip == 0 {
+            frameSkip = 1  // Ensure non-zero default
+        }
+
         startTracking()
     }
 
@@ -157,6 +167,12 @@ final class CursorTracker {
 
                 // Clamp dt to avoid huge jumps on resume or first frame
                 let clampedDt = min(max(dt, 1.0 / 240.0), 1.0 / 30.0)
+
+                // Throttle: only update every (frameSkip + 1) frames
+                tracker.frameCounter += 1
+                if tracker.frameCounter % (tracker.frameSkip + 1) != 0 {
+                    return kCVReturnSuccess
+                }
 
                 tracker.updateSmoothing(dt: clampedDt)
 
