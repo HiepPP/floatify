@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import os.log
 
 // MARK: - DuckPanel
 
@@ -19,6 +20,7 @@ class DuckNotificationManager {
     private var panels: [DuckPanel] = []
     private let maxPanels = 3
     private let stackOffset: CGFloat = 4
+    private let log = OSLog(subsystem: "com.ducknotify", category: "panel")
 
     private init() {}
 
@@ -89,12 +91,18 @@ class DuckNotificationManager {
     }
 
     private func cornerOrigin(corner: Corner, size: CGSize, padding: CGFloat = 16, stackOffset: CGFloat = 0) -> CGPoint {
-        guard let frame = NSScreen.main?.visibleFrame else { return .zero }
+        guard let frame = NSScreen.main?.visibleFrame else {
+            print("DEBUG: No main screen, returning zero")
+            return .zero
+        }
+        let origin: CGPoint
         switch corner {
         case .bottomLeft:
-            return CGPoint(x: frame.minX + padding, y: frame.minY + padding + stackOffset)
+            origin = CGPoint(x: frame.minX + padding, y: frame.minY + padding + stackOffset)
         case .bottomRight:
-            return CGPoint(x: frame.maxX - size.width - padding, y: frame.minY + padding + stackOffset)
+            origin = CGPoint(x: frame.maxX - size.width - padding, y: frame.minY + padding + stackOffset)
         }
+        print("DEBUG: cornerOrigin for \(corner) - frame: \(frame), origin: \(origin)")
+        return origin
     }
 }

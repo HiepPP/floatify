@@ -4,10 +4,16 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
+    private var pipeSource: DispatchSourceRead?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let alert = NSAlert()
+        alert.messageText = "DuckNotify Started"
+        alert.informativeText = "The app has started successfully"
+        alert.runModal()
+
         setupStatusItem()
-        setupDistributedNotification()
+        setupPipeListener()
         installCLIToolIfNeeded()
     }
 
@@ -36,32 +42,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 
-    // MARK: - Distributed Notification
+    // MARK: - Pipe Listener
 
-    private let notificationName = "com.ducknotify.newNotification"
+    private let pipePath = "/var/tmp/duck-notify.pipe"
 
-    private func setupDistributedNotification() {
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(handleNotification(_:)),
-            name: NSNotification.Name(notificationName),
-            object: nil
-        )
+    private func setupPipeListener() {
+        NSLog("DuckNotify: Setting up pipe at %@", pipePath)
+
+        // Create pipe if it doesn't exist
+        if !FileManager.default.fileExists(atPath: pipePath) {
+            let result = mkfifo(pipePath, 0o666)
+            NSLog("DuckNotify: mkfifo result: %d, errno: %d", result, errno)
+        }
+
+        // Remove existing pipe to avoid stale state
+        try? FileManager.default.removeItem(atPath: pipePath)
+        let mkresult = mkfifo(pipePath, 0o666)
+        NSLog("DuckNotify: mkfifo second call result: %d, errno: %d", mkresult, errno)
+
+        // Open pipe for reading
+        let pipeFd = open(pipePath, O_RDONLY | O_NONBLOCK)
+        NSLog("DuckNotify: pipeFd: %d, errno: %d", pipeFd, errno)
+        guard pipeFd >= 0 else {
+            print("Failed to open pipe at \(pipePath)")
+            return
+        }
+
+        // Set up dispatch source to read from pipe
+        pipeSource = DispatchSource.makeReadSource(fileDescriptor: pipeFd, queue: .main)
+        pipeSource?.setEventHandler { [weak self] in
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            let bytesRead = read(pipeFd, &buffer, buffer.count)
+            if bytesRead > 0 {
+                let data = Data(bytes: buffer, count: bytesRead)
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    self?.handleJSON(json)
+                }
+            }
+        }
+        pipeSource?.setCancelHandler {
+            close(pipeFd)
+        }
+        pipeSource?.resume()
     }
 
-    @objc private func handleNotification(_ notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let data = try? JSONSerialization.data(withJSONObject: userInfo),
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return }
-
+    private func handleJSON(_ json: [String: Any]) {
         let message = json["message"] as? String ?? "Task complete!"
         let cornerStr = json["corner"] as? String ?? "bottomRight"
         let corner: Corner = cornerStr == "bottomLeft" ? .bottomLeft : .bottomRight
         let duration = json["duration"] as? TimeInterval ?? 6.0
 
-        DuckNotificationManager.shared.show(message: message, corner: corner, duration: duration)
+        DispatchQueue.main.async {
+            DuckNotificationManager.shared.show(message: message, corner: corner, duration: duration)
+        }
     }
 
     // MARK: - CLI Symlink Installation

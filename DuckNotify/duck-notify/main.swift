@@ -38,20 +38,37 @@ guard Double(duration) != nil else {
     exit(1)
 }
 
-// MARK: - DistributedNotification
+// MARK: - Write to Pipe
+
+let pipePath = "/var/tmp/duck-notify.pipe"
 
 let payload: [String: Any] = [
     "message":  message,
     "corner":   corner,
-    "duration": duration
+    "duration": Double(duration) ?? 6.0
 ]
 
-let notificationName = "com.ducknotify.newNotification"
-DistributedNotificationCenter.default().postNotificationName(
-    NSNotification.Name(notificationName),
-    object: nil,
-    userInfo: payload,
-    deliverImmediately: true
-)
+guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
+    fputs("Failed to encode payload\n", stderr)
+    exit(1)
+}
 
-print("🦆 Sent: \(message)")
+// Open pipe for writing
+let pipeFd = open(pipePath, O_WRONLY | O_NONBLOCK)
+if pipeFd < 0 {
+    fputs("🦆 DuckNotify.app is not running\n", stderr)
+    exit(1)
+}
+
+let bytesWritten = data.withUnsafeBytes { buffer -> Int in
+    return write(pipeFd, buffer.baseAddress!, data.count)
+}
+close(pipeFd)
+
+if bytesWritten == data.count {
+    print("🦆 Sent: \(message)")
+    exit(0)
+} else {
+    fputs("Failed to write to pipe\n", stderr)
+    exit(1)
+}
