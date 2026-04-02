@@ -147,6 +147,12 @@ Add to `~/.claude/settings.json`:
 - Do not refactor surrounding code when fixing a bug.
 - Do not create new files unless strictly necessary.
 
+## Asking Users for Clarification
+- MUST use the `AskUserQuestion` tool when you need to ask the user a question
+- Do not list choices as plain text in the response
+- Pass the question details via the `questions` parameter
+- Wait for the user's answer before proceeding
+
 ## Override Rule
 User instructions always override this file.
 
