@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floatify Position Mockups</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        .mockup-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .screen-mockup {
+            background: #0f0f23;
+            border: 2px solid #333;
+            border-radius: 12px;
+            height: 300px;
+            position: relative;
+            overflow: hidden;
+        }
+        .screen-mockup::before {
+            content: attr(data-label);
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 11px;
+            color: #888;
+            background: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        .notif {
+            position: absolute;
+            width: 200px;
+            height: 50px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            font-size: 12px;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        .notif::before {
+            content: '🦆';
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .notif .msg { font-weight: 500; }
+        @keyframes slideFromLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideFromRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes dropFromTop {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes riseFromBottom {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.1); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes spiralIn {
+            from { transform: rotate(-180deg) scale(0); opacity: 0; }
+            to { transform: rotate(0deg) scale(1); opacity: 1; }
+        }
+        .bottom-left { bottom: 10px; left: 10px; animation-name: slideFromLeft; }
+        .bottom-right { bottom: 10px; right: 10px; animation-name: slideFromRight; }
+        .top-left { top: 10px; left: 10px; animation-name: dropFromTop; }
+        .top-right { top: 10px; right: 10px; animation-name: dropFromTop; }
+        .center { top: 50%; left: 50%; transform: translate(-50%, -50%); animation-name: bounceIn; }
+        .center::after {
+            content: 'CENTER';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+        }
+        .menubar { top: 10px; left: 50%; transform: translateX(-50%); animation-name: dropFromTop; }
+        .menubar::after {
+            content: 'MENUBAR';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* Horizontal stacking */
+        .h-stack {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        .h-stack .notif {
+            position: relative;
+            animation-name: slideFromLeft;
+        }
+
+        /* Special effects */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .sparkle {
+            position: absolute;
+            font-size: 16px;
+            animation: sparkle 1s ease-out forwards;
+        }
+        @keyframes sparkle {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+        .sound-wave {
+            position: absolute;
+            border: 2px solid rgba(100,200,255,0.5);
+            border-radius: 50%;
+            animation: ripple 1s ease-out forwards;
+        }
+        @keyframes ripple {
+            0% { width: 20px; height: 20px; opacity: 1; }
+            100% { width: 80px; height: 80px; opacity: 0; }
+        }
+
+        .effects-section {
+            margin-top: 40px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .effects-section h2 {
+            text-align: center;
+            font-weight: 300;
+            margin-bottom: 20px;
+            color: #aaa;
+        }
+        .effect-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .effect-card {
+            background: #0f0f23;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px 25px;
+            text-align: center;
+        }
+        .effect-card h3 { font-size: 14px; margin-bottom: 8px; color: #fff; }
+        .effect-card p { font-size: 11px; color: #888; }
+        .mini-screen {
+            width: 160px;
+            height: 100px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 6px;
+            position: relative;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        .mini-notif {
+            position: absolute;
+            width: 60px;
+            height: 18px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>FLOATIFY NOTIFICATION POSITIONS</h1>
+
+    <div class="mockup-container">
+        <div class="screen-mockup" data-label="Bottom Left (Current)">
+            <div class="notif bottom-left"><span class="msg">Task done!</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Bottom Right (Current)">
+            <div class="notif bottom-right"><span class="msg">Build failed</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Top Left (NEW)">
+            <div class="notif top-left"><span class="msg">Deploy OK</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Top Right (NEW)">
+            <div class="notif top-right"><span class="msg">Tests passed</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Center (NEW)">
+            <div class="notif center"><span class="msg">Attention!</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Menubar (NEW)">
+            <div class="notif menubar"><span class="msg">Claude Code</span></div>
+        </div>
+
+        <div class="screen-mockup" data-label="Horizontal Stacking (NEW)">
+            <div class="h-stack">
+                <div class="notif"><span class="msg">Msg 1</span></div>
+                <div class="notif" style="animation-delay: 0.15s"><span class="msg">Msg 2</span></div>
+                <div class="notif" style="animation-delay: 0.3s"><span class="msg">Msg 3</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="effects-section">
+        <h2>SPECIAL EFFECTS PER POSITION</h2>
+        <div class="effect-row">
+            <div class="effect-card">
+                <div class="mini-screen">
+                    <div class="notif top-left" style="width:50px;height:16px;font-size:7px;padding:0 6px;"><span class="msg">msg</span></div>
+                </div>
+                <h3>Top Corners</h3>
+                <p>Drop animation<br>Particle sparkles<br>Soft chime sound</p>
+            </div>
+            <div class="effect-card">
+                <div class="mini-screen">
+                    <div class="notif bottom-left" style="width:50px;height:16px;font-size:7px;padding:0 6px;"><span class="msg">msg</span></div>
+                </div>
+                <h3>Bottom Corners</h3>
+                <p>Slide from side<br>Sound wave ripple<br>Bass tone</p>
+            </div>
+            <div class="effect-card">
+                <div class="mini-screen">
+                    <div class="notif center" style="width:50px;height:16px;font-size:7px;padding:0 6px;"><span class="msg">msg</span></div>
+                </div>
+                <h3>Center</h3>
+                <p>Bounce/scale in<br>Glow pulse effect<br>Alert tone</p>
+            </div>
+            <div class="effect-card">
+                <div class="mini-screen">
+                    <div class="notif menubar" style="width:50px;height:16px;font-size:7px;padding:0 6px;"><span class="msg">msg</span></div>
+                </div>
+                <h3>Menubar</h3>
+                <p>Gentle drop<br>Subtle shimmer<br>Whisper sound</p>
+            </div>
+            <div class="effect-card">
+                <div class="mini-screen">
+                    <div class="h-stack" style="position:absolute;bottom:5px;left:5px;">
+                        <div class="notif" style="width:35px;height:14px;font-size:6px;padding:0 4px;animation-name:slideFromLeft;"><span class="msg">m1</span></div>
+                        <div class="notif" style="width:35px;height:14px;font-size:6px;padding:0 4px;animation-name:slideFromLeft;"><span class="msg">m2</span></div>
+                    </div>
+                </div>
+                <h3>Horizontal Stack</h3>
+                <p>Cascade slide-in<br>Staggered delays<br>Chime cascade</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
