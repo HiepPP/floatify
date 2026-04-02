@@ -1,5 +1,4 @@
 import Foundation
-import CoreFoundation
 
 // MARK: - Argument Parsing
 
@@ -39,31 +38,20 @@ guard Double(duration) != nil else {
     exit(1)
 }
 
-// MARK: - CFMessagePort Client
+// MARK: - DistributedNotification
 
-let portName = "com.yourname.duck-notify" as CFString
-
-guard let port = CFMessagePortCreateRemote(nil, portName) else {
-    fputs("🦆 DuckNotify.app is not running\n", stderr)
-    exit(1)
-}
-
-let payload: [String: String] = [
+let payload: [String: Any] = [
     "message":  message,
     "corner":   corner,
     "duration": duration
 ]
 
-guard let data = try? JSONSerialization.data(withJSONObject: payload) as CFData else {
-    fputs("Failed to encode payload\n", stderr)
-    exit(1)
-}
+let notificationName = "com.ducknotify.newNotification"
+DistributedNotificationCenter.default().postNotificationName(
+    NSNotification.Name(notificationName),
+    object: nil,
+    userInfo: payload,
+    deliverImmediately: true
+)
 
-let result = CFMessagePortSendRequest(port, 0, data, 1.0, 0, nil, nil)
-
-if result == kCFMessagePortSuccess {
-    print("🦆 Sent: \(message)")
-} else {
-    fputs("❌ IPC failed (code: \(result))\n", stderr)
-    exit(1)
-}
+print("🦆 Sent: \(message)")
