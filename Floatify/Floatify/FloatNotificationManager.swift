@@ -20,6 +20,7 @@ class FloatPanel: NSPanel {
 class FloatNotificationManager {
     static let shared = FloatNotificationManager()
     private var panels: [FloatPanel] = []
+    private var cursorFollowTimers: [FloatPanel: Timer] = [:]
     private let maxPanels = 3
     private let maxHorizontalPanels = 5
     private let stackOffset: CGFloat = 4
@@ -109,11 +110,20 @@ class FloatNotificationManager {
     }
 
     private func startCursorTracking(for panel: FloatPanel) {
-        CursorTracker.shared.startDisplayLink(for: panel)
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak panel] timer in
+            guard let panel = panel, panel.isVisible else {
+                timer.invalidate()
+                return
+            }
+            let newOrigin = CursorTracker.shared.screenCornerPosition(for: .cursorFollow, panelSize: panel.frame.size)
+            panel.setFrameOrigin(newOrigin)
+        }
+        cursorFollowTimers[panel] = timer
     }
 
     private func stopCursorTracking(for panel: FloatPanel) {
-        CursorTracker.shared.stopDisplayLink(for: panel)
+        cursorFollowTimers[panel]?.invalidate()
+        cursorFollowTimers.removeValue(forKey: panel)
     }
 
     private func dismiss(panel: FloatPanel) {
