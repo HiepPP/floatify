@@ -56,7 +56,11 @@ guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
 // Open pipe for writing
 let pipeFd = open(pipePath, O_WRONLY | O_NONBLOCK)
 if pipeFd < 0 {
-    fputs("🦆 DuckNotify.app is not running\n", stderr)
+    if errno == EACCES || errno == EPERM {
+        fputs("🦆 Permission denied - check app permissions\n", stderr)
+    } else {
+        fputs("🦆 DuckNotify.app is not running\n", stderr)
+    }
     exit(1)
 }
 

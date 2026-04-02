@@ -90,11 +90,13 @@ class DuckNotificationManager {
         }
     }
 
-    private func cornerOrigin(corner: Corner, size: CGSize, padding: CGFloat = 16, stackOffset: CGFloat = 0) -> CGPoint {
-        guard let frame = NSScreen.main?.visibleFrame else {
+    private func cornerOrigin(corner: Corner, size: CGSize, padding: CGFloat = 0, stackOffset: CGFloat = 0) -> CGPoint {
+        guard let screen = NSScreen.main else {
             print("DEBUG: No main screen, returning zero")
             return .zero
         }
+        // Use full frame (not visibleFrame) to get absolute screen edges
+        let frame = screen.frame
         let origin: CGPoint
         switch corner {
         case .bottomLeft:
