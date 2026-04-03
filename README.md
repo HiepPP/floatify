@@ -171,6 +171,38 @@ Add to your `~/.claude/settings.json` to get notifications when Claude Code fini
 
 ---
 
+## Configuration
+
+Floatify uses `positions.json` for per-position notification configuration. The bundled defaults are at `Floatify/Floatify/Resources/positions.json`.
+
+### Config Fields
+
+| Field | Description |
+|-------|-------------|
+| `margin` | Distance from screen edge (pixels) |
+| `width` | Panel width (pixels) |
+| `height` | Panel height (pixels) |
+| `stackOffset` | Vertical spacing between stacked notifications (pixels) |
+
+### User Overrides
+
+Place your custom config at `~/.floatify/positions.json`. User values take precedence over bundled defaults.
+
+```json
+{
+  "bottomRight": {
+    "margin": 20,
+    "width": 320,
+    "height": 80,
+    "stackOffset": 6
+  }
+}
+```
+
+### Supported Positions
+
+`bottomLeft`, `bottomRight`, `topLeft`, `topRight`, `center`, `menubar`, `horizontal`, `cursorFollow`
+
 ## Architecture
 
 ```

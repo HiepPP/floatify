@@ -101,6 +101,56 @@ import Layout from '../layouts/Layout.astro';
         <h3 class="text-lg font-semibold text-terminal-text mb-2">Developer-First</h3>
         <p class="text-sm text-terminal-text/70">Hooks integrate seamlessly with your Claude Code workflow.</p>
       </div>
+      <!-- Feature 7: Configurable -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x2699;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Configurable Layout</h3>
+        <p class="text-sm text-terminal-text/70">Customize panel size, margin, and stacking offset via positions.json.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Configuration Section -->
+  <section id="configuration" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 class="text-2xl font-mono font-bold text-terminal-text mb-8">Configuration</h2>
+    <p class="text-terminal-text/70 mb-6">Floatify uses <code class="px-2 py-1 bg-[#313244] rounded text-sm">positions.json</code> for per-position notification settings. Place your custom config at <code class="px-2 py-1 bg-[#313244] rounded text-sm">~/.floatify/positions.json</code>.</p>
+    <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+      <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-[#181825]">
+        <span class="text-xs text-terminal-text/60 font-mono">positions.json</span>
+        <button onclick="copyCode(this)" class="text-xs text-terminal-text/60 hover:text-terminal-text px-2 py-1 rounded bg-[#313244] hover:bg-[#45475a] transition-colors">Copy</button>
+      </div>
+      <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
+  "bottomRight": {
+    "margin": 20,
+    "width": 320,
+    "height": 80,
+    "stackOffset": 6
+  },
+  "center": {
+    "margin": 0,
+    "width": 280,
+    "height": 68,
+    "stackOffset": 4
+  }
+}`}</code></pre>
+    </div>
+    <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-[#1e1e2e] border border-terminal-border rounded-lg p-4">
+        <p class="text-xs text-terminal-text/50 font-mono mb-1">margin</p>
+        <p class="text-sm text-terminal-text">Screen edge distance (px)</p>
+      </div>
+      <div class="bg-[#1e1e2e] border border-terminal-border rounded-lg p-4">
+        <p class="text-xs text-terminal-text/50 font-mono mb-1">width</p>
+        <p class="text-sm text-terminal-text">Panel width (px)</p>
+      </div>
+      <div class="bg-[#1e1e2e] border border-terminal-border rounded-lg p-4">
+        <p class="text-xs text-terminal-text/50 font-mono mb-1">height</p>
+        <p class="text-sm text-terminal-text">Panel height (px)</p>
+      </div>
+      <div class="bg-[#1e1e2e] border border-terminal-border rounded-lg p-4">
+        <p class="text-xs text-terminal-text/50 font-mono mb-1">stackOffset</p>
+        <p class="text-sm text-terminal-text">Stack spacing (px)</p>
+      </div>
     </div>
   </section>
 
