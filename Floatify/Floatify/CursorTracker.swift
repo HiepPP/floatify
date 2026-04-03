@@ -4,12 +4,6 @@ import Foundation
 final class CursorTracker {
     static let shared = CursorTracker()
 
-    private var monitor: Any?
-    private var lastPosition: CGPoint = .zero
-    private var smoothedPosition: CGPoint = .zero
-    private var isTracking = false
-
-    var smoothingFactor: CGFloat = 0.8
     var edgePadding: CGFloat = 20
 
     var currentPosition: CGPoint {
@@ -18,40 +12,17 @@ final class CursorTracker {
 
     private init() {}
 
-    deinit {
-        stopTracking()
-    }
-
     func startTracking() {
-        guard !isTracking else { return }
-        isTracking = true
-        monitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
-            self?.handleMouseMove(event)
-        }
+        // No-op: NSEvent.mouseLocation always returns current position
     }
 
     func stopTracking() {
-        guard isTracking else { return }
-        isTracking = false
-        monitor.map { NSEvent.removeMonitor($0) }
-        monitor = nil
-    }
-
-    private func handleMouseMove(_ event: NSEvent) {
-        lastPosition = NSEvent.mouseLocation
-        smoothedPosition = interpolate(from: smoothedPosition, to: lastPosition, factor: smoothingFactor)
-    }
-
-    private func interpolate(from: CGPoint, to: CGPoint, factor: CGFloat) -> CGPoint {
-        CGPoint(
-            x: from.x + (to.x - from.x) * factor,
-            y: from.y + (to.y - from.y) * factor
-        )
+        // No-op
     }
 
     func clampedPosition(in rect: CGRect) -> CGPoint {
         let screen = NSScreen.main?.frame ?? .zero
-        let pos = smoothedPosition
+        let pos = NSEvent.mouseLocation
 
         var x = pos.x
         var y = pos.y

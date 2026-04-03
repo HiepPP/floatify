@@ -112,7 +112,7 @@ class FloatNotificationManager {
     }
 
     private func startCursorTracking(for panel: FloatPanel) {
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak panel] timer in
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak panel] timer in
             guard let panel = panel, panel.isVisible else {
                 timer.invalidate()
                 return
