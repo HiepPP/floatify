@@ -159,7 +159,7 @@ User instructions always override this file.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **duck-claude** (102 symbols, 97 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **floatify** (234 symbols, 298 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -175,7 +175,7 @@ This project is indexed by GitNexus as **duck-claude** (102 symbols, 97 relation
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/duck-claude/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/floatify/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -214,10 +214,10 @@ This project is indexed by GitNexus as **duck-claude** (102 symbols, 97 relation
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/duck-claude/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/duck-claude/clusters` | All functional areas |
-| `gitnexus://repo/duck-claude/processes` | All execution flows |
-| `gitnexus://repo/duck-claude/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/floatify/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/floatify/clusters` | All functional areas |
+| `gitnexus://repo/floatify/processes` | All execution flows |
+| `gitnexus://repo/floatify/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 

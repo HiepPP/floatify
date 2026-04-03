@@ -1,5 +1,7 @@
 # Floatify
 
+**Website:** https://floatify-app.vercel.app
+
 <!-- Header Banner -->
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-11%2B-blue?style=for-the-badge" alt="macOS 11+">
