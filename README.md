@@ -94,10 +94,14 @@ Approve the CLI symlink prompt when it appears. The `floatify` command will be a
 # Basic notification
 floatify --message 'Task complete!' --corner bottomRight --duration 6
 
-# Different positions
+# Corner positions
 floatify --message 'Bottom Left!' --corner bottomLeft --duration 4
+floatify --message 'Bottom Right!' --corner bottomRight --duration 4
+floatify --message 'Top Left!' --corner topLeft --duration 4
 floatify --message 'Top Right!' --corner topRight --duration 4
 floatify --message 'Centered!' --corner center --duration 5
+floatify --message 'Below menu bar!' --corner menubar --duration 5
+floatify --message 'Horizontal!' --corner horizontal --duration 5
 
 # Follows your cursor
 floatify --message 'Following cursor!' --corner cursorFollow --duration 8
@@ -120,16 +124,16 @@ floatify [options]
 
 ### Corner Positions
 
-| Position | Description |
-|----------|-------------|
-| `bottomLeft` | Bottom-left corner |
-| `bottomRight` | Bottom-right corner |
-| `topLeft` | Top-left corner |
-| `topRight` | Top-right corner |
-| `center` | Screen center |
-| `menubar` | Below menu bar |
-| `horizontal` | Horizontal layout at bottom-center |
-| `cursorFollow` | Follows cursor position |
+| Flag | Description |
+|------|-------------|
+| `--corner bottomLeft` | Bottom-left corner |
+| `--corner bottomRight` | Bottom-right corner |
+| `--corner topLeft` | Top-left corner |
+| `--corner topRight` | Top-right corner |
+| `--corner center` | Screen center |
+| `--corner menubar` | Below menu bar |
+| `--corner horizontal` | Horizontal layout at bottom-center |
+| `--corner cursorFollow` | Follows cursor position |
 
 ---
 
