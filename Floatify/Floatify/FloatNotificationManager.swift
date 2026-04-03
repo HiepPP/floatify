@@ -41,7 +41,8 @@ class FloatNotificationManager {
             dismissOldest()
         }
 
-        let size = CGSize(width: 280, height: 68)
+        let config = PositionConfigManager.shared.config(for: corner)
+        let size = CGSize(width: config.width, height: config.height)
         let origin: CGPoint
         var newPanel = FloatPanel(
             contentRect: NSRect(origin: .zero, size: size),
@@ -60,8 +61,8 @@ class FloatNotificationManager {
         case .topLeft, .topRight, .center, .menubar:
             origin = handleVerticalPanel(corner: corner, size: size)
         default:
-            let stackOffsetY = CGFloat(panels.filter { $0.horizontalIndex == 0 }.count) * stackOffset
-            origin = cornerOrigin(corner: corner, size: size, stackOffset: stackOffsetY)
+            let stackOffsetY = CGFloat(panels.filter { $0.horizontalIndex == 0 }.count) * config.stackOffset
+            origin = cornerOrigin(corner: corner, size: size, padding: config.margin, stackOffset: stackOffsetY)
         }
 
         newPanel.notificationCorner = corner
@@ -107,8 +108,9 @@ class FloatNotificationManager {
     }
 
     private func handleVerticalPanel(corner: Corner, size: CGSize) -> CGPoint {
-        let stackOffsetY = CGFloat(panels.filter { $0.horizontalIndex == 0 }.count) * stackOffset
-        return cornerOrigin(corner: corner, size: size, stackOffset: stackOffsetY)
+        let config = PositionConfigManager.shared.config(for: corner)
+        let stackOffsetY = CGFloat(panels.filter { $0.horizontalIndex == 0 }.count) * config.stackOffset
+        return cornerOrigin(corner: corner, size: size, padding: config.margin, stackOffset: stackOffsetY)
     }
 
     private func startCursorTracking(for panel: FloatPanel) {
@@ -144,10 +146,11 @@ class FloatNotificationManager {
 
     private func repositionPanels() {
         for (index, panel) in panels.enumerated() {
-            let offsetY = CGFloat(index) * stackOffset
+            let config = PositionConfigManager.shared.config(for: panel.notificationCorner)
+            let offsetY = CGFloat(index) * config.stackOffset
             guard let frame = panel.contentView?.window?.frame else { continue }
             let size = frame.size
-            let newOrigin = cornerOrigin(corner: panel.notificationCorner, size: size, stackOffset: offsetY)
+            let newOrigin = cornerOrigin(corner: panel.notificationCorner, size: size, padding: config.margin, stackOffset: offsetY)
             panel.setFrameOrigin(newOrigin)
         }
     }
