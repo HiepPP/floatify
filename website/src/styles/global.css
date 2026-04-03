@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-terminal-bg text-terminal-text font-mono antialiased;
+}
+
+/* Terminal window styling */
+.terminal-dot-red { @apply w-3 h-3 rounded-full bg-red-500; }
+.terminal-dot-yellow { @apply w-3 h-3 rounded-full bg-yellow-500; }
+.terminal-dot-green { @apply w-3 h-3 rounded-full bg-green-500; }

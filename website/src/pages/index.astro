@@ -1,0 +1,414 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Floatify - Floating Notifications for Developers">
+  <!-- Navigation -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="text-xl font-bold text-white">Floatify</div>
+      <a
+        href="https://github.com/hieppp/floatify"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#24292e] hover:bg-[#2d333b] transition-colors"
+      >
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span class="text-sm text-white">Star</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+        Floating Notifications<br/>for Developers
+      </h1>
+      <p class="text-xl text-gray-400 mb-8">
+        Sub-millisecond notifications that never steal your focus
+      </p>
+    </div>
+
+    <!-- Terminal Window -->
+    <div
+      id="terminal"
+      class="w-full max-w-2xl rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-2xl hover:shadow-purple-500/20"
+      style="background: #1e1e2e; border: 1px solid #313244;"
+    >
+      <!-- Terminal Header -->
+      <div class="flex items-center gap-2 px-4 py-3" style="background: #181825;">
+        <div class="w-3 h-3 rounded-full bg-[#f38ba8]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#f9e2af]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#a6e3a1]"></div>
+        <span class="ml-4 text-sm text-gray-500">zsh</span>
+      </div>
+      <!-- Terminal Body -->
+      <div class="px-6 py-8 font-mono text-sm">
+        <div class="flex items-center">
+          <span class="text-[#a6e3a1]">$</span>
+          <span id="typed-command" class="ml-2 text-white"></span>
+          <span id="cursor" class="ml-1 w-2.5 h-5 bg-white animate-pulse"></span>
+        </div>
+        <div id="copied-feedback" class="mt-4 text-[#a6e3a1] text-sm opacity-0 transition-opacity duration-300">
+          Copied!
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-4 text-sm text-gray-500">Click terminal to copy command</p>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-20 px-6 max-w-6xl mx-auto">
+    <h2 class="text-3xl font-bold text-terminal-text mb-12 text-center">Features</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Feature 1: Sub-millisecond IPC -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x26A1;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Sub-millisecond IPC</h3>
+        <p class="text-sm text-terminal-text/70">FIFO pipe for instant communication between CLI and app with minimal latency.</p>
+      </div>
+      <!-- Feature 2: Zero Focus Stealing -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x1F510;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Zero Focus Stealing</h3>
+        <p class="text-sm text-terminal-text/70">Non-activating NSPanel design keeps your workflow uninterrupted.</p>
+      </div>
+      <!-- Feature 3: Dead Zone Positioning -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x1F4CF;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Dead Zone Positioning</h3>
+        <p class="text-sm text-terminal-text/70">Screen corner placement uses otherwise wasted screen space.</p>
+      </div>
+      <!-- Feature 4: Stackable Panels -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x1F4CB;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Stackable Panels</h3>
+        <p class="text-sm text-terminal-text/70">Up to 3 notifications stack elegantly with 4px vertical offset.</p>
+      </div>
+      <!-- Feature 5: FIFO Pipe IPC -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x1F4E4;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">FIFO Pipe IPC</h3>
+        <p class="text-sm text-terminal-text/70">Simple and reliable named pipe communication, no network needed.</p>
+      </div>
+      <!-- Feature 6: Developer-First -->
+      <div class="bg-terminal-bg border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200">
+        <div class="text-3xl mb-4">&#x1F4BB;</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Developer-First</h3>
+        <p class="text-sm text-terminal-text/70">Hooks integrate seamlessly with your Claude Code workflow.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="py-20 px-6 max-w-6xl mx-auto">
+    <h2 class="text-3xl font-bold text-terminal-text mb-12 text-center">How It Works</h2>
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-8 md:gap-4">
+      <!-- Step 1 -->
+      <div class="flex-1 flex flex-col items-center text-center relative">
+        <div class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold mb-4 z-10">1</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Hook Trigger</h3>
+        <p class="text-sm text-terminal-text/70">Claude Code hook fires on your command completion.</p>
+        <!-- Arrow 1 (hidden on mobile, shown between steps on desktop) -->
+        <div class="hidden md:block absolute top-6 right-0 translate-x-1/2 w-8 h-0.5 bg-terminal-border"></div>
+      </div>
+      <!-- Step 2 -->
+      <div class="flex-1 flex flex-col items-center text-center relative">
+        <div class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold mb-4 z-10">2</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">CLI Command</h3>
+        <p class="text-sm text-terminal-text/70">floatify sends message via FIFO pipe to the app.</p>
+        <!-- Arrow 2 (hidden on mobile, shown between steps on desktop) -->
+        <div class="hidden md:block absolute top-6 right-0 translate-x-1/2 w-8 h-0.5 bg-terminal-border"></div>
+      </div>
+      <!-- Step 3 -->
+      <div class="flex-1 flex flex-col items-center text-center">
+        <div class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold mb-4 z-10">3</div>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Notification</h3>
+        <p class="text-sm text-terminal-text/70">Panel appears in screen dead zone instantly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLI Reference -->
+  <section id="cli-reference" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 class="text-2xl font-mono font-bold text-terminal-text mb-8">CLI Reference</h2>
+    <div class="space-y-6">
+      <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-[#181825]">
+          <div class="flex gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-[#f38ba8]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#f9e2af]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#a6e3a1]"></span>
+          </div>
+          <button onclick="copyCode(this)" class="text-xs text-terminal-text/60 hover:text-terminal-text px-2 py-1 rounded bg-[#313244] hover:bg-[#45475a] transition-colors">Copy</button>
+        </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>floatify --message "Task complete!"</code></pre>
+      </div>
+      <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-[#181825]">
+          <div class="flex gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-[#f38ba8]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#f9e2af]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#a6e3a1]"></span>
+          </div>
+          <button onclick="copyCode(this)" class="text-xs text-terminal-text/60 hover:text-terminal-text px-2 py-1 rounded bg-[#313244] hover:bg-[#45475a] transition-colors">Copy</button>
+        </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>floatify --message "Deploy done!" --corner bottomRight</code></pre>
+      </div>
+      <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-[#181825]">
+          <div class="flex gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-[#f38ba8]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#f9e2af]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#a6e3a1]"></span>
+          </div>
+          <button onclick="copyCode(this)" class="text-xs text-terminal-text/60 hover:text-terminal-text px-2 py-1 rounded bg-[#313244] hover:bg-[#45475a] transition-colors">Copy</button>
+        </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>floatify --message "Build failed" --corner bottomLeft --duration 10</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Claude Code Integration -->
+  <section id="claude-code-integration" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 class="text-2xl font-mono font-bold text-terminal-text mb-8">Claude Code Integration</h2>
+    <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+      <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-[#181825]">
+        <span class="text-xs text-terminal-text/60 font-mono">settings.json</span>
+        <button onclick="copyCode(this)" class="text-xs text-terminal-text/60 hover:text-terminal-text px-2 py-1 rounded bg-[#313244] hover:bg-[#45475a] transition-colors">Copy</button>
+      </div>
+      <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --message 'Floatify is waiting' --corner bottomRight --duration 10"
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --message 'Bash task done' --corner bottomLeft --duration 5"
+      }]
+    }]
+  }
+}`}</code></pre>
+    </div>
+  </section>
+
+  <!-- Installation Section -->
+  <section id="installation" class="py-20 px-6 max-w-4xl mx-auto border-t border-[#313244]/30">
+    <h2 class="text-2xl font-mono font-bold text-terminal-text mb-8">Installation</h2>
+    <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-[#1e1e2e]">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-terminal-border bg-[#181825]">
+        <div class="w-3 h-3 rounded-full bg-[#f38ba8]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#f9e2af]"></div>
+        <div class="w-3 h-3 rounded-full bg-[#a6e3a1]"></div>
+        <span class="ml-4 text-xs text-terminal-text/50 font-mono">terminal</span>
+      </div>
+
+      <ol class="divide-y divide-[#313244]">
+        <!-- Step 1: Clone -->
+        <li class="flex items-start gap-4 p-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-[#a6e3a1]/20 text-[#a6e3a1] rounded-full flex items-center justify-center text-sm font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-terminal-text font-mono mb-2">Clone the repository</p>
+            <div class="p-3 bg-[#181825] border border-[#313244] rounded font-mono text-sm">
+              <span class="text-[#a6e3a1]">$</span> <span class="text-terminal-text/80">git clone https://github.com/hieppp/floatify.git</span>
+            </div>
+          </div>
+        </li>
+
+        <!-- Step 2: Generate Xcode project -->
+        <li class="flex items-start gap-4 p-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-[#a6e3a1]/20 text-[#a6e3a1] rounded-full flex items-center justify-center text-sm font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-terminal-text font-mono mb-2">Generate Xcode project</p>
+            <div class="p-3 bg-[#181825] border border-[#313244] rounded font-mono text-sm">
+              <span class="text-[#a6e3a1]">$</span> <span class="text-terminal-text/80">cd Floatify && xcodegen generate</span>
+            </div>
+          </div>
+        </li>
+
+        <!-- Step 3: Build the app -->
+        <li class="flex items-start gap-4 p-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-[#a6e3a1]/20 text-[#a6e3a1] rounded-full flex items-center justify-center text-sm font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-terminal-text font-mono mb-2">Build the app</p>
+            <div class="p-3 bg-[#181825] border border-[#313244] rounded font-mono text-sm overflow-x-auto">
+              <span class="text-[#a6e3a1]">$</span> <span class="text-terminal-text/80">xcodebuild -project Floatify.xcodeproj -scheme Floatify -configuration Debug build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO</span>
+            </div>
+          </div>
+        </li>
+
+        <!-- Step 4: Build the CLI -->
+        <li class="flex items-start gap-4 p-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-[#a6e3a1]/20 text-[#a6e3a1] rounded-full flex items-center justify-center text-sm font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-terminal-text font-mono mb-2">Build the CLI</p>
+            <div class="p-3 bg-[#181825] border border-[#313244] rounded font-mono text-sm overflow-x-auto">
+              <span class="text-[#a6e3a1]">$</span> <span class="text-terminal-text/80">xcodebuild -project Floatify.xcodeproj -scheme floatify -configuration Debug build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO</span>
+            </div>
+          </div>
+        </li>
+
+        <!-- Step 5: Install symlinks -->
+        <li class="flex items-start gap-4 p-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-[#a6e3a1]/20 text-[#a6e3a1] rounded-full flex items-center justify-center text-sm font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-terminal-text font-mono mb-2">Install symlinks</p>
+            <div class="p-3 bg-[#181825] border border-[#313244] rounded font-mono text-sm">
+              <p class="text-terminal-text/60">The app creates symlinks automatically on first launch.</p>
+              <p class="text-terminal-text/60 mt-2">Run <span class="text-terminal-text/80">open /Applications/Floatify.app</span> to start.</p>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 bg-[#313244] hover:bg-[#45475a] text-terminal-text rounded-lg font-mono text-sm transition-colors">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 3.848-2.805 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A12.019 12.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 px-6 border-t border-[#313244] bg-[#181825]">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Left: Copyright -->
+        <p class="text-terminal-text/60 text-sm font-mono">2026 Floatify</p>
+
+        <!-- Center: MIT License -->
+        <span class="px-3 py-1 bg-[#313244]/50 rounded text-xs font-mono text-terminal-text/80 border border-[#313244]">
+          MIT License
+        </span>
+
+        <!-- Right: GitHub Link -->
+        <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-terminal-text/60 hover:text-terminal-text text-sm font-mono transition-colors">
+          GitHub
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Back to top -->
+      <div class="mt-6 text-center">
+        <a href="#" class="text-terminal-text/40 hover:text-terminal-text/80 text-xs font-mono transition-colors">
+          Back to top
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <style>
+    #cursor {
+      display: inline-block;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+
+  <script>
+    function copyCode(button: HTMLButtonElement) {
+      const pre = button.closest('.relative')?.querySelector('code');
+      if (pre) {
+        navigator.clipboard.writeText(pre.textContent || '').then(() => {
+          const original = button.textContent;
+          button.textContent = 'Copied!';
+          setTimeout(() => { button.textContent = original; }, 2000);
+        });
+      }
+    }
+
+    // Terminal typing animation
+    const command = "$ git clone https://github.com/hieppp/floatify.git";
+    const typedCommand = document.getElementById("typed-command");
+    const cursor = document.getElementById("cursor");
+    const terminal = document.getElementById("terminal");
+    const copiedFeedback = document.getElementById("copied-feedback");
+
+    let charIndex = 0;
+
+    function typeCharacter() {
+      if (charIndex < command.length) {
+        typedCommand.textContent += command[charIndex];
+        charIndex++;
+        setTimeout(typeCharacter, 40 + Math.random() * 60);
+      } else {
+        terminal.classList.add("typing-complete");
+      }
+    }
+
+    terminal?.addEventListener("click", () => {
+      navigator.clipboard.writeText("git clone https://github.com/hieppp/floatify.git").then(() => {
+        if (copiedFeedback) {
+          copiedFeedback.style.opacity = "1";
+          setTimeout(() => {
+            copiedFeedback.style.opacity = "0";
+          }, 1500);
+        }
+      });
+    });
+
+    setTimeout(typeCharacter, 500);
+
+    // Navbar scroll behavior
+    const navbar = document.getElementById("navbar");
+    window.addEventListener("scroll", () => {
+      const scrollY = window.scrollY;
+      if (scrollY > 50) {
+        navbar.style.background = "rgba(17, 17, 27, 0.95)";
+        navbar.style.backdropFilter = "blur(10px)";
+      } else {
+        navbar.style.background = "transparent";
+        navbar.style.backdropFilter = "none";
+      }
+    });
+  </script>
+<style>
+  #cursor {
+    display: inline-block;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+</style>
+</Layout>
