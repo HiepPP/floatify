@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		025EE69B7CAB1F0F1B28C730 /* positions.json in Resources */ = {isa = PBXBuildFile; fileRef = 0F0C15189D4A45F901EFE3E3 /* positions.json */; };
 		0F220237F68BB335FAACF2E4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80FABD64CC2AB3A7B7C000DC /* main.swift */; };
 		105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440F612B0DBA815B721CCD32 /* FloatEffects.swift */; };
 		3FDECEC56F61445657E65D3F /* FloatNotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DACC97B72E843D8F308AB3E /* FloatNotificationView.swift */; };
 		4DF1E2C00D13115C9933D6A9 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */; };
 		60EA7C7065C2955E6CFCCBD0 /* Corner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F6A91E7F736FCB8819CA6F /* Corner.swift */; };
+		78A8D17ECED33A449E627504 /* PositionConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD3300C41D39AE34907128BD /* PositionConfigManager.swift */; };
 		B30711D21D567F22226BE83C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5384F019B036F95A28E65D7 /* Assets.xcassets */; };
 		C95C6817E7C45A90A43FE657 /* FloatNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C9FF9FF7D99C1C4BEB05A0 /* FloatNotificationManager.swift */; };
 		F0CD4B564D1ECAA6D9FBF60A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0CFF7F45B818C87EFDF510 /* main.swift */; };
@@ -21,6 +23,7 @@
 
 /* Begin PBXFileReference section */
 		04830C59EC2F08805CED8332 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0F0C15189D4A45F901EFE3E3 /* positions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = positions.json; sourceTree = "<group>"; };
 		440F612B0DBA815B721CCD32 /* FloatEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatEffects.swift; sourceTree = "<group>"; };
 		4DACC97B72E843D8F308AB3E /* FloatNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatNotificationView.swift; sourceTree = "<group>"; };
 		4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
@@ -34,6 +37,7 @@
 		C2C9FF9FF7D99C1C4BEB05A0 /* FloatNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatNotificationManager.swift; sourceTree = "<group>"; };
 		D5384F019B036F95A28E65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D63DAD4239E10639F6510535 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		DD3300C41D39AE34907128BD /* PositionConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionConfigManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -77,9 +81,19 @@
 				4DACC97B72E843D8F308AB3E /* FloatNotificationView.swift */,
 				889D2E95327A399171312B59 /* Info.plist */,
 				80FABD64CC2AB3A7B7C000DC /* main.swift */,
+				DD3300C41D39AE34907128BD /* PositionConfigManager.swift */,
 				4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */,
+				DF3AD548F6AE135DB258AE2A /* Resources */,
 			);
 			path = Floatify;
+			sourceTree = "<group>";
+		};
+		DF3AD548F6AE135DB258AE2A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0F0C15189D4A45F901EFE3E3 /* positions.json */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -163,6 +177,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B30711D21D567F22226BE83C /* Assets.xcassets in Resources */,
+				025EE69B7CAB1F0F1B28C730 /* positions.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +194,7 @@
 				105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */,
 				C95C6817E7C45A90A43FE657 /* FloatNotificationManager.swift in Sources */,
 				3FDECEC56F61445657E65D3F /* FloatNotificationView.swift in Sources */,
+				78A8D17ECED33A449E627504 /* PositionConfigManager.swift in Sources */,
 				4DF1E2C00D13115C9933D6A9 /* SoundManager.swift in Sources */,
 				0F220237F68BB335FAACF2E4 /* main.swift in Sources */,
 			);
