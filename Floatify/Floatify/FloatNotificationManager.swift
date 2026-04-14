@@ -68,6 +68,7 @@ class FloatNotificationManager {
     private init() {}
 
     func show(message: String, corner: Corner, duration: TimeInterval = 6, project: String?) {
+        NSLog("Floatify: show() called - message: %@, corner: %@, duration: %.1f, project: %@", message, corner.rawValue, duration, project ?? "nil")
         DispatchQueue.main.async {
             self.createPanel(message: message, corner: corner, duration: duration, project: project)
         }
@@ -127,12 +128,16 @@ class FloatNotificationManager {
     }
 
     private func createPanel(message: String, corner: Corner, duration: TimeInterval, project: String?) {
+        NSLog("Floatify: createPanel() called - panels.count: %d", panels.count)
         if panels.count >= maxPanels {
             dismissOldest()
         }
 
+        NSLog("Floatify: Getting config for corner: %@", corner.rawValue)
         let config = PositionConfigManager.shared.config(for: corner)
+        NSLog("Floatify: Config - width: %.1f, height: %.1f", config.width, config.height)
         let size = CGSize(width: config.width, height: config.height)
+        NSLog("Floatify: Creating FloatPanel")
         let origin: CGPoint
         var newPanel = FloatPanel(
             contentRect: NSRect(origin: .zero, size: size),
@@ -140,6 +145,7 @@ class FloatNotificationManager {
             backing: .buffered,
             defer: false
         )
+        NSLog("Floatify: FloatPanel created successfully")
 
         switch corner {
         case .horizontal:
@@ -151,9 +157,11 @@ class FloatNotificationManager {
         case .topLeft, .topRight, .center, .menubar:
             origin = handleVerticalPanel(corner: corner, size: size)
         default:
+            NSLog("Floatify: Using default corner handling")
             let stackOffsetY = CGFloat(panels.filter { $0.horizontalIndex == 0 }.count) * config.stackOffset
             origin = cornerOrigin(corner: corner, size: size, padding: config.margin, stackOffset: stackOffsetY)
         }
+        NSLog("Floatify: Origin calculated: %@", NSStringFromPoint(origin))
 
         newPanel.notificationCorner = corner
         newPanel.setFrameOrigin(origin)
@@ -175,6 +183,7 @@ class FloatNotificationManager {
         )
         newPanel.contentView = NSHostingView(rootView: view)
         newPanel.orderFront(nil)
+        NSLog("Floatify: Panel ordered front at origin: %@", NSStringFromPoint(origin))
         panels.append(newPanel)
 
         if corner == .cursorFollow {

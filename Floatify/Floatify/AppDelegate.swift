@@ -365,11 +365,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         pipeSource = DispatchSource.makeReadSource(fileDescriptor: pipeFd, queue: .main)
         pipeSource?.setEventHandler { [weak self] in
+            NSLog("Floatify: Pipe event triggered")
             var buffer = [UInt8](repeating: 0, count: 4096)
             let bytesRead = read(pipeFd, &buffer, buffer.count)
+            NSLog("Floatify: Bytes read: %d", bytesRead)
             if bytesRead > 0 {
                 let data = Data(bytes: buffer, count: bytesRead)
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    NSLog("Floatify: Received JSON: %@", json)
                     self?.handleJSON(json)
                 }
             }
@@ -381,6 +384,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleJSON(_ json: [String: Any]) {
+        NSLog("Floatify: handleJSON called with: %@", json)
         if let statusString = json["status"] as? String,
            let isRunning = claudeRunningStatus(from: statusString) {
             let source = (json["source"] as? String)?.lowercased() ?? "claude"
