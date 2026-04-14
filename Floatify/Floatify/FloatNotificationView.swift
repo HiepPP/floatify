@@ -7,6 +7,68 @@ enum StatusSpriteCharacter {
     case blastoise
 }
 
+enum FloaterSize {
+    case compact
+    case regular
+    case large
+
+    var spriteSize: CGFloat {
+        switch self {
+        case .compact: return 36
+        case .regular: return 44
+        case .large: return 52
+        }
+    }
+
+    var statusDotSize: CGFloat {
+        switch self {
+        case .compact: return 8
+        case .regular: return 10
+        case .large: return 12
+        }
+    }
+
+    var cornerRadius: CGFloat {
+        switch self {
+        case .compact: return 16
+        case .regular: return 20
+        case .large: return 24
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .compact: return 10
+        case .regular: return 12
+        case .large: return 14
+        }
+    }
+
+    var verticalPadding: CGFloat {
+        switch self {
+        case .compact: return 6
+        case .regular: return 8
+        case .large: return 10
+        }
+    }
+
+    var projectNameSize: CGFloat {
+        switch self {
+        case .compact: return 12
+        case .regular: return 14
+        case .large: return 16
+        }
+    }
+
+    var stageSize: CGFloat {
+        switch self {
+        case .compact: return 44
+        case .regular: return 56
+        case .large: return 64
+        }
+    }
+}
+
 private enum SpriteSheetCache {
     static let sheetName = "image"
     static var sheetCGImage: CGImage? = {
@@ -37,6 +99,7 @@ private enum SpriteSheetCache {
 private struct SpriteAnimationView: View {
     let character: StatusSpriteCharacter
     let isAnimating: Bool
+    var size: CGFloat = 44
 
     @State private var frameIndex = 0
     private let timer = Timer.publish(every: 0.16, on: .main, in: .common).autoconnect()
@@ -82,10 +145,72 @@ private struct SpriteAnimationView: View {
                     .scaledToFit()
             }
         }
-        .frame(width: 44, height: 44)
+        .frame(width: size, height: size)
         .onReceive(timer) { _ in
             guard isAnimating else { return }
             frameIndex = (frameIndex + 1) % frameRects.count
+        }
+    }
+}
+
+private struct PulsingCircle: View {
+    let color: Color
+    let size: CGFloat
+    var isPulsing: Bool = true
+
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var pulseOpacity: CGFloat = 1.0
+
+    var body: some View {
+        ZStack {
+            if isPulsing {
+                Circle()
+                    .fill(color.opacity(0.3))
+                    .frame(width: size * pulseScale * 1.5, height: size * pulseScale * 1.5)
+                    .opacity(pulseOpacity * 0.4)
+            }
+
+            Circle()
+                .fill(color)
+                .frame(width: size, height: size)
+        }
+        .onAppear {
+            guard isPulsing else { return }
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                pulseScale = 1.3
+                pulseOpacity = 0.5
+            }
+        }
+    }
+}
+
+private struct ProgressRing: View {
+    let color: Color
+    let size: CGFloat
+    var isAnimating: Bool = true
+
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color.opacity(0.2), lineWidth: 2)
+                .frame(width: size, height: size)
+
+            Circle()
+                .trim(from: 0, to: 0.7)
+                .stroke(
+                    color,
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                )
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(rotation))
+        }
+        .onAppear {
+            guard isAnimating else { return }
+            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
         }
     }
 }
@@ -103,6 +228,8 @@ struct FloatNotificationView: View {
     var animatesStatus = true
     var isDraggablePanel = false
     var playsEntryAnimation = true
+    var floaterSize: FloaterSize = .regular
+    var isCompact: Bool = false
     @ObservedObject var dismissController: DismissController
 
     @State private var showGlow = false
@@ -127,6 +254,8 @@ struct FloatNotificationView: View {
         animatesStatus: Bool = true,
         isDraggablePanel: Bool = false,
         playsEntryAnimation: Bool = true,
+        floaterSize: FloaterSize = .regular,
+        isCompact: Bool = false,
         dismissController: DismissController
     ) {
         self.message = message
@@ -141,6 +270,8 @@ struct FloatNotificationView: View {
         self.animatesStatus = animatesStatus
         self.isDraggablePanel = isDraggablePanel
         self.playsEntryAnimation = playsEntryAnimation
+        self.floaterSize = floaterSize
+        self.isCompact = isCompact || floaterSize == .compact
         self.dismissController = dismissController
         _panelScale = State(initialValue: playsEntryAnimation ? 0.85 : 1.0)
         _panelOpacity = State(initialValue: playsEntryAnimation ? 0 : 1.0)
@@ -156,8 +287,9 @@ struct FloatNotificationView: View {
 
     private var displayName: String {
         let name = project ?? "Claude Code"
-        if name.count > 20 {
-            return String(name.prefix(20)) + "..."
+        let maxLength = isCompact ? 16 : 20
+        if name.count > maxLength {
+            return String(name.prefix(maxLength)) + "..."
         }
         return name
     }
@@ -175,19 +307,23 @@ struct FloatNotificationView: View {
     }
 
     private var panelCornerRadius: CGFloat {
-        showsStatusAsColorOnly ? 22 : 16
+        showsStatusAsColorOnly ? floaterSize.cornerRadius + 2 : floaterSize.cornerRadius
     }
 
     private var statusDotSize: CGFloat {
-        showsStatusAsColorOnly ? 12 : 8
+        floaterSize.statusDotSize
     }
 
     private var panelBorderColor: Color {
-        showsStatusAsColorOnly ? .white.opacity(0.18) : .white.opacity(0.10)
+        showsStatusAsColorOnly ? .white.opacity(0.20) : .white.opacity(0.12)
     }
 
     private var textForegroundStyle: AnyShapeStyle {
         AnyShapeStyle(showsStatusAsColorOnly ? .primary : .secondary)
+    }
+
+    private var isRunning: Bool {
+        statusIndicatorColor == .red
     }
 
     var body: some View {
@@ -214,29 +350,31 @@ struct FloatNotificationView: View {
                 .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius))
             }
 
-            HStack(spacing: showsStatusAsColorOnly ? 10 : 12) {
+            HStack(spacing: floaterSize.horizontalPadding - 2) {
                 if showsStatusAsColorOnly {
                     tappablePersistentSpriteStage
                 } else {
                     duckIcon
                 }
 
-                VStack(alignment: .leading, spacing: showsStatusAsColorOnly ? 2 : 4) {
+                VStack(alignment: .leading, spacing: isCompact ? 1 : 3) {
                     if showsStatusAsColorOnly {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Text(displayName)
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .font(.system(size: floaterSize.projectNameSize, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
+
+                            Spacer(minLength: 0)
 
                             statusIndicator
                         }
                     } else {
-                        HStack(spacing: 7) {
+                        HStack(spacing: 6) {
                             statusIndicator
 
                             Text(displayName)
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .font(.system(size: isCompact ? 10 : 11, weight: .semibold, design: .rounded))
                                 .foregroundStyle(textForegroundStyle)
                                 .lineLimit(1)
                         }
@@ -244,7 +382,7 @@ struct FloatNotificationView: View {
 
                     if !showsStatusAsColorOnly {
                         Text(message)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: isCompact ? 12 : 13, weight: .medium))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
                     }
@@ -254,27 +392,28 @@ struct FloatNotificationView: View {
                     Spacer(minLength: 0)
                 } else {
                     Capsule()
-                        .fill(.white.opacity(0.08))
-                        .frame(width: 1, height: 36)
+                        .fill(.white.opacity(0.10))
+                        .frame(width: 1, height: floaterSize.stageSize - 16)
                         .padding(.leading, 2)
                 }
             }
-            .padding(.horizontal, showsStatusAsColorOnly ? 12 : 16)
-            .padding(.vertical, showsStatusAsColorOnly ? 8 : 12)
+            .padding(.horizontal, floaterSize.horizontalPadding)
+            .padding(.vertical, floaterSize.verticalPadding)
         }
         .fixedSize(horizontal: isDraggablePanel, vertical: false)
-        .frame(width: isDraggablePanel ? nil : 280)
-        .frame(minHeight: showsStatusAsColorOnly ? 72 : 68)
+        .frame(width: isDraggablePanel ? nil : (isCompact ? 240 : 280))
+        .frame(minHeight: showsStatusAsColorOnly ? (isCompact ? 56 : 72) : (isCompact ? 56 : 68))
         .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius))
-        .shadow(color: .black.opacity(showsStatusAsColorOnly ? 0.16 : 0.18), radius: 16, x: 0, y: 10)
-        .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 12)
+        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+        .shadow(color: statusAccentColor.opacity(isRunning ? 0.15 : 0), radius: 16, x: 0, y: 4)
         .scaleEffect(panelScale)
         .opacity(panelOpacity)
         .allowsHitTesting(true)
         .overlay(alignment: .topTrailing) {
             if isDraggablePanel {
                 closeButton
-                    .padding(7)
+                    .padding(6)
                     .opacity(isPanelHovering ? 1 : 0)
             }
         }
@@ -298,28 +437,53 @@ struct FloatNotificationView: View {
     private var panelBackground: some View {
         ZStack {
             RoundedRectangle(cornerRadius: panelCornerRadius)
-                .fill(.regularMaterial)
+                .fill(.ultraThinMaterial)
 
             if showsStatusAsColorOnly {
                 RoundedRectangle(cornerRadius: panelCornerRadius)
                     .fill(
                         LinearGradient(
                             colors: [
-                                .white.opacity(0.08),
+                                .white.opacity(0.10),
+                                .white.opacity(0.04),
                                 .clear
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
+
+                HStack {
+                    Circle()
+                        .fill(statusAccentColor.opacity(isRunning ? 0.20 : 0.14))
+                        .frame(width: floaterSize.stageSize, height: floaterSize.stageSize)
+                        .blur(radius: 24)
+                    Spacer()
+                }
+                .padding(.leading, -10)
+
+                if isRunning {
+                    RoundedRectangle(cornerRadius: panelCornerRadius)
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    statusAccentColor.opacity(0.08),
+                                    .clear
+                                ],
+                                center: .leading,
+                                startRadius: 0,
+                                endRadius: 120
+                            )
+                        )
+                }
             }
 
             RoundedRectangle(cornerRadius: panelCornerRadius)
                 .fill(
                     LinearGradient(
                         colors: [
-                            .white.opacity(0.12),
-                            .white.opacity(0.03),
+                            .white.opacity(0.14),
+                            .white.opacity(0.04),
                             .clear
                         ],
                         startPoint: .top,
@@ -327,23 +491,22 @@ struct FloatNotificationView: View {
                     )
                 )
 
-            if showsStatusAsColorOnly {
-                HStack {
-                    Circle()
-                        .fill(statusAccentColor.opacity(0.16))
-                        .frame(width: 58, height: 58)
-                        .blur(radius: 20)
-                    Spacer()
-                }
-                .padding(.leading, 6)
-            }
-
             RoundedRectangle(cornerRadius: panelCornerRadius)
-                .stroke(panelBorderColor, lineWidth: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.25),
+                            .white.opacity(0.08)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
 
-            RoundedRectangle(cornerRadius: panelCornerRadius - 1.5)
-                .stroke(.white.opacity(0.05), lineWidth: 1)
-                .padding(1.5)
+            RoundedRectangle(cornerRadius: panelCornerRadius - 1)
+                .strokeBorder(.white.opacity(0.06), lineWidth: 1)
+                .padding(1)
         }
     }
 
@@ -351,10 +514,14 @@ struct FloatNotificationView: View {
     private var duckIcon: some View {
         let icon = Group {
             if let spriteCharacter {
-                SpriteAnimationView(character: spriteCharacter, isAnimating: showIdleAnimations && shouldAnimateStatus)
+                SpriteAnimationView(
+                    character: spriteCharacter,
+                    isAnimating: showIdleAnimations && shouldAnimateStatus,
+                    size: floaterSize.spriteSize
+                )
             } else {
                 Text("\u{1F986}")
-                    .font(.system(size: 30))
+                    .font(.system(size: floaterSize.spriteSize - 14))
             }
         }
 
@@ -371,36 +538,67 @@ struct FloatNotificationView: View {
     private var statusIndicator: some View {
         if let statusIndicatorColor {
             ZStack {
-                Circle()
-                    .fill(statusIndicatorColor.opacity(showsStatusAsColorOnly ? 0.26 : 0.14))
-                    .frame(width: statusDotSize + (showsStatusAsColorOnly ? 10 : 9), height: statusDotSize + (showsStatusAsColorOnly ? 10 : 9))
-                    .blur(radius: showsStatusAsColorOnly ? 7 : 2)
+                if isRunning && showsStatusAsColorOnly {
+                    ProgressRing(
+                        color: statusIndicatorColor,
+                        size: statusDotSize + 6,
+                        isAnimating: isRunning
+                    )
+                } else {
+                    Circle()
+                        .fill(statusIndicatorColor.opacity(0.20))
+                        .frame(width: statusDotSize + (showsStatusAsColorOnly ? 8 : 6), height: statusDotSize + (showsStatusAsColorOnly ? 8 : 6))
+                        .blur(radius: showsStatusAsColorOnly ? 6 : 2)
+                }
 
-                Circle()
-                    .fill(statusIndicatorColor)
-                    .frame(width: statusDotSize, height: statusDotSize)
+                PulsingCircle(
+                    color: statusIndicatorColor,
+                    size: statusDotSize,
+                    isPulsing: isRunning
+                )
             }
         }
     }
 
     private var persistentSpriteStage: some View {
-        ZStack {
+        let stageSize = floaterSize.stageSize
+        return ZStack {
             Circle()
-                .fill(.white.opacity(0.08))
-                .frame(width: 52, height: 52)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.12),
+                            .white.opacity(0.06)
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize / 2
+                    )
+                )
+                .frame(width: stageSize, height: stageSize)
 
             Circle()
-                .fill(statusAccentColor.opacity(0.12))
-                .frame(width: 42, height: 42)
-                .blur(radius: 6)
+                .fill(statusAccentColor.opacity(isRunning ? 0.18 : 0.10))
+                .frame(width: stageSize - 10, height: stageSize - 10)
+                .blur(radius: 8)
 
             duckIcon
-                .scaleEffect(1.08)
+                .scaleEffect(1.1)
         }
-        .frame(width: 56, height: 56)
+        .frame(width: stageSize, height: stageSize)
         .overlay(
             Circle()
-                .stroke(.white.opacity(0.10), lineWidth: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.16),
+                            .white.opacity(0.06)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
         )
     }
 
@@ -412,30 +610,50 @@ struct FloatNotificationView: View {
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
+            .help("Open project in VS Code")
         } else {
             persistentSpriteStage
         }
     }
 
     private var closeButton: some View {
-        Button(action: {
+        let buttonSize: CGFloat = isCompact ? 16 : 18
+        return Button(action: {
             onClose?()
         }) {
             Image(systemName: "xmark")
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: isCompact ? 7 : 8, weight: .bold))
                 .foregroundStyle(isCloseHovering ? .primary : .secondary)
-                .frame(width: 18, height: 18)
+                .frame(width: buttonSize, height: buttonSize)
                 .background(
-                    Circle()
-                        .fill(isCloseHovering ? .white.opacity(0.18) : .black.opacity(0.08))
+                    ZStack {
+                        Circle()
+                            .fill(isCloseHovering ? .white.opacity(0.20) : .black.opacity(0.06))
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        .white.opacity(isCloseHovering ? 0.10 : 0.04),
+                                        .clear
+                                    ],
+                                    center: .top,
+                                    startRadius: 0,
+                                    endRadius: buttonSize / 2
+                                )
+                            )
+                    }
                 )
                 .overlay(
-                    Circle().strokeBorder(.white.opacity(isCloseHovering ? 0.24 : 0.10), lineWidth: 1)
+                    Circle()
+                        .strokeBorder(
+                            .white.opacity(isCloseHovering ? 0.28 : 0.12),
+                            lineWidth: 1
+                        )
                 )
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .scaleEffect(isCloseHovering ? 1.04 : 1.0)
+        .scaleEffect(isCloseHovering ? 1.06 : 1.0)
         .onHover { hovering in
             isCloseHovering = hovering
         }
@@ -446,7 +664,7 @@ struct FloatNotificationView: View {
 
         isEntryPlaying = true
 
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.1)) {
             panelScale = 1.0
             panelOpacity = 1.0
         }
@@ -456,11 +674,11 @@ struct FloatNotificationView: View {
         showIdleAnimations = false
         isEntryPlaying = false
 
-        withAnimation(.easeOut(duration: 0.25)) {
-            panelScale = 0.85
+        withAnimation(.easeOut(duration: 0.22)) {
+            panelScale = 0.90
             panelOpacity = 0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
             dismissController.onDismissComplete?()
         }
     }

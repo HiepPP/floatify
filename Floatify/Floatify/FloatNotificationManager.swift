@@ -277,6 +277,7 @@ class FloatNotificationManager {
         onClose: (() -> Void)? = nil
     ) -> NSHostingView<FloatNotificationView> {
         let style = statusStyle(for: item.id)
+        let size = floaterSizeFromDefaults()
         return NSHostingView(
             rootView: FloatNotificationView(
                 message: item.state.message,
@@ -290,9 +291,19 @@ class FloatNotificationManager {
                 animatesStatus: item.state == .running,
                 isDraggablePanel: true,
                 playsEntryAnimation: playsEntryAnimation,
+                floaterSize: size,
                 dismissController: dismissController
             )
         )
+    }
+
+    private func floaterSizeFromDefaults() -> FloaterSize {
+        let sizeString = UserDefaults.standard.string(forKey: "FloaterSize") ?? "regular"
+        switch sizeString {
+        case "compact": return .compact
+        case "large": return .large
+        default: return .regular
+        }
     }
 
     private func statusStyle(for id: String) -> PersistentStatusStyle {
