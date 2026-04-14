@@ -8,14 +8,43 @@ struct FloatNotificationView: View {
     var effect: String?
     var sound: String?
     var onTap: (() -> Void)?
+    var statusIndicatorColor: Color?
+    var isDraggablePanel = false
+    var playsEntryAnimation = true
     @ObservedObject var dismissController: DismissController
 
     @State private var showGlow = false
     @State private var showIdleAnimations = false
     @State private var isEntryPlaying = false
-    @State private var panelScale: CGFloat = 0.85
-    @State private var panelOpacity: CGFloat = 0
+    @State private var panelScale: CGFloat
+    @State private var panelOpacity: CGFloat
     @StateObject private var particleSystem = ParticleSystem()
+
+    init(
+        message: String,
+        project: String? = nil,
+        corner: Corner = .bottomRight,
+        effect: String? = nil,
+        sound: String? = nil,
+        onTap: (() -> Void)? = nil,
+        statusIndicatorColor: Color? = nil,
+        isDraggablePanel: Bool = false,
+        playsEntryAnimation: Bool = true,
+        dismissController: DismissController
+    ) {
+        self.message = message
+        self.project = project
+        self.corner = corner
+        self.effect = effect
+        self.sound = sound
+        self.onTap = onTap
+        self.statusIndicatorColor = statusIndicatorColor
+        self.isDraggablePanel = isDraggablePanel
+        self.playsEntryAnimation = playsEntryAnimation
+        self.dismissController = dismissController
+        _panelScale = State(initialValue: playsEntryAnimation ? 0.85 : 1.0)
+        _panelOpacity = State(initialValue: playsEntryAnimation ? 0 : 1.0)
+    }
 
     private var effectiveEffect: String {
         effect ?? corner.defaultEffect
@@ -40,11 +69,9 @@ struct FloatNotificationView: View {
                     .frame(width: 300, height: 100)
             }
 
-            // Background material
             RoundedRectangle(cornerRadius: 14)
                 .fill(.regularMaterial)
 
-            // Lottie panel - drives the panel visual
             LottiePanelBackground(
                 animationName: effectiveEffect.lottieFileName,
                 isPlaying: $isEntryPlaying,
@@ -58,15 +85,23 @@ struct FloatNotificationView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 14))
 
-            // Content on top
             HStack(spacing: 10) {
                 duckIcon
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        if let statusIndicatorColor {
+                            Circle()
+                                .fill(statusIndicatorColor)
+                                .frame(width: 8, height: 8)
+                        }
+
+                        Text(displayName)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
                     Text(message)
                         .font(.system(size: 13, weight: .medium))
                         .lineLimit(2)
@@ -82,8 +117,13 @@ struct FloatNotificationView: View {
         .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 4)
         .scaleEffect(panelScale)
         .opacity(panelOpacity)
+        .allowsHitTesting(!isDraggablePanel)
         .onAppear {
-            triggerEntry()
+            if playsEntryAnimation {
+                triggerEntry()
+            } else {
+                showIdleAnimations = true
+            }
         }
         .onChange(of: dismissController.shouldDismiss) { shouldDismiss in
             if shouldDismiss {

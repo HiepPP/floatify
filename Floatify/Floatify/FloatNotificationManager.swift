@@ -1,39 +1,100 @@
 import AppKit
 import SwiftUI
-import os.log
-
-// MARK: - FloatPanel
 
 class FloatPanel: NSPanel {
     var horizontalIndex: Int = 0
     var notificationCorner: Corner = .bottomRight
     var dismissController: DismissController?
+    var isPersistentStatusPanel = false
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
-        return frameRect
+        frameRect
     }
 }
 
-// MARK: - FloatNotificationManager
+enum ClaudeStatusState {
+    case running
+    case complete
+
+    var message: String {
+        switch self {
+        case .running:
+            return "Still running"
+        case .complete:
+            return "Complete"
+        }
+    }
+
+    var indicatorColor: Color {
+        switch self {
+        case .running:
+            return .red
+        case .complete:
+            return .green
+        }
+    }
+}
+
+struct PersistentStatusItem {
+    let id: String
+    let project: String
+    let state: ClaudeStatusState
+}
 
 class FloatNotificationManager {
     static let shared = FloatNotificationManager()
+
     private var panels: [FloatPanel] = []
     private var cursorFollowTimers: [FloatPanel: Timer] = [:]
+    private var statusPanels: [String: FloatPanel] = [:]
+    private var statusPanelMoveObservers: [String: NSObjectProtocol] = [:]
     private let maxPanels = 8
     private let maxHorizontalPanels = 5
-    private let stackOffset: CGFloat = 4
     private let horizontalStackOffset: CGFloat = 8
-    private let log = OSLog(subsystem: "com.floatify", category: "panel")
+    private let statusPanelVerticalSpacing: CGFloat = 12
+    private let statusPanelOriginKeyPrefix = "StatusFloaterOrigin."
 
     private init() {}
 
     func show(message: String, corner: Corner, duration: TimeInterval = 6, project: String?) {
         DispatchQueue.main.async {
             self.createPanel(message: message, corner: corner, duration: duration, project: project)
+        }
+    }
+
+    func showPersistentStatuses(_ items: [PersistentStatusItem]) {
+        DispatchQueue.main.async {
+            let sortedItems = items.sorted {
+                if $0.project.localizedCaseInsensitiveCompare($1.project) == .orderedSame {
+                    return $0.id < $1.id
+                }
+                return $0.project.localizedCaseInsensitiveCompare($1.project) == .orderedAscending
+            }
+
+            let activeIDs = Set(sortedItems.map(\.id))
+            let staleIDs = self.statusPanels.keys.filter { !activeIDs.contains($0) }
+            for id in staleIDs {
+                self.removeStatusPanel(id: id)
+            }
+
+            for (index, item) in sortedItems.enumerated() {
+                if let panel = self.statusPanels[item.id] {
+                    self.updateStatusPanel(panel, item: item, playsEntryAnimation: false)
+                    if !self.hasStoredStatusPanelOrigin(for: item.id) {
+                        panel.setFrameOrigin(self.defaultStatusPanelOrigin(for: panel.frame.size, index: index))
+                    }
+                    panel.orderFrontRegardless()
+                    continue
+                }
+
+                let panel = self.makePersistentStatusPanel(item: item, index: index)
+                self.statusPanels[item.id] = panel
+                self.installStatusMoveObserver(for: panel, id: item.id)
+                panel.orderFrontRegardless()
+            }
         }
     }
 
@@ -54,11 +115,11 @@ class FloatNotificationManager {
 
         switch corner {
         case .horizontal:
-            let result = handleHorizontalPanel(panel: &newPanel, size: size)
+            let result = handleHorizontalPanel(size: size)
             origin = result.origin
             newPanel.horizontalIndex = result.index
         case .cursorFollow:
-            origin = handleCursorFollowPanel(panel: &newPanel, size: size)
+            origin = CursorTracker.shared.screenCornerPosition(for: .cursorFollow, panelSize: size)
         case .topLeft, .topRight, .center, .menubar:
             origin = handleVerticalPanel(corner: corner, size: size)
         default:
@@ -98,7 +159,128 @@ class FloatNotificationManager {
         }
     }
 
-    private func handleHorizontalPanel(panel: inout FloatPanel, size: CGSize) -> (origin: CGPoint, index: Int) {
+    private func makePersistentStatusPanel(item: PersistentStatusItem, index: Int) -> FloatPanel {
+        let config = PositionConfigManager.shared.config(for: .bottomRight)
+        let size = CGSize(width: config.width, height: config.height)
+        let panel = FloatPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+
+        panel.isPersistentStatusPanel = true
+        panel.notificationCorner = .bottomRight
+        panel.level = .popUpMenu
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = false
+        panel.isMovableByWindowBackground = true
+        panel.hidesOnDeactivate = false
+        panel.setFrameOrigin(restoredStatusPanelOrigin(for: size, id: item.id, index: index))
+
+        updateStatusPanel(panel, item: item, playsEntryAnimation: true)
+        return panel
+    }
+
+    private func updateStatusPanel(_ panel: FloatPanel, item: PersistentStatusItem, playsEntryAnimation: Bool) {
+        let dismissController = DismissController()
+        panel.dismissController = dismissController
+        panel.contentView = NSHostingView(
+            rootView: FloatNotificationView(
+                message: item.state.message,
+                project: item.project,
+                corner: .bottomRight,
+                statusIndicatorColor: item.state.indicatorColor,
+                isDraggablePanel: true,
+                playsEntryAnimation: playsEntryAnimation,
+                dismissController: dismissController
+            )
+        )
+    }
+
+    private func installStatusMoveObserver(for panel: FloatPanel, id: String) {
+        if let observer = statusPanelMoveObservers[id] {
+            NotificationCenter.default.removeObserver(observer)
+        }
+
+        statusPanelMoveObservers[id] = NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self, weak panel] _ in
+            guard let origin = panel?.frame.origin else { return }
+            self?.saveStatusPanelOrigin(origin, id: id)
+        }
+    }
+
+    private func removeStatusPanel(id: String) {
+        if let observer = statusPanelMoveObservers[id] {
+            NotificationCenter.default.removeObserver(observer)
+            statusPanelMoveObservers.removeValue(forKey: id)
+        }
+
+        if let panel = statusPanels[id] {
+            panel.orderOut(nil)
+            statusPanels.removeValue(forKey: id)
+        }
+    }
+
+    private func restoredStatusPanelOrigin(for size: CGSize, id: String, index: Int) -> CGPoint {
+        let defaults = UserDefaults.standard
+        let defaultOrigin = defaultStatusPanelOrigin(for: size, index: index)
+        guard let storedOrigin = defaults.dictionary(forKey: statusPanelOriginKey(for: id)) else {
+            return defaultOrigin
+        }
+
+        guard let x = storedOrigin["x"] as? Double,
+              let y = storedOrigin["y"] as? Double else {
+            return defaultOrigin
+        }
+
+        return clampedStatusPanelOrigin(CGPoint(x: x, y: y), size: size)
+    }
+
+    private func saveStatusPanelOrigin(_ origin: CGPoint, id: String) {
+        UserDefaults.standard.set(["x": origin.x, "y": origin.y], forKey: statusPanelOriginKey(for: id))
+    }
+
+    private func hasStoredStatusPanelOrigin(for id: String) -> Bool {
+        UserDefaults.standard.dictionary(forKey: statusPanelOriginKey(for: id)) != nil
+    }
+
+    private func statusPanelOriginKey(for id: String) -> String {
+        statusPanelOriginKeyPrefix + id
+    }
+
+    private func defaultStatusPanelOrigin(for size: CGSize, index: Int) -> CGPoint {
+        let config = PositionConfigManager.shared.config(for: .bottomRight)
+        let stackOffset = CGFloat(index) * (size.height + statusPanelVerticalSpacing)
+        return cornerOrigin(corner: .bottomRight, size: size, padding: config.margin, stackOffset: stackOffset)
+    }
+
+    private func clampedStatusPanelOrigin(_ origin: CGPoint, size: CGSize) -> CGPoint {
+        let candidateRect = CGRect(origin: origin, size: size)
+        let screen = NSScreen.screens.first { $0.frame.intersects(candidateRect) } ?? NSScreen.main
+        guard let screen else {
+            return origin
+        }
+
+        let frame = screen.frame
+        let minX = frame.minX
+        let maxX = frame.maxX - size.width
+        let minY = frame.minY
+        let maxY = frame.maxY - size.height
+
+        return CGPoint(
+            x: min(max(origin.x, minX), maxX),
+            y: min(max(origin.y, minY), maxY)
+        )
+    }
+
+    private func handleHorizontalPanel(size: CGSize) -> (origin: CGPoint, index: Int) {
         let horizontalPanels = panels.filter { $0.horizontalIndex > 0 }
         let index = horizontalPanels.count + 1
         if index > maxHorizontalPanels {
@@ -108,10 +290,6 @@ class FloatNotificationManager {
         }
         let offsetX = CGFloat(index) * horizontalStackOffset
         return (horizontalOrigin(size: size, offset: offsetX), index)
-    }
-
-    private func handleCursorFollowPanel(panel: inout FloatPanel, size: CGSize) -> CGPoint {
-        return CursorTracker.shared.screenCornerPosition(for: .cursorFollow, panelSize: size)
     }
 
     private func handleVerticalPanel(corner: Corner, size: CGSize) -> CGPoint {
@@ -164,8 +342,7 @@ class FloatNotificationManager {
         for (index, panel) in panels.enumerated() {
             let config = PositionConfigManager.shared.config(for: panel.notificationCorner)
             let offsetY = CGFloat(index) * config.stackOffset
-            guard let frame = panel.contentView?.window?.frame else { continue }
-            let size = frame.size
+            let size = panel.frame.size
             let newOrigin = cornerOrigin(corner: panel.notificationCorner, size: size, padding: config.margin, stackOffset: offsetY)
             panel.setFrameOrigin(newOrigin)
         }
@@ -173,10 +350,10 @@ class FloatNotificationManager {
 
     private func cornerOrigin(corner: Corner, size: CGSize, padding: CGFloat = 0, stackOffset: CGFloat = 0) -> CGPoint {
         guard let screen = NSScreen.main else {
-            print("DEBUG: No main screen, returning zero")
             return .zero
         }
         let frame = screen.frame
+
         switch corner {
         case .bottomLeft:
             return CGPoint(x: frame.minX + padding, y: frame.minY + padding + stackOffset)
