@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Floatify - Floating Notifications for Developers">
+<Layout title="Floatify - Session Floaters for Claude Code and Codex">
   <!-- Skip to main content for accessibility -->
   <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#88c0d0] focus:text-[#2e3440] focus:rounded-lg">
     Skip to main content
@@ -14,7 +14,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <a href="/" class="text-xl font-bold text-terminal-text" aria-label="Floatify home">
           Floatify
-          <span class="sr-only"> - Floating Notifications for Developers</span>
+          <span class="sr-only"> - Session Floaters for Claude Code and Codex</span>
         </a>
       <a
         href="https://github.com/hieppp/floatify"
@@ -38,13 +38,13 @@ import Layout from '../layouts/Layout.astro';
   <section aria-labelledby="hero-heading" class="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
     <div class="text-center max-w-3xl mx-auto mb-12">
       <h1 id="hero-heading" class="text-5xl md:text-6xl font-bold text-terminal-text mb-6 leading-tight">
-        Floating Notifications<br/>for Developers
+        Floating Session HUDs<br/>for Developers
       </h1>
       <p class="text-xl text-terminal-text-secondary mb-8">
-        Sub-millisecond notifications that never steal your focus
+        Per-session floaters that stay visible without stealing focus
       </p>
       <p class="text-lg text-terminal-text-tertiary">
-        A macOS menu bar app that displays non-intrusive floating notifications in screen dead zones. Built for developers who use Claude Code hooks.
+        A macOS menu bar app for Claude Code and Codex. It shows one persistent floater per live session, labels each one by project folder, and uses red and green status at a glance.
       </p>
     </div>
 
@@ -123,8 +123,8 @@ import Layout from '../layouts/Layout.astro';
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-[11px] text-terminal-text font-mono truncate">Build complete</p>
-              <p id="demo-corner-label" class="text-[9px] text-[#88c0d0] font-mono truncate">bottomRight</p>
+              <p class="text-[11px] text-terminal-text font-mono truncate">api-server</p>
+              <p id="demo-corner-label" class="text-[9px] text-[#88c0d0] font-mono truncate">session floater</p>
             </div>
           </div>
 
@@ -148,8 +148,8 @@ import Layout from '../layouts/Layout.astro';
         <svg class="w-6 h-6 text-terminal-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Sub-millisecond IPC</h3>
-        <p class="text-sm text-terminal-text-secondary">FIFO pipe for instant communication between CLI and app with minimal latency.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Per-Session Floaters</h3>
+        <p class="text-sm text-terminal-text-secondary">Each Claude Code or Codex session gets its own floater instead of one global status box.</p>
       </div>
       <!-- Feature 2: Zero Focus Stealing -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
@@ -157,39 +157,39 @@ import Layout from '../layouts/Layout.astro';
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
         </svg>
         <h3 class="text-lg font-semibold text-terminal-text mb-2">Zero Focus Stealing</h3>
-        <p class="text-sm text-terminal-text-secondary">Non-activating NSPanel design keeps your workflow uninterrupted.</p>
+        <p class="text-sm text-terminal-text-secondary">Non-activating NSPanel windows stay above apps without interrupting typing or mouse focus.</p>
       </div>
       <!-- Feature 3: Dead Zone Positioning -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
         <svg class="w-6 h-6 text-terminal-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Dead Zone Positioning</h3>
-        <p class="text-sm text-terminal-text-secondary">Screen corner placement uses otherwise wasted screen space.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Project-Aware Labels</h3>
+        <p class="text-sm text-terminal-text-secondary">Each floater shows the current folder name, so multiple sessions stay easy to scan.</p>
       </div>
       <!-- Feature 4: Stackable Panels -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
         <svg class="w-6 h-6 text-terminal-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Stackable Panels</h3>
-        <p class="text-sm text-terminal-text-secondary">Up to 3 notifications stack elegantly with 4px vertical offset.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Drag, Close, Arrange</h3>
+        <p class="text-sm text-terminal-text-secondary">Move floaters anywhere, close the ones you do not need, or restack them from the menu bar.</p>
       </div>
       <!-- Feature 5: FIFO Pipe IPC -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
         <svg class="w-6 h-6 text-terminal-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">FIFO Pipe IPC</h3>
-        <p class="text-sm text-terminal-text-secondary">Simple and reliable named pipe communication, no network needed.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Color-First Status</h3>
+        <p class="text-sm text-terminal-text-secondary">Red means running. Green means complete. Status stays readable without extra words.</p>
       </div>
       <!-- Feature 6: Developer-First -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
         <svg class="w-6 h-6 text-terminal-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Developer-First</h3>
-        <p class="text-sm text-terminal-text-secondary">Hooks integrate seamlessly with your Claude Code workflow.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Claude and Codex</h3>
+        <p class="text-sm text-terminal-text-secondary">Claude uses hook-driven status. Codex uses live process activity, so both tools show up together.</p>
       </div>
       <!-- Feature 7: Configurable -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
@@ -197,8 +197,8 @@ import Layout from '../layouts/Layout.astro';
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Configurable Layout</h3>
-        <p class="text-sm text-terminal-text-secondary">Customize panel size, margin, and stacking offset via positions.json.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Sprite HUD UI</h3>
+        <p class="text-sm text-terminal-text-secondary">Persistent floaters use animated sprite characters and a compact HUD layout built for glanceable status.</p>
       </div>
     </div>
   </section>
@@ -255,7 +255,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="flex-1 flex flex-col items-center text-center relative">
         <div class="w-12 h-12 rounded-full bg-terminal-surface text-terminal-text flex items-center justify-center text-xl font-bold mb-4 z-10">1</div>
         <h3 class="text-lg font-semibold text-terminal-text mb-2">Hook Trigger</h3>
-        <p class="text-sm text-terminal-text-secondary">Claude Code hook fires on your command completion.</p>
+        <p class="text-sm text-terminal-text-secondary">Claude hooks or session monitors detect live Claude Code and Codex sessions.</p>
         <!-- Arrow 1 (hidden on mobile, shown between steps on desktop) -->
         <div class="hidden md:block absolute top-6 right-0 translate-x-1/2 w-8 h-0.5 bg-terminal-border"></div>
       </div>
@@ -263,15 +263,15 @@ import Layout from '../layouts/Layout.astro';
       <div class="flex-1 flex flex-col items-center text-center relative">
         <div class="w-12 h-12 rounded-full bg-terminal-surface text-terminal-text flex items-center justify-center text-xl font-bold mb-4 z-10">2</div>
         <h3 class="text-lg font-semibold text-terminal-text mb-2">CLI Command</h3>
-        <p class="text-sm text-terminal-text-secondary">floatify sends message via FIFO pipe to the app.</p>
+        <p class="text-sm text-terminal-text-secondary">floatify sends status or notification payloads through the FIFO pipe.</p>
         <!-- Arrow 2 (hidden on mobile, shown between steps on desktop) -->
         <div class="hidden md:block absolute top-6 right-0 translate-x-1/2 w-8 h-0.5 bg-terminal-border"></div>
       </div>
       <!-- Step 3 -->
       <div class="flex-1 flex flex-col items-center text-center">
         <div class="w-12 h-12 rounded-full bg-terminal-surface text-terminal-text flex items-center justify-center text-xl font-bold mb-4 z-10">3</div>
-        <h3 class="text-lg font-semibold text-terminal-text mb-2">Notification</h3>
-        <p class="text-sm text-terminal-text-secondary">Panel appears in screen dead zone instantly.</p>
+        <h3 class="text-lg font-semibold text-terminal-text mb-2">Persistent Floater</h3>
+        <p class="text-sm text-terminal-text-secondary">One HUD appears per session with project label, sprite, and color status.</p>
       </div>
     </div>
   </section>
@@ -313,35 +313,47 @@ import Layout from '../layouts/Layout.astro';
         </div>
         <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>floatify --message "Build failed" --position bottomLeft --duration 10</code></pre>
       </div>
+      <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-terminal-card">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border" style="background: #2e3440;">
+          <div class="flex gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-terminal-dot"></span>
+            <span class="w-3 h-3 rounded-full bg-terminal-dot"></span>
+            <span class="w-3 h-3 rounded-full bg-terminal-dot"></span>
+          </div>
+          <button onclick="copyCode(this)" class="text-xs text-terminal-text-secondary hover:text-terminal-text px-2 py-1 rounded bg-terminal-surface hover:bg-terminal-border-hover transition-colors">Copy</button>
+        </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>floatify --status complete</code></pre>
+      </div>
     </div>
   </section>
 
   <!-- Claude Code Integration -->
   <section id="claude-code-integration" aria-labelledby="claude-integration-heading" class="py-20 px-6 max-w-4xl mx-auto">
     <h2 id="claude-integration-heading" class="text-xs text-terminal-text-tertiary tracking-wider uppercase mb-8">Claude Code Integration</h2>
+    <p class="text-terminal-text-secondary mb-6">Claude should send completion state only. Floatify discovers live Claude sessions itself, and Codex sessions are detected automatically.</p>
     <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-terminal-card">
       <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border" style="background: #2e3440;">
         <span class="text-xs text-terminal-text-muted font-mono">settings.json</span>
         <button onclick="copyCode(this)" class="text-xs text-terminal-text-secondary hover:text-terminal-text px-2 py-1 rounded bg-terminal-surface hover:bg-terminal-border-hover transition-colors">Copy</button>
       </div>
-      <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
   "hooks": {
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --message 'Floatify is waiting' --position bottomRight --duration 10"
+        "command": "floatify --status complete"
       }]
     }],
-    "PostToolUse": [{
-      "matcher": "Bash",
+    "SessionEnd": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --message 'Bash task done' --position bottomLeft --duration 5"
+        "command": "floatify --status complete"
       }]
     }]
   }
 }`}</code></pre>
     </div>
+    <p class="text-sm text-terminal-text-tertiary mt-4">Do not use <code class="px-2 py-1 bg-terminal-card rounded text-sm">UserPromptSubmit</code> for <code class="px-2 py-1 bg-terminal-card rounded text-sm">floatify --status running</code>.</p>
   </section>
 
   <!-- FAQ Section -->
@@ -355,7 +367,7 @@ import Layout from '../layouts/Layout.astro';
           "name": "What is Floatify?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Floatify is a macOS menu bar app that displays floating notifications in screen dead zones (corners and edges). It uses sub-millisecond FIFO pipe IPC to receive commands from the floatify CLI, making it ideal for developer workflows and Claude Code hook integrations."
+            "text": "Floatify is a macOS menu bar app that shows one persistent floater per Claude Code or Codex session, plus temporary notifications from the CLI. It uses FIFO pipe IPC for commands and process detection for live session tracking."
           }
         },
         {
@@ -368,10 +380,10 @@ import Layout from '../layouts/Layout.astro';
         },
         {
           "@type": "Question",
-          "name": "What positions are supported?",
+          "name": "How does session tracking work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Floatify supports 8 positions: bottomLeft, bottomRight, topLeft, topRight, center, menubar, horizontal, and cursorFollow. Each position has default animations optimized for that location."
+            "text": "Claude floaters are discovered from live claude --ide processes and updated by status hooks. Codex floaters are discovered from live codex processes and activity polling. Each session gets its own project-labeled floater."
           }
         },
         {
@@ -387,7 +399,7 @@ import Layout from '../layouts/Layout.astro';
           "name": "How do I integrate with Claude Code?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Add hook configurations to your Claude Code settings.json. Use PostToolUse hooks to notify after bash commands, or Stop hooks for session completion. The floatify CLI handles the rest."
+            "text": "Add Stop and SessionEnd hooks to your Claude Code settings.json and send floatify --status complete. Avoid UserPromptSubmit for running state. Floatify handles live session discovery and the CLI handles the status payload."
           }
         }
       ]
@@ -402,7 +414,7 @@ import Layout from '../layouts/Layout.astro';
           </svg>
         </summary>
         <p class="mt-3 text-sm text-terminal-text-secondary">
-          Floatify is a macOS menu bar app that displays floating notifications in screen dead zones (corners and edges). It uses sub-millisecond FIFO pipe IPC to receive commands from the floatify CLI, making it ideal for developer workflows and Claude Code hook integrations.
+          Floatify is a macOS menu bar app that shows one persistent floater per Claude Code or Codex session, plus temporary notifications from the CLI. It uses FIFO pipe IPC for commands and process detection for live session tracking.
         </p>
       </details>
       <details class="group bg-terminal-card border border-terminal-border rounded-lg p-4">
@@ -418,13 +430,13 @@ import Layout from '../layouts/Layout.astro';
       </details>
       <details class="group bg-terminal-card border border-terminal-border rounded-lg p-4">
         <summary class="flex items-center justify-between cursor-pointer list-none text-terminal-text font-medium">
-          <span>What positions are supported?</span>
+          <span>How does session tracking work?</span>
           <svg class="w-5 h-5 text-terminal-text-muted group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </summary>
         <p class="mt-3 text-sm text-terminal-text-secondary">
-          Floatify supports 8 positions: bottomLeft, bottomRight, topLeft, topRight, center, menubar, horizontal, and cursorFollow. Each position has default animations optimized for that location.
+          Claude floaters are discovered from live claude --ide processes and updated by status hooks. Codex floaters are discovered from live codex processes and activity polling. Each session gets its own project-labeled floater.
         </p>
       </details>
       <details class="group bg-terminal-card border border-terminal-border rounded-lg p-4">
@@ -446,7 +458,7 @@ import Layout from '../layouts/Layout.astro';
           </svg>
         </summary>
         <p class="mt-3 text-sm text-terminal-text-secondary">
-          Add hook configurations to your Claude Code settings.json. Use PostToolUse hooks to notify after bash commands, or Stop hooks for session completion. The floatify CLI handles the rest.
+          Add Stop and SessionEnd hooks to your Claude Code settings.json and send floatify --status complete. Avoid UserPromptSubmit for running state. Floatify handles live session discovery and the CLI handles the status payload.
         </p>
       </details>
     </div>

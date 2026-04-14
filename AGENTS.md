@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Floatify** — A macOS menu bar daemon that renders animated floating notifications in screen dead zones (bottom-left/bottom-right corners), triggered by Claude Code hooks.
+**Floatify** - A macOS menu bar daemon that renders two overlay types:
+- temporary notifications sent from the CLI
+- persistent per-session floaters for Claude Code and Codex
 
 Two components:
-- **Floatify.app** — Background GUI app (LSUIElement, no Dock icon) owning a floating NSPanel overlay
-- **floatify CLI** — Sends messages to the app via FIFO pipe IPC
+- **Floatify.app** - Background GUI app (LSUIElement, no Dock icon) owning floating `NSPanel` overlays
+- **floatify CLI** - Sends notification and status payloads to the app via FIFO pipe IPC
 
 ## Build Commands
 
@@ -26,15 +28,19 @@ xcodebuild -project Floatify.xcodeproj -scheme floatify -configuration Debug bui
 ## Architecture
 
 ```
-Claude Code hooks → floatify CLI → FIFO pipe IPC → Floatify.app → NSPanel overlay
+Claude hooks / floatify CLI / session monitors -> FIFO pipe IPC + process scan -> Floatify.app -> temporary and persistent NSPanel overlays
 ```
 
 **Key technical decisions:**
 - FIFO pipe for sub-ms IPC (no network permissions needed)
 - NSPanel with `.nonactivatingPanel` to avoid stealing keyboard focus
-- `NSScreen.frame` for absolute positioning at screen edges
+- `NSScreen.visibleFrame` and saved origins for panel placement
 - `.popUpMenu` level floats above all apps including fullscreen windows
-- Max 3 stacked panels with 4px vertical offset
+- persistent floaters are keyed per Claude or Codex session
+- Claude sessions are discovered from `claude --ide` processes
+- Codex sessions are discovered from live `codex` node processes
+- persistent floaters show project folder name, color-only status, sprite icon, close button, and draggable saved position
+- menu bar menu includes `Arrange` to restack live floaters
 
 ## Project Structure
 
@@ -44,12 +50,12 @@ Floatify/
 ├── Floatify.xcodeproj/     # Xcode project
 ├── Floatify/               # macOS App target
 │   ├── AppDelegate.swift   # FIFO pipe server + menu bar + symlink install
-│   ├── FloatNotificationManager.swift  # NSPanel factory + stacking
-│   ├── FloatNotificationView.swift      # SwiftUI notification view
+│   ├── FloatNotificationManager.swift  # NSPanel factory + temporary/persistent floater management
+│   ├── FloatNotificationView.swift      # SwiftUI temporary notification and persistent HUD view
 │   ├── Corner.swift        # Corner enum
 │   ├── main.swift          # App entry point
 │   ├── cli/                # Command Line Tool target
-│   │   └── main.swift     # Argument parser + FIFO pipe client
+│   │   └── main.swift     # Argument parser + FIFO pipe client + session inference
 │   └── Info.plist          # LSUIElement = true
 ```
 
@@ -57,14 +63,27 @@ Floatify/
 
 **Pipe path:** `/var/tmp/floatify.pipe`
 
-**JSON payload:**
+**Notification payload:**
 ```json
 {
   "message": "Task complete!",
   "corner": "bottomRight",
-  "duration": "6"
+  "duration": 6,
+  "project": "floatify"
 }
 ```
+
+**Status payload:**
+```json
+{
+  "status": "running",
+  "project": "floatify",
+  "source": "claude",
+  "session": "claude:12345"
+}
+```
+
+`status` accepts `running`, `complete`, `done`, or `idle`.
 
 ## Configuration for Claude Code
 
@@ -75,19 +94,20 @@ Add to `~/.claude/settings.json`:
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --message 'Floatify is waiting' --position bottomRight --duration 10"
+        "command": "floatify --status complete"
       }]
     }],
-    "PostToolUse": [{
-      "matcher": "Bash",
+    "SessionEnd": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --message 'Bash task done' --position bottomLeft --duration 5"
+        "command": "floatify --status complete"
       }]
     }]
   }
 }
 ```
+
+Do not use `UserPromptSubmit` for `floatify --status running`. That hook can interfere with Claude Code prompt flow.
 
 ## Output
 - Answer is always line 1. Reasoning comes after, never before.
