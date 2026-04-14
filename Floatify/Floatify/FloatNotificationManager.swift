@@ -98,6 +98,7 @@ class FloatNotificationManager {
                 self.arrangePersistentStatuses()
             }
 
+            var didAddPanels = false
             for (index, item) in sortedItems.enumerated() {
                 if let panel = self.statusPanels[item.id] {
                     self.updateStatusPanel(panel, item: item, playsEntryAnimation: false)
@@ -112,6 +113,11 @@ class FloatNotificationManager {
                 self.statusPanels[item.id] = panel
                 self.installStatusMoveObserver(for: panel, id: item.id)
                 panel.orderFrontRegardless()
+                didAddPanels = true
+            }
+
+            if didAddPanels {
+                self.arrangePersistentStatuses()
             }
         }
     }
