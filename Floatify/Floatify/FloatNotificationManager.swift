@@ -67,6 +67,7 @@ class FloatNotificationManager {
     private var panels: [FloatPanel] = []
     private var cursorFollowTimers: [FloatPanel: Timer] = [:]
     private var floaterPanel: FloatPanel?
+    private var floaterHostingView: NSHostingView<FloaterPanelView>?
     private var floaterPanelMoveObserver: NSObjectProtocol?
     private var currentStatusItemsByID: [String: PersistentStatusItem] = [:]
     private var floaterDismissControllers: [String: DismissController] = [:]
@@ -78,6 +79,7 @@ class FloatNotificationManager {
     private let floaterPanelSpacing: CGFloat = 10
     private let floaterPanelOriginKey = "FloaterPanelOrigin"
     private let floaterPanelCollapsedKey = "FloaterPanelCollapsed"
+    private let floaterPanelAnimationDuration: TimeInterval = 0.28
     private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
     private let statusSpriteCharacters: [StatusSpriteCharacter] = [.squirtle, .wartortle, .blastoise]
     private var isFloaterPanelCollapsed: Bool
@@ -218,7 +220,6 @@ class FloatNotificationManager {
         let size = fittingPanelSize(for: hostingView)
 
         if let panel = floaterPanel {
-            panel.contentView = hostingView
             resizeFloaterPanel(panel, to: size)
             panel.orderFrontRegardless()
             return
@@ -250,25 +251,31 @@ class FloatNotificationManager {
     }
 
     private func makeFloaterPanelHostingView(items: [FloaterPanelItem]) -> NSHostingView<FloaterPanelView> {
-        let view = NSHostingView(
-            rootView: FloaterPanelView(
-                items: items,
-                spacing: floaterPanelSpacing,
-                isCollapsed: isFloaterPanelCollapsed,
-                onToggleCollapsed: { [weak self] in
-                    self?.toggleFloaterPanelCollapsed()
-                },
-                onItemTap: { [weak self] item in
-                    self?.openProjectInVSCode(for: item)
-                },
-                onItemClose: { [weak self] item in
-                    self?.closePersistentStatusPanel(id: item.id)
-                }
-            )
+        let rootView = FloaterPanelView(
+            items: items,
+            spacing: floaterPanelSpacing,
+            isCollapsed: isFloaterPanelCollapsed,
+            onToggleCollapsed: { [weak self] in
+                self?.toggleFloaterPanelCollapsed()
+            },
+            onItemTap: { [weak self] item in
+                self?.openProjectInVSCode(for: item)
+            },
+            onItemClose: { [weak self] item in
+                self?.closePersistentStatusPanel(id: item.id)
+            }
         )
+
+        if let view = floaterHostingView {
+            view.rootView = rootView
+            return view
+        }
+
+        let view = NSHostingView(rootView: rootView)
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.clear.cgColor
         view.layer?.isOpaque = false
+        floaterHostingView = view
         return view
     }
 
@@ -384,6 +391,7 @@ class FloatNotificationManager {
             panel.orderOut(nil)
             floaterPanel = nil
         }
+        floaterHostingView = nil
 
         isFloaterPanelCollapsed = false
         UserDefaults.standard.set(false, forKey: floaterPanelCollapsedKey)
@@ -418,7 +426,12 @@ class FloatNotificationManager {
             CGPoint(x: panel.frame.maxX - size.width, y: panel.frame.minY),
             size: size
         )
-        panel.setFrame(NSRect(origin: origin, size: size), display: true)
+        let frame = NSRect(origin: origin, size: size)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = floaterPanelAnimationDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            panel.animator().setFrame(frame, display: true)
+        }
         saveFloaterPanelOrigin(origin)
     }
 

@@ -251,6 +251,8 @@ private struct FloaterPanelHeaderView: View {
 
     @State private var isCollapseHovering = false
 
+    private let collapseAnimation = Animation.spring(response: 0.34, dampingFraction: 0.86)
+
     var body: some View {
         HStack(spacing: 0) {
             ZStack {
@@ -308,7 +310,7 @@ private struct FloaterPanelHeaderView: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(isCollapseHovering ? .primary : .secondary)
                     .rotationEffect(.degrees(isCollapsed ? 180 : 0))
-                    .animation(.easeInOut(duration: 0.2), value: isCollapsed)
+                    .animation(collapseAnimation, value: isCollapsed)
                     .frame(width: 34, height: 34)
                     .contentShape(Rectangle())
             }
@@ -345,6 +347,8 @@ struct FloaterPanelView: View {
     let onItemTap: (PersistentStatusItem) -> Void
     let onItemClose: (PersistentStatusItem) -> Void
 
+    private let collapseAnimation = Animation.spring(response: 0.34, dampingFraction: 0.86)
+
     private var runningCount: Int {
         items.reduce(into: 0) { result, item in
             if item.item.state == .running {
@@ -359,7 +363,11 @@ struct FloaterPanelView: View {
                 itemCount: items.count,
                 runningCount: runningCount,
                 isCollapsed: isCollapsed,
-                onToggleCollapsed: onToggleCollapsed
+                onToggleCollapsed: {
+                    withAnimation(collapseAnimation) {
+                        onToggleCollapsed()
+                    }
+                }
             )
 
             if !isCollapsed {
@@ -387,11 +395,19 @@ struct FloaterPanelView: View {
                     }
                 }
                 .padding(.top, spacing)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .scale(scale: 0.96, anchor: .top).combined(with: .opacity)
+                    )
+                )
             }
         }
         .padding(8)
         .fixedSize()
+        .clipped()
         .background(.clear)
+        .animation(collapseAnimation, value: isCollapsed)
     }
 }
 
