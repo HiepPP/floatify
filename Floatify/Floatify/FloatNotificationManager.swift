@@ -44,6 +44,11 @@ struct PersistentStatusItem {
     let state: ClaudeStatusState
 }
 
+private struct PersistentStatusStyle {
+    let effect: String
+    let spriteCharacter: StatusSpriteCharacter
+}
+
 class FloatNotificationManager {
     static let shared = FloatNotificationManager()
 
@@ -56,6 +61,8 @@ class FloatNotificationManager {
     private let horizontalStackOffset: CGFloat = 8
     private let statusPanelVerticalSpacing: CGFloat = 12
     private let statusPanelOriginKeyPrefix = "StatusFloaterOrigin."
+    private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
+    private let statusSpriteCharacters: [StatusSpriteCharacter] = [.squirtle, .wartortle, .blastoise]
 
     private init() {}
 
@@ -205,17 +212,37 @@ class FloatNotificationManager {
         dismissController: DismissController,
         playsEntryAnimation: Bool
     ) -> NSHostingView<FloatNotificationView> {
-        NSHostingView(
+        let style = statusStyle(for: item.id)
+        return NSHostingView(
             rootView: FloatNotificationView(
                 message: item.state.message,
                 project: item.project,
                 corner: .bottomRight,
+                effect: style.effect,
                 statusIndicatorColor: item.state.indicatorColor,
+                spriteCharacter: style.spriteCharacter,
+                animatesStatus: item.state == .running,
                 isDraggablePanel: true,
                 playsEntryAnimation: playsEntryAnimation,
                 dismissController: dismissController
             )
         )
+    }
+
+    private func statusStyle(for id: String) -> PersistentStatusStyle {
+        let seed = stableSeed(for: id)
+        return PersistentStatusStyle(
+            effect: statusEffects[seed % statusEffects.count],
+            spriteCharacter: statusSpriteCharacters[seed % statusSpriteCharacters.count]
+        )
+    }
+
+    private func stableSeed(for text: String) -> Int {
+        var hash = 5381
+        for scalar in text.unicodeScalars {
+            hash = ((hash << 5) &+ hash) &+ Int(scalar.value)
+        }
+        return abs(hash)
     }
 
     private func fittingPanelSize(for hostingView: NSView) -> CGSize {

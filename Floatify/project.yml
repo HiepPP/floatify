@@ -28,6 +28,8 @@ targets:
         buildPhase: resources
       - path: Floatify/Assets.xcassets
         buildPhase: resources
+      - path: ../image.png
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.floatify.app

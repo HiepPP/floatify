@@ -1,6 +1,95 @@
 import SwiftUI
 import Lottie
 
+enum StatusSpriteCharacter {
+    case squirtle
+    case wartortle
+    case blastoise
+}
+
+private enum SpriteSheetCache {
+    static let sheetName = "image"
+    static var sheetCGImage: CGImage? = {
+        guard let url = Bundle.main.url(forResource: sheetName, withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+            return nil
+        }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }()
+    static var frames: [String: NSImage] = [:]
+
+    static func image(for rect: CGRect) -> NSImage? {
+        let key = "\(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.size.width)):\(Int(rect.size.height))"
+        if let cached = frames[key] {
+            return cached
+        }
+
+        guard let cropped = sheetCGImage?.cropping(to: rect) else {
+            return nil
+        }
+
+        let image = NSImage(cgImage: cropped, size: rect.size)
+        frames[key] = image
+        return image
+    }
+}
+
+private struct SpriteAnimationView: View {
+    let character: StatusSpriteCharacter
+    let isAnimating: Bool
+
+    @State private var frameIndex = 0
+    private let timer = Timer.publish(every: 0.16, on: .main, in: .common).autoconnect()
+
+    private var frameRects: [CGRect] {
+        switch character {
+        case .squirtle:
+            return [
+                CGRect(x: 6, y: 203, width: 44, height: 44),
+                CGRect(x: 45, y: 203, width: 44, height: 44),
+                CGRect(x: 85, y: 203, width: 46, height: 44),
+                CGRect(x: 128, y: 205, width: 42, height: 44),
+                CGRect(x: 168, y: 206, width: 42, height: 42),
+                CGRect(x: 207, y: 207, width: 44, height: 42)
+            ]
+        case .wartortle:
+            return [
+                CGRect(x: 302, y: 206, width: 47, height: 40),
+                CGRect(x: 350, y: 208, width: 47, height: 40),
+                CGRect(x: 430, y: 210, width: 44, height: 44),
+                CGRect(x: 478, y: 208, width: 45, height: 46),
+                CGRect(x: 520, y: 210, width: 46, height: 44),
+                CGRect(x: 564, y: 210, width: 46, height: 42)
+            ]
+        case .blastoise:
+            return [
+                CGRect(x: 13, y: 149, width: 44, height: 44),
+                CGRect(x: 54, y: 146, width: 46, height: 46),
+                CGRect(x: 98, y: 154, width: 46, height: 38),
+                CGRect(x: 141, y: 156, width: 45, height: 38),
+                CGRect(x: 184, y: 151, width: 47, height: 42),
+                CGRect(x: 225, y: 152, width: 46, height: 41)
+            ]
+        }
+    }
+
+    var body: some View {
+        Group {
+            if let image = SpriteSheetCache.image(for: frameRects[frameIndex]) {
+                Image(nsImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(width: 44, height: 44)
+        .onReceive(timer) { _ in
+            guard isAnimating else { return }
+            frameIndex = (frameIndex + 1) % frameRects.count
+        }
+    }
+}
+
 struct FloatNotificationView: View {
     let message: String
     var project: String?
@@ -9,6 +98,8 @@ struct FloatNotificationView: View {
     var sound: String?
     var onTap: (() -> Void)?
     var statusIndicatorColor: Color?
+    var spriteCharacter: StatusSpriteCharacter?
+    var animatesStatus = true
     var isDraggablePanel = false
     var playsEntryAnimation = true
     @ObservedObject var dismissController: DismissController
@@ -28,6 +119,8 @@ struct FloatNotificationView: View {
         sound: String? = nil,
         onTap: (() -> Void)? = nil,
         statusIndicatorColor: Color? = nil,
+        spriteCharacter: StatusSpriteCharacter? = nil,
+        animatesStatus: Bool = true,
         isDraggablePanel: Bool = false,
         playsEntryAnimation: Bool = true,
         dismissController: DismissController
@@ -39,6 +132,8 @@ struct FloatNotificationView: View {
         self.sound = sound
         self.onTap = onTap
         self.statusIndicatorColor = statusIndicatorColor
+        self.spriteCharacter = spriteCharacter
+        self.animatesStatus = animatesStatus
         self.isDraggablePanel = isDraggablePanel
         self.playsEntryAnimation = playsEntryAnimation
         self.dismissController = dismissController
@@ -60,6 +155,10 @@ struct FloatNotificationView: View {
             return String(name.prefix(20)) + "..."
         }
         return name
+    }
+
+    private var shouldAnimateStatus: Bool {
+        !isDraggablePanel || animatesStatus
     }
 
     var body: some View {
@@ -136,13 +235,26 @@ struct FloatNotificationView: View {
         }
     }
 
+    @ViewBuilder
     private var duckIcon: some View {
-        Text("\u{1F986}")
-            .font(.system(size: 32))
-            .bobbing(isEnabled: showIdleAnimations)
-            .glowPulse(isEnabled: showIdleAnimations && showGlow)
-            .floatDrift(isEnabled: showIdleAnimations)
-            .hoverScale()
+        let icon = Group {
+            if let spriteCharacter {
+                SpriteAnimationView(character: spriteCharacter, isAnimating: showIdleAnimations && shouldAnimateStatus)
+            } else {
+                Text("\u{1F986}")
+                    .font(.system(size: 30))
+            }
+        }
+
+        if shouldAnimateStatus {
+            icon
+                .bobbing(isEnabled: showIdleAnimations)
+                .glowPulse(isEnabled: showIdleAnimations && showGlow)
+                .floatDrift(isEnabled: showIdleAnimations)
+                .hoverScale()
+        } else {
+            icon
+        }
     }
 
     private func triggerEntry() {
