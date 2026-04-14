@@ -79,7 +79,9 @@ class FloatNotificationManager {
     private let floaterPanelSpacing: CGFloat = 10
     private let floaterPanelOriginKey = "FloaterPanelOrigin"
     private let floaterPanelCollapsedKey = "FloaterPanelCollapsed"
-    private let floaterPanelAnimationDuration: TimeInterval = 0.28
+    private let floaterPanelAnimationDuration: TimeInterval = 0.38
+    private let floaterPanelSpringDamping: CGFloat = 0.82
+    private let floaterPanelSpringVelocity: CGFloat = 0.45
     private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
     private let statusSpriteCharacters: [StatusSpriteCharacter] = [.squirtle, .wartortle, .blastoise]
     private var isFloaterPanelCollapsed: Bool
@@ -427,11 +429,16 @@ class FloatNotificationManager {
             size: size
         )
         let frame = NSRect(origin: origin, size: size)
+
         NSAnimationContext.runAnimationGroup { context in
             context.duration = floaterPanelAnimationDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.allowsImplicitAnimation = true
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 0.0, 0.30, 1.0)
             panel.animator().setFrame(frame, display: true)
+        } completionHandler: {
+            panel.setFrame(frame, display: true)
         }
+
         saveFloaterPanelOrigin(origin)
     }
 

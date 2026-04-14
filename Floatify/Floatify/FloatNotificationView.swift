@@ -251,7 +251,12 @@ private struct FloaterPanelHeaderView: View {
 
     @State private var isCollapseHovering = false
 
-    private let collapseAnimation = Animation.spring(response: 0.34, dampingFraction: 0.86)
+    private let collapseAnimation = Animation.interpolatingSpring(
+        mass: 1.0,
+        stiffness: 160,
+        damping: 18,
+        initialVelocity: 0.0
+    )
 
     var body: some View {
         HStack(spacing: 0) {
@@ -347,7 +352,12 @@ struct FloaterPanelView: View {
     let onItemTap: (PersistentStatusItem) -> Void
     let onItemClose: (PersistentStatusItem) -> Void
 
-    private let collapseAnimation = Animation.spring(response: 0.34, dampingFraction: 0.86)
+    private let collapseAnimation = Animation.interpolatingSpring(
+        mass: 1.0,
+        stiffness: 160,
+        damping: 18,
+        initialVelocity: 0.0
+    )
 
     private var runningCount: Int {
         items.reduce(into: 0) { result, item in
@@ -397,8 +407,12 @@ struct FloaterPanelView: View {
                 .padding(.top, spacing)
                 .transition(
                     .asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .scale(scale: 0.96, anchor: .top).combined(with: .opacity)
+                        insertion: .move(edge: .top)
+                            .combined(with: .opacity)
+                            .animation(.interpolatingSpring(mass: 1, stiffness: 140, damping: 16)),
+                        removal: .scale(scale: 0.95, anchor: .top)
+                            .combined(with: .opacity)
+                            .animation(.easeOut(duration: 0.22))
                     )
                 )
             }
