@@ -108,6 +108,8 @@ struct FloatNotificationView: View {
     @State private var showGlow = false
     @State private var showIdleAnimations = false
     @State private var isEntryPlaying = false
+    @State private var isPanelHovering = false
+    @State private var isCloseHovering = false
     @State private var panelScale: CGFloat
     @State private var panelOpacity: CGFloat
     @StateObject private var particleSystem = ParticleSystem()
@@ -172,6 +174,22 @@ struct FloatNotificationView: View {
         statusIndicatorColor ?? .clear
     }
 
+    private var panelCornerRadius: CGFloat {
+        showsStatusAsColorOnly ? 22 : 16
+    }
+
+    private var statusDotSize: CGFloat {
+        showsStatusAsColorOnly ? 12 : 8
+    }
+
+    private var panelBorderColor: Color {
+        showsStatusAsColorOnly ? .white.opacity(0.18) : .white.opacity(0.10)
+    }
+
+    private var textForegroundStyle: AnyShapeStyle {
+        AnyShapeStyle(showsStatusAsColorOnly ? .primary : .secondary)
+    }
+
     var body: some View {
         ZStack {
             if corner == .cursorFollow {
@@ -179,77 +197,89 @@ struct FloatNotificationView: View {
                     .frame(width: 300, height: 100)
             }
 
-            RoundedRectangle(cornerRadius: 14)
-                .fill(.regularMaterial)
+            panelBackground
 
-            if showsStatusAsColorOnly {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(statusAccentColor.opacity(0.12))
-            }
-
-            LottiePanelBackground(
-                animationName: effectiveEffect.lottieFileName,
-                isPlaying: $isEntryPlaying,
-                onEntryComplete: {
-                    showIdleAnimations = true
-                    showGlow = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        showGlow = false
-                    }
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            if showsStatusAsColorOnly {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(statusAccentColor.opacity(0.7), lineWidth: 1.5)
-            }
-
-            HStack(spacing: 10) {
-                duckIcon
-
-                VStack(alignment: .leading, spacing: showsStatusAsColorOnly ? 0 : 2) {
-                    HStack(spacing: 6) {
-                        if let statusIndicatorColor {
-                            Circle()
-                                .fill(statusIndicatorColor)
-                                .frame(width: showsStatusAsColorOnly ? 12 : 8, height: showsStatusAsColorOnly ? 12 : 8)
-                                .shadow(color: statusIndicatorColor.opacity(showsStatusAsColorOnly ? 0.85 : 0), radius: 8, x: 0, y: 0)
+            if !showsStatusAsColorOnly {
+                LottiePanelBackground(
+                    animationName: effectiveEffect.lottieFileName,
+                    isPlaying: $isEntryPlaying,
+                    onEntryComplete: {
+                        showIdleAnimations = true
+                        showGlow = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            showGlow = false
                         }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius))
+            }
 
-                        Text(displayName)
-                            .font(.system(size: showsStatusAsColorOnly ? 13 : 11, weight: .semibold))
-                            .foregroundColor(showsStatusAsColorOnly ? .primary : .secondary)
-                            .lineLimit(1)
+            HStack(spacing: showsStatusAsColorOnly ? 10 : 12) {
+                if showsStatusAsColorOnly {
+                    persistentSpriteStage
+                } else {
+                    duckIcon
+                }
+
+                VStack(alignment: .leading, spacing: showsStatusAsColorOnly ? 2 : 4) {
+                    if showsStatusAsColorOnly {
+                        HStack(spacing: 10) {
+                            Text(displayName)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+
+                            statusIndicator
+                        }
+                    } else {
+                        HStack(spacing: 7) {
+                            statusIndicator
+
+                            Text(displayName)
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(textForegroundStyle)
+                                .lineLimit(1)
+                        }
                     }
 
                     if !showsStatusAsColorOnly {
                         Text(message)
                             .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.primary)
                             .lineLimit(2)
                     }
                 }
 
                 if !isDraggablePanel {
                     Spacer(minLength: 0)
+                } else {
+                    Capsule()
+                        .fill(.white.opacity(0.08))
+                        .frame(width: 1, height: 36)
+                        .padding(.leading, 2)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, showsStatusAsColorOnly ? 12 : 16)
+            .padding(.vertical, showsStatusAsColorOnly ? 8 : 12)
         }
         .fixedSize(horizontal: isDraggablePanel, vertical: false)
         .frame(width: isDraggablePanel ? nil : 280)
-        .frame(minHeight: showsStatusAsColorOnly ? 64 : 68)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: showsStatusAsColorOnly ? statusAccentColor.opacity(0.22) : .black.opacity(0.18), radius: 10, x: 0, y: 4)
+        .frame(minHeight: showsStatusAsColorOnly ? 72 : 68)
+        .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius))
+        .shadow(color: .black.opacity(showsStatusAsColorOnly ? 0.16 : 0.18), radius: 16, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
         .scaleEffect(panelScale)
         .opacity(panelOpacity)
         .allowsHitTesting(true)
         .overlay(alignment: .topTrailing) {
             if isDraggablePanel {
                 closeButton
-                    .padding(8)
+                    .padding(7)
+                    .opacity(isPanelHovering ? 1 : 0)
             }
+        }
+        .onHover { hovering in
+            isPanelHovering = hovering
         }
         .onAppear {
             if playsEntryAnimation {
@@ -262,6 +292,58 @@ struct FloatNotificationView: View {
             if shouldDismiss {
                 triggerExit()
             }
+        }
+    }
+
+    private var panelBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: panelCornerRadius)
+                .fill(.regularMaterial)
+
+            if showsStatusAsColorOnly {
+                RoundedRectangle(cornerRadius: panelCornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.08),
+                                .clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+
+            RoundedRectangle(cornerRadius: panelCornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.12),
+                            .white.opacity(0.03),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+
+            if showsStatusAsColorOnly {
+                HStack {
+                    Circle()
+                        .fill(statusAccentColor.opacity(0.16))
+                        .frame(width: 58, height: 58)
+                        .blur(radius: 20)
+                    Spacer()
+                }
+                .padding(.leading, 6)
+            }
+
+            RoundedRectangle(cornerRadius: panelCornerRadius)
+                .stroke(panelBorderColor, lineWidth: 1)
+
+            RoundedRectangle(cornerRadius: panelCornerRadius - 1.5)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+                .padding(1.5)
         }
     }
 
@@ -279,12 +361,47 @@ struct FloatNotificationView: View {
         if shouldAnimateStatus {
             icon
                 .bobbing(isEnabled: showIdleAnimations)
-                .glowPulse(isEnabled: showIdleAnimations && showGlow)
                 .floatDrift(isEnabled: showIdleAnimations)
-                .hoverScale()
         } else {
             icon
         }
+    }
+
+    @ViewBuilder
+    private var statusIndicator: some View {
+        if let statusIndicatorColor {
+            ZStack {
+                Circle()
+                    .fill(statusIndicatorColor.opacity(showsStatusAsColorOnly ? 0.26 : 0.14))
+                    .frame(width: statusDotSize + (showsStatusAsColorOnly ? 10 : 9), height: statusDotSize + (showsStatusAsColorOnly ? 10 : 9))
+                    .blur(radius: showsStatusAsColorOnly ? 7 : 2)
+
+                Circle()
+                    .fill(statusIndicatorColor)
+                    .frame(width: statusDotSize, height: statusDotSize)
+            }
+        }
+    }
+
+    private var persistentSpriteStage: some View {
+        ZStack {
+            Circle()
+                .fill(.white.opacity(0.08))
+                .frame(width: 52, height: 52)
+
+            Circle()
+                .fill(statusAccentColor.opacity(0.12))
+                .frame(width: 42, height: 42)
+                .blur(radius: 6)
+
+            duckIcon
+                .scaleEffect(1.08)
+        }
+        .frame(width: 56, height: 56)
+        .overlay(
+            Circle()
+                .stroke(.white.opacity(0.10), lineWidth: 1)
+        )
     }
 
     private var closeButton: some View {
@@ -293,15 +410,22 @@ struct FloatNotificationView: View {
         }) {
             Image(systemName: "xmark")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isCloseHovering ? .primary : .secondary)
                 .frame(width: 18, height: 18)
-                .background(.ultraThinMaterial, in: Circle())
+                .background(
+                    Circle()
+                        .fill(isCloseHovering ? .white.opacity(0.18) : .black.opacity(0.08))
+                )
                 .overlay(
-                    Circle().strokeBorder(.white.opacity(0.16), lineWidth: 1)
+                    Circle().strokeBorder(.white.opacity(isCloseHovering ? 0.24 : 0.10), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
+        .scaleEffect(isCloseHovering ? 1.04 : 1.0)
+        .onHover { hovering in
+            isCloseHovering = hovering
+        }
     }
 
     private func triggerEntry() {
