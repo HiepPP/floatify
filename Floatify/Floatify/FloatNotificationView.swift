@@ -70,6 +70,36 @@ enum FloaterSize {
     }
 }
 
+// MARK: - Sprite Sheet Metadata
+
+private struct SpriteSheetMetadata {
+    let frameRects: [CGRect]
+
+    static let defaultMetadata = SpriteSheetMetadata(frameRects: [
+        CGRect(x: 6, y: 203, width: 44, height: 44),
+        CGRect(x: 45, y: 203, width: 44, height: 44),
+        CGRect(x: 85, y: 203, width: 46, height: 44),
+        CGRect(x: 128, y: 205, width: 42, height: 44),
+        CGRect(x: 168, y: 206, width: 42, height: 42),
+        CGRect(x: 207, y: 207, width: 44, height: 42)
+    ])
+
+    static let bySheetName: [String: SpriteSheetMetadata] = [
+        "Abra Alakazam Sprite": SpriteSheetMetadata(frameRects: [
+            CGRect(x: 15, y: 15, width: 32, height: 32),
+            CGRect(x: 50, y: 15, width: 32, height: 32),
+            CGRect(x: 85, y: 15, width: 32, height: 32),
+            CGRect(x: 120, y: 15, width: 32, height: 32),
+            CGRect(x: 155, y: 15, width: 32, height: 32),
+            CGRect(x: 190, y: 15, width: 32, height: 32)
+        ])
+    ]
+
+    static func forSheet(_ name: String) -> SpriteSheetMetadata {
+        bySheetName[name] ?? defaultMetadata
+    }
+}
+
 // MARK: - Animate Source Manager
 
 private enum AnimateSourceManager {
@@ -140,15 +170,12 @@ private struct SpriteAnimationView: View {
         sheetName ?? "image"
     }
 
+    private var metadata: SpriteSheetMetadata {
+        SpriteSheetMetadata.forSheet(effectiveSheetName)
+    }
+
     private var frameRects: [CGRect] {
-        return [
-            CGRect(x: 6, y: 203, width: 44, height: 44),
-            CGRect(x: 45, y: 203, width: 44, height: 44),
-            CGRect(x: 85, y: 203, width: 46, height: 44),
-            CGRect(x: 128, y: 205, width: 42, height: 44),
-            CGRect(x: 168, y: 206, width: 42, height: 42),
-            CGRect(x: 207, y: 207, width: 44, height: 42)
-        ]
+        metadata.frameRects
     }
 
     var body: some View {
