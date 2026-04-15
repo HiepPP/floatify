@@ -262,7 +262,6 @@ class FloatNotificationManager {
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.ignoresMouseEvents = false
-        panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
         panel.contentView = hostingView
         panel.setFrameOrigin(restoredFloaterPanelOrigin(for: size))
