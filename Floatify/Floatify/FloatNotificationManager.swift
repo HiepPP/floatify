@@ -56,6 +56,7 @@ struct FloaterPanelItem: Identifiable {
     let item: PersistentStatusItem
     let dismissController: DismissController
     let playsEntryAnimation: Bool
+    let shouldShake: Bool
     let effect: String
     let sheetName: String?
     let floaterSize: FloaterSize
@@ -134,10 +135,20 @@ class FloatNotificationManager {
             let visibleItems = items
                 .filter { !self.hiddenStatusPanelIDs.contains($0.id) }
                 .sorted(by: Self.sortPersistentItems(_:_:))
-            let previousIDs = Set(self.currentStatusItemsByID.keys)
+            let previousItemsByID = self.currentStatusItemsByID
+            let previousIDs = Set(previousItemsByID.keys)
+
+            // Shake when an item enters idle (yellow) from any non-idle state - i.e., Claude just finished
+            let shakingItemIDs = Set(visibleItems.filter { item in
+                guard let previous = previousItemsByID[item.id] else { return false }
+                return previous.state != .idle && item.state == .idle
+            }.map(\.id))
 
             self.currentStatusItemsByID = Dictionary(uniqueKeysWithValues: visibleItems.map { ($0.id, $0) })
-            self.refreshFloaterPanel(animatedItemIDs: Set(visibleItems.map(\.id)).subtracting(previousIDs))
+            self.refreshFloaterPanel(
+                animatedItemIDs: Set(visibleItems.map(\.id)).subtracting(previousIDs),
+                shakingItemIDs: shakingItemIDs
+            )
         }
     }
 
@@ -226,7 +237,7 @@ class FloatNotificationManager {
         }
     }
 
-    private func refreshFloaterPanel(animatedItemIDs: Set<String> = [], animated: Bool = false) {
+    private func refreshFloaterPanel(animatedItemIDs: Set<String> = [], shakingItemIDs: Set<String> = [], animated: Bool = false) {
         let items = currentStatusItemsByID.values.sorted(by: Self.sortPersistentItems(_:_:))
         guard !items.isEmpty else {
             removeFloaterPanel()
@@ -239,6 +250,7 @@ class FloatNotificationManager {
                 item: item,
                 dismissController: floaterDismissController(for: item.id),
                 playsEntryAnimation: animatedItemIDs.contains(item.id),
+                shouldShake: shakingItemIDs.contains(item.id),
                 effect: style.effect,
                 sheetName: style.sheetName,
                 floaterSize: floaterSize

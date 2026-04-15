@@ -605,6 +605,34 @@ private struct AvatarBreathingModifier: ViewModifier {
     }
 }
 
+struct ShakeEffect: GeometryEffect {
+    var animatableData: CGFloat = 0
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        // sin(x * pi * n) produces n full oscillations over [0, 1]; (1 - x) dampens toward end
+        let translation = sin(animatableData * .pi * 6) * 12 * (1 - animatableData)
+        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
+    }
+}
+
+private struct CompletionShakeModifier: ViewModifier {
+    let shakeTrigger: UUID?
+
+    @State private var shakeAmount: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .modifier(ShakeEffect(animatableData: shakeAmount))
+            .onChange(of: shakeTrigger) { newValue in
+                guard newValue != nil else { return }
+                shakeAmount = 0
+                withAnimation(.easeOut(duration: 0.7)) {
+                    shakeAmount = 1
+                }
+            }
+    }
+}
+
 private struct PulsingCircle: View {
     let color: Color
     let size: CGFloat
@@ -829,6 +857,7 @@ struct FloaterPanelView: View {
                                 onItemClose(item.item)
                             },
                             statusIndicatorColor: item.item.state.indicatorColor,
+                            statusState: item.item.state,
                             sheetName: item.sheetName,
                             animatesStatus: item.item.state == .running || item.item.state == .idle,
                             isDraggablePanel: true,
@@ -836,6 +865,7 @@ struct FloaterPanelView: View {
                             floaterSize: item.floaterSize,
                             lastActivity: item.item.lastActivity,
                             modifiedFilesCount: item.item.modifiedFilesCount,
+                            shouldShake: item.shouldShake,
                             dismissController: item.dismissController
                         )
                     }
@@ -855,7 +885,6 @@ struct FloaterPanelView: View {
         }
         .padding(8)
         .fixedSize()
-        .clipped()
         .background(.clear)
         .animation(collapseAnimation, value: isCollapsed)
     }
@@ -870,6 +899,7 @@ struct FloatNotificationView: View {
     var onTap: (() -> Void)?
     var onClose: (() -> Void)?
     var statusIndicatorColor: Color?
+    var statusState: ClaudeStatusState?
     var sheetName: String?
     var animatesStatus = true
     var isDraggablePanel = false
@@ -878,6 +908,7 @@ struct FloatNotificationView: View {
     var isCompact: Bool = false
     var lastActivity: Date?
     var modifiedFilesCount: Int = 0
+    var shouldShake: Bool = false
     @ObservedObject var dismissController: DismissController
 
     @State private var showGlow = false
@@ -887,6 +918,7 @@ struct FloatNotificationView: View {
     @State private var isCloseHovering = false
     @State private var panelScale: CGFloat
     @State private var panelOpacity: CGFloat
+    @State private var shakeTrigger: UUID?
     @StateObject private var particleSystem = ParticleSystem()
 
     init(
@@ -898,6 +930,7 @@ struct FloatNotificationView: View {
         onTap: (() -> Void)? = nil,
         onClose: (() -> Void)? = nil,
         statusIndicatorColor: Color? = nil,
+        statusState: ClaudeStatusState? = nil,
         sheetName: String? = nil,
         animatesStatus: Bool = true,
         isDraggablePanel: Bool = false,
@@ -906,6 +939,7 @@ struct FloatNotificationView: View {
         isCompact: Bool = false,
         lastActivity: Date? = nil,
         modifiedFilesCount: Int = 0,
+        shouldShake: Bool = false,
         dismissController: DismissController
     ) {
         self.message = message
@@ -916,6 +950,7 @@ struct FloatNotificationView: View {
         self.onTap = onTap
         self.onClose = onClose
         self.statusIndicatorColor = statusIndicatorColor
+        self.statusState = statusState
         self.sheetName = sheetName
         self.animatesStatus = animatesStatus
         self.isDraggablePanel = isDraggablePanel
@@ -924,9 +959,11 @@ struct FloatNotificationView: View {
         self.isCompact = isCompact || floaterSize == .compact
         self.lastActivity = lastActivity
         self.modifiedFilesCount = modifiedFilesCount
+        self.shouldShake = shouldShake
         self.dismissController = dismissController
         _panelScale = State(initialValue: playsEntryAnimation ? 0.85 : 1.0)
         _panelOpacity = State(initialValue: playsEntryAnimation ? 0 : 1.0)
+        _shakeTrigger = State(initialValue: shouldShake ? UUID() : nil)
     }
 
     private var effectiveEffect: String {
@@ -1138,12 +1175,21 @@ struct FloatNotificationView: View {
                 triggerEntry()
             }
             showIdleAnimations = true
+            if shouldShake {
+                shakeTrigger = UUID()
+            }
+        }
+        .onChange(of: shouldShake) { newValue in
+            if newValue {
+                shakeTrigger = UUID()
+            }
         }
         .onChange(of: dismissController.shouldDismiss) { shouldDismiss in
             if shouldDismiss {
                 triggerExit()
             }
         }
+        .modifier(CompletionShakeModifier(shakeTrigger: shakeTrigger))
     }
 
     private var panelBackground: some View {

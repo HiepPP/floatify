@@ -547,25 +547,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                     lastActivity: now,
                     modifiedFilesCount: existingSession?.modifiedFilesCount ?? 0
                 )
-                claudeRunningStateByID[sessionID] = state
-                refreshPersistentStatuses()
-
-                // When complete is received: show idle (yellow) for 15s, then transition to complete (green)
+                // When complete is received: show idle (yellow) for timeout, then auto-transition to complete (green).
+                // Collapse into a single state write so downstream shake detection sees a direct running->idle transition.
                 idleTransitionTimers[sessionID]?.invalidate()
                 idleTransitionTimers.removeValue(forKey: sessionID)
-                switch state {
-                case .complete:
-                    // Show idle first, then auto-transition to complete after timeout
-                    claudeRunningStateByID[sessionID] = .idle
-                    refreshPersistentStatuses()
+
+                let displayState: ClaudeStatusState = (state == .complete) ? .idle : state
+                claudeRunningStateByID[sessionID] = displayState
+                refreshPersistentStatuses()
+
+                if state == .complete {
                     idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
                         guard let self else { return }
                         self.claudeRunningStateByID[sessionID] = .complete
                         self.idleTransitionTimers.removeValue(forKey: sessionID)
                         self.refreshPersistentStatuses()
                     }
-                default:
-                    break
                 }
             }
         }
