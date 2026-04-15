@@ -142,7 +142,7 @@ floatify [options]
 
 ## Claude Code Integration
 
-Add to your `~/.claude/settings.json` to get notifications when Claude Code finishes tasks:
+Add to your `~/.claude/settings.json` to drive per-session floater status as Claude Code runs:
 
 ```json
 {
@@ -152,18 +152,27 @@ Add to your `~/.claude/settings.json` to get notifications when Claude Code fini
         "hooks": [
           {
             "type": "command",
-            "command": "floatify --message 'Floatify is waiting' --position bottomRight --duration 10"
+            "command": "sh -c 'floatify --status complete >/dev/null 2>&1'"
           }
         ]
       }
     ],
-    "PostToolUse": [
+    "SessionEnd": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "floatify --message 'Bash done' --position bottomLeft --duration 5"
+            "command": "sh -c 'floatify --status complete >/dev/null 2>&1'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'floatify --status running >/dev/null 2>&1'"
           }
         ]
       }
@@ -171,6 +180,12 @@ Add to your `~/.claude/settings.json` to get notifications when Claude Code fini
   }
 }
 ```
+
+| Hook | Command | Effect |
+|------|---------|--------|
+| `Stop` | `floatify --status complete` | Session floater turns yellow (idle), then green (complete) after idle timeout |
+| `SessionEnd` | `floatify --status complete` | Same as `Stop`, fires when the Claude Code session ends |
+| `UserPromptSubmit` | `floatify --status running` | Session floater turns red (running) when a prompt is submitted |
 
 ---
 
