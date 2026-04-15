@@ -696,7 +696,6 @@ private struct WindowDragRegion: NSViewRepresentable {
 
 private struct FloaterPanelHeaderView: View {
     let itemCount: Int
-    let runningCount: Int
     let isCollapsed: Bool
     let onToggleCollapsed: () -> Void
 
@@ -734,20 +733,6 @@ private struct FloaterPanelHeaderView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(.white.opacity(0.08)))
-
-                    if runningCount > 0 {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(.red)
-                                .frame(width: 6, height: 6)
-                            Text("\(runningCount)")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.red.opacity(0.9))
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(.red.opacity(0.10)))
-                    }
 
                     Spacer(minLength: 0)
                 }
@@ -810,19 +795,10 @@ struct FloaterPanelView: View {
         initialVelocity: 0.0
     )
 
-    private var runningCount: Int {
-        items.reduce(into: 0) { result, item in
-            if item.item.state == .running {
-                result += 1
-            }
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             FloaterPanelHeaderView(
                 itemCount: items.count,
-                runningCount: runningCount,
                 isCollapsed: isCollapsed,
                 onToggleCollapsed: {
                     withAnimation(collapseAnimation) {
