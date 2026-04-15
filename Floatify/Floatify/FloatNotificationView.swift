@@ -10,25 +10,25 @@ enum FloaterSize {
 
     var rowHeight: CGFloat {
         switch self {
-        case .compact: return 44
-        case .regular: return 56
-        case .large: return 64
+        case .compact: return 38
+        case .regular: return 46
+        case .large: return 60
         }
     }
 
     var spriteSize: CGFloat {
         switch self {
-        case .compact: return 28
-        case .regular: return 36
-        case .large: return 42
+        case .compact: return 26
+        case .regular: return 32
+        case .large: return 40
         }
     }
 
     var stageSize: CGFloat {
         switch self {
-        case .compact: return 34
-        case .regular: return 44
-        case .large: return 52
+        case .compact: return 30
+        case .regular: return 38
+        case .large: return 48
         }
     }
 
@@ -42,33 +42,40 @@ enum FloaterSize {
 
     var cornerRadius: CGFloat {
         switch self {
-        case .compact: return 11
-        case .regular: return 13
-        case .large: return 15
+        case .compact: return 10
+        case .regular: return 12
+        case .large: return 14
         }
     }
 
     var horizontalPadding: CGFloat {
         switch self {
-        case .compact: return 9
-        case .regular: return 11
-        case .large: return 13
+        case .compact: return 8
+        case .regular: return 10
+        case .large: return 12
         }
     }
 
     var projectFontSize: CGFloat {
         switch self {
         case .compact: return 12
-        case .regular: return 13.5
-        case .large: return 15
+        case .regular: return 13
+        case .large: return 14.5
         }
     }
 
     var metaFontSize: CGFloat {
         switch self {
-        case .compact: return 10
-        case .regular: return 11
-        case .large: return 12
+        case .compact: return 9.5
+        case .regular: return 10.5
+        case .large: return 11.5
+        }
+    }
+
+    var isSingleLine: Bool {
+        switch self {
+        case .compact, .regular: return true
+        case .large: return false
         }
     }
 
@@ -323,63 +330,32 @@ private struct SpriteStageView: View {
 
     @State private var glowPulse: CGFloat = 1.0
     @State private var celebrateScale: CGFloat = 1.0
-    @State private var eagerLean: Double = 0
 
     var body: some View {
         ZStack {
-            // Single soft glow behind sprite, status-tinted
+            // Single soft status-tinted halo. No glass disc.
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            statusColor.opacity(isRunning ? 0.45 : 0.28),
-                            statusColor.opacity(isRunning ? 0.20 : 0.12),
+                            statusColor.opacity(isRunning ? 0.38 : 0.20),
+                            statusColor.opacity(isRunning ? 0.14 : 0.06),
                             .clear
                         ],
                         center: .center,
                         startRadius: 0,
-                        endRadius: stageSize / 2 + 4
+                        endRadius: stageSize / 2 + 2
                     )
                 )
-                .frame(width: stageSize * 1.4 * glowPulse, height: stageSize * 1.4 * glowPulse)
-                .blur(radius: 6)
+                .frame(width: stageSize * 1.35 * glowPulse, height: stageSize * 1.35 * glowPulse)
+                .blur(radius: 5)
 
-            // Glass disc to sit the sprite on
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            .white.opacity(0.18),
-                            .white.opacity(0.06),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: stageSize / 2
-                    )
-                )
-                .frame(width: stageSize, height: stageSize)
-                .overlay(
-                    Circle()
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.30),
-                                    .white.opacity(0.08)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 1
-                        )
-                )
-
-            // Sprite (or fallback duck) with lean/celebrate
+            // Sprite - motion gated on state
             Group {
                 if let sheetName {
                     SpriteAnimationView(
                         sheetName: sheetName,
-                        isAnimating: isAnimating,
+                        isAnimating: isRunning && isAnimating,
                         size: spriteSize
                     )
                 } else {
@@ -387,25 +363,18 @@ private struct SpriteStageView: View {
                         .font(.system(size: spriteSize - 4))
                 }
             }
-            .bobbing(isEnabled: isAnimating)
-            .floatDrift(isEnabled: isAnimating)
-            .modifier(WiggleModifier(isEnabled: isAnimating && !isRunning))
-            .rotationEffect(.degrees(eagerLean))
+            .bobbing(isEnabled: isRunning && isAnimating)
             .scaleEffect(celebrateScale)
 
-            // Sparkle burst when complete
             if isComplete {
                 SparkleBurst(trigger: completeTrigger)
             }
         }
-        .frame(width: stageSize + 8, height: stageSize + 8)
+        .frame(width: stageSize + 6, height: stageSize + 6)
         .onAppear {
             if isRunning && isAnimating {
                 withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                    glowPulse = 1.12
-                }
-                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
-                    eagerLean = 6
+                    glowPulse = 1.10
                 }
             }
             if isComplete {
@@ -420,7 +389,7 @@ private struct SpriteStageView: View {
 
     private func celebrate() {
         withAnimation(.spring(response: 0.25, dampingFraction: 0.45)) {
-            celebrateScale = 1.25
+            celebrateScale = 1.22
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) {
@@ -443,25 +412,12 @@ private struct StatusPill: View {
 
     @State private var pulseScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.55
-    @State private var emojiWiggle: Double = 0
-    private let wiggleTimer = Timer.publish(every: 1.8, on: .main, in: .common).autoconnect()
 
     var body: some View {
         HStack(spacing: 4) {
             if let emoji {
                 Text(emoji)
                     .font(.system(size: fontSize + 1))
-                    .rotationEffect(.degrees(emojiWiggle))
-                    .onReceive(wiggleTimer) { _ in
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
-                            emojiWiggle = Double.random(in: -15...15)
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                emojiWiggle = 0
-                            }
-                        }
-                    }
             } else {
                 ZStack {
                     if isPulsing {
@@ -492,7 +448,7 @@ private struct StatusPill: View {
         }
         .padding(.leading, 6)
         .padding(.trailing, 8)
-        .padding(.vertical, 3)
+        .padding(.vertical, 2.5)
         .fixedSize()
         .background(
             Capsule().fill(color.opacity(0.14))
@@ -879,8 +835,8 @@ struct FloatNotificationView: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: .black.opacity(isHovering ? 0.28 : 0.20), radius: isHovering ? 20 : 14, x: 0, y: isHovering ? 12 : 6)
-        .shadow(color: accentColor.opacity(isRunning ? 0.28 : 0.10), radius: 18, x: 0, y: 6)
+        .shadow(color: .black.opacity(isHovering ? 0.26 : 0.18), radius: isHovering ? 18 : 12, x: 0, y: isHovering ? 10 : 5)
+        .shadow(color: accentColor.opacity(isRunning ? 0.22 : 0), radius: 14, x: 0, y: 4)
         .animation(.easeInOut(duration: 0.18), value: isHovering)
         .animation(.easeInOut(duration: 0.22), value: accentColor)
         .scaleEffect(panelScale)
@@ -909,13 +865,13 @@ struct FloatNotificationView: View {
                 .fill(.ultraThinMaterial)
 
             if isPersistent {
-                // Status-tinted radial wash from the avatar side
+                // Status-tinted radial wash from the avatar side (quieter)
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(
                         RadialGradient(
                             colors: [
-                                accentColor.opacity(isRunning ? 0.16 : 0.08),
-                                accentColor.opacity(isRunning ? 0.06 : 0.03),
+                                accentColor.opacity(isRunning ? 0.10 : 0.04),
+                                accentColor.opacity(isRunning ? 0.04 : 0.02),
                                 .clear
                             ],
                             center: .leading,
@@ -956,42 +912,11 @@ struct FloatNotificationView: View {
             .onHover { isAvatarHovering = $0 }
             .help("Open project in editor")
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(displayName)
-                    .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
-                    .tracking(-0.2)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                HStack(spacing: 6) {
-                    if let timeAgoText {
-                        Text(timeAgoText)
-                            .font(.system(size: floaterSize.metaFontSize, weight: .medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if timeAgoText != nil && modifiedFilesCount > 0 {
-                        Circle()
-                            .fill(.secondary.opacity(0.5))
-                            .frame(width: 2, height: 2)
-                    }
-
-                    if modifiedFilesCount > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: floaterSize.metaFontSize - 1, weight: .semibold))
-                            Text("\(modifiedFilesCount)")
-                                .font(.system(size: floaterSize.metaFontSize, weight: .semibold))
-                                .monospacedDigit()
-                        }
-                        .foregroundStyle(.orange)
-                    }
-                }
+            if floaterSize.isSingleLine {
+                singleLineBody
+            } else {
+                twoLineBody
             }
-
-            Spacer(minLength: 4)
 
             if let stateLabel {
                 StatusPill(
@@ -1012,6 +937,72 @@ struct FloatNotificationView: View {
         }
         .padding(.leading, floaterSize.horizontalPadding - 2)
         .padding(.trailing, floaterSize.horizontalPadding)
+    }
+
+    @ViewBuilder
+    private var singleLineBody: some View {
+        HStack(spacing: 6) {
+            Text(displayName)
+                .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
+                .tracking(-0.2)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+
+            metaInline
+                .layoutPriority(0)
+
+            Spacer(minLength: 4)
+        }
+    }
+
+    @ViewBuilder
+    private var twoLineBody: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(displayName)
+                .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
+                .tracking(-0.2)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            metaInline
+        }
+
+        Spacer(minLength: 4)
+    }
+
+    @ViewBuilder
+    private var metaInline: some View {
+        HStack(spacing: 5) {
+            if let timeAgoText {
+                Text(timeAgoText)
+                    .font(.system(size: floaterSize.metaFontSize, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+
+            if timeAgoText != nil && modifiedFilesCount > 0 {
+                Circle()
+                    .fill(.secondary.opacity(0.5))
+                    .frame(width: 2, height: 2)
+            }
+
+            if modifiedFilesCount > 0 {
+                HStack(spacing: 2) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: floaterSize.metaFontSize - 1, weight: .semibold))
+                    Text("\(modifiedFilesCount)")
+                        .font(.system(size: floaterSize.metaFontSize, weight: .semibold))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(.orange)
+                .fixedSize()
+            }
+        }
     }
 
     @ViewBuilder
