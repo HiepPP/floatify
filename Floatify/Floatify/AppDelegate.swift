@@ -499,31 +499,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                 claudeRunningStateByID[sessionID] = state
                 refreshPersistentStatuses()
 
-                // Auto-transition: running -> idle after 15s -> complete after 15s
+                // When complete is received: show idle (yellow) for 15s, then transition to complete (green)
                 idleTransitionTimers[sessionID]?.invalidate()
                 idleTransitionTimers.removeValue(forKey: sessionID)
                 switch state {
-                case .running:
-                    idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
-                        guard let self else { return }
-                        self.claudeRunningStateByID[sessionID] = .idle
-                        self.idleTransitionTimers.removeValue(forKey: sessionID)
-                        self.refreshPersistentStatuses()
-                        self.idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: self.idleTimeoutSeconds, repeats: false) { [weak self] _ in
-                            guard let self else { return }
-                            self.claudeRunningStateByID[sessionID] = .complete
-                            self.idleTransitionTimers.removeValue(forKey: sessionID)
-                            self.refreshPersistentStatuses()
-                        }
-                    }
-                case .idle:
+                case .complete:
+                    // Show idle first, then auto-transition to complete after timeout
+                    claudeRunningStateByID[sessionID] = .idle
+                    refreshPersistentStatuses()
                     idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
                         guard let self else { return }
                         self.claudeRunningStateByID[sessionID] = .complete
                         self.idleTransitionTimers.removeValue(forKey: sessionID)
                         self.refreshPersistentStatuses()
                     }
-                case .complete:
+                default:
                     break
                 }
             }

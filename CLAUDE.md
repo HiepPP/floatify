@@ -89,9 +89,10 @@ Floatify/
 
 `status` accepts `running`, `complete`, `done`, or `idle`.
 
-Status flow with auto-transition:
-- `running` (red) -> `idle` (yellow) after 15s -> `complete` (green)
-- Send `idle` explicitly or let `running` sessions auto-transition via the 15s timer
+Status flow:
+- `running` (red) stays until manually changed
+- When `complete` is sent: shows `idle` (yellow) for idle timeout duration, then auto-transitions to `complete` (green)
+- `idle` can be sent manually to force yellow state without timer
 
 ## Configuration for Claude Code
 
