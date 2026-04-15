@@ -63,7 +63,7 @@ enum FloaterSize {
 
     var stageSize: CGFloat {
         switch self {
-        case .compact: return 42
+        case .compact: return 48
         case .regular: return 56
         case .large: return 64
         }

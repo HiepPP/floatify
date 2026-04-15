@@ -30,7 +30,6 @@
 		F2C2CF84F2AF4D6427BC1600 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63DAD4239E10639F6510535 /* AppDelegate.swift */; };
 		F53714895F8A794904AFE214 /* IdleAnimations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */; };
 		F6CCF2164687869393B36160 /* exit_fade.json in Resources */ = {isa = PBXBuildFile; fileRef = 14CB93C3AFE94711410CCED7 /* exit_fade.json */; };
-		F773C3638581358F178D8273 /* Abra Alakazam Sprite.png in Resources */ = {isa = PBXBuildFile; fileRef = BF7D4849C08DB50A88F42EF9 /* Abra Alakazam Sprite.png */; };
 		F99C39E270331F4B91B0D17F /* CursorTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628FC4BFF079783826FBD6EA /* CursorTracker.swift */; };
 /* End PBXBuildFile section */
 
@@ -56,7 +55,6 @@
 		B0FB1358410034C55CF7BF79 /* floatify */ = {isa = PBXFileReference; includeInIndex = 0; path = floatify; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA1AC1930C4647F6B45D54D6 /* image.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image.png; sourceTree = "<group>"; };
 		BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimator.swift; sourceTree = "<group>"; };
-		BF7D4849C08DB50A88F42EF9 /* Abra Alakazam Sprite.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Abra Alakazam Sprite.png"; sourceTree = "<group>"; };
 		C2C9FF9FF7D99C1C4BEB05A0 /* FloatNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatNotificationManager.swift; sourceTree = "<group>"; };
 		C99E350187EB98B959FBA420 /* exit_slide.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = exit_slide.json; sourceTree = "<group>"; };
 		D5384F019B036F95A28E65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -109,7 +107,6 @@
 		892200DCD9372AEC30D2F395 /* animate-source */ = {
 			isa = PBXGroup;
 			children = (
-				BF7D4849C08DB50A88F42EF9 /* Abra Alakazam Sprite.png */,
 				BA1AC1930C4647F6B45D54D6 /* image.png */,
 			);
 			name = "animate-source";
@@ -246,7 +243,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F773C3638581358F178D8273 /* Abra Alakazam Sprite.png in Resources */,
 				B30711D21D567F22226BE83C /* Assets.xcassets in Resources */,
 				38B748E447FF06EC65D3FC02 /* dropdown_entry.json in Resources */,
 				F6CCF2164687869393B36160 /* exit_fade.json in Resources */,
