@@ -245,7 +245,7 @@ class FloatNotificationManager {
         }
 
         let floaterItems = items.map { item in
-            let style = statusStyle(for: item.id)
+            let style = statusStyle(for: item)
             return FloaterPanelItem(
                 item: item,
                 dismissController: floaterDismissController(for: item.id),
@@ -358,16 +358,22 @@ class FloatNotificationManager {
 
     private var sheetAssignments: [String: String] = [:]
 
-    private func statusStyle(for id: String) -> PersistentStatusStyle {
-        let seed = stableSeed(for: id)
+    private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
+        let seed = stableSeed(for: item.id)
         let effect = statusEffects[seed % statusEffects.count]
+        let avatarKey = item.project.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if let assignedSheet = sheetAssignments[id] {
+        if let assignedSheet = sheetAssignments[avatarKey] {
             return PersistentStatusStyle(effect: effect, sheetName: assignedSheet)
         }
 
-        let sheetName = availableSpriteSheets.randomElement()
-        sheetAssignments[id] = sheetName
+        guard !availableSpriteSheets.isEmpty else {
+            return PersistentStatusStyle(effect: effect, sheetName: nil)
+        }
+
+        let index = stableSeed(for: avatarKey) % availableSpriteSheets.count
+        let sheetName = availableSpriteSheets[index]
+        sheetAssignments[avatarKey] = sheetName
         return PersistentStatusStyle(effect: effect, sheetName: sheetName)
     }
 

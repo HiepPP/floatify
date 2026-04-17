@@ -26,8 +26,8 @@ enum FloaterSize: Equatable {
 
     var rowHeight: CGFloat {
         switch self {
-        case .compact: return 32
-        case .regular: return 38
+        case .compact: return 38
+        case .regular: return 44
         case .large: return 56
         }
     }
@@ -90,16 +90,15 @@ enum FloaterSize: Equatable {
 
     var isSingleLine: Bool {
         switch self {
-        case .compact, .regular: return true
-        case .large: return false
+        case .compact, .regular, .large: return false
         }
     }
 
     var panelWidth: CGFloat {
         switch self {
-        case .compact: return 176
-        case .regular: return 222
-        case .large: return 340
+        case .compact: return 210
+        case .regular: return 262
+        case .large: return 352
         }
     }
 
@@ -133,7 +132,7 @@ enum FloaterSize: Equatable {
     }
 
     var hoverTrailingInset: CGFloat {
-        trailingInset + closeButtonSize + 6
+        trailingInset + closeButtonSize + 8
     }
 
     var avatarHitSize: CGFloat {
@@ -145,6 +144,22 @@ enum FloaterSize: Equatable {
         case .compact: return 9
         case .regular: return 11
         case .large: return 14
+        }
+    }
+
+    var statusPillMinWidth: CGFloat {
+        switch self {
+        case .compact: return 42
+        case .regular: return 58
+        case .large: return 66
+        }
+    }
+
+    var bodySpacing: CGFloat {
+        switch self {
+        case .compact: return 1
+        case .regular: return 2
+        case .large: return 3
         }
     }
 }
@@ -504,7 +519,6 @@ private struct StatusPill: View {
         .padding(.leading, 5)
         .padding(.trailing, 7)
         .padding(.vertical, 2)
-        .fixedSize()
         .background(
             Capsule().fill(color.opacity(0.12))
         )
@@ -642,25 +656,18 @@ private struct FloaterPanelHeaderView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 9)
-                .fill(.ultraThinMaterial)
+                .fill(FloaterPalette.panelTint.opacity(0.92))
                 .overlay(
                     RoundedRectangle(cornerRadius: 9)
-                        .fill(FloaterPalette.panelTint.opacity(0.68))
+                        .fill(.thinMaterial.opacity(0.14))
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 9)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [FloaterPalette.strokeStrong.opacity(0.24), FloaterPalette.strokeSoft.opacity(0.32)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1
-                )
+                .strokeBorder(FloaterPalette.highlight.opacity(0.10), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 9))
-        .shadow(color: FloaterPalette.panelShadow.opacity(0.35), radius: 10, x: 0, y: 4)
+        .shadow(color: FloaterPalette.panelShadow.opacity(0.18), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -761,6 +768,8 @@ struct FloatNotificationView: View {
     @State private var panelScale: CGFloat
     @State private var panelOpacity: CGFloat
     @State private var shakeTrigger: UUID?
+    @State private var completionTrigger: UUID?
+    @State private var lastObservedStatusState: ClaudeStatusState?
     @StateObject private var particleSystem = ParticleSystem()
 
     init(
@@ -806,6 +815,8 @@ struct FloatNotificationView: View {
         _panelScale = State(initialValue: playsEntryAnimation ? 0.92 : 1.0)
         _panelOpacity = State(initialValue: playsEntryAnimation ? 0 : 1.0)
         _shakeTrigger = State(initialValue: shouldShake ? UUID() : nil)
+        _completionTrigger = State(initialValue: nil)
+        _lastObservedStatusState = State(initialValue: statusState)
     }
 
     private var effectiveSound: String? {
@@ -830,7 +841,7 @@ struct FloatNotificationView: View {
     }
 
     private var completeTrigger: UUID? {
-        statusState == .complete ? UUID() : nil
+        completionTrigger
     }
 
     private var timeAgoText: String? {
@@ -849,21 +860,10 @@ struct FloatNotificationView: View {
         isDraggablePanel && statusIndicatorColor != nil
     }
 
-    private var showsMetaInline: Bool {
-        guard isPersistent else { return false }
-        if floaterSize == .large { return true }
-        if isHovering { return true }
-        return isRunning || modifiedFilesCount > 0
-    }
-
-    private var showsStatusPill: Bool {
-        guard isPersistent, stateLabel != nil else { return false }
-        if floaterSize == .large { return true }
-        return isHovering
-    }
-
     private var trailingContentInset: CGFloat {
-        isHovering ? floaterSize.hoverTrailingInset : floaterSize.trailingInset
+        guard isPersistent else { return floaterSize.trailingInset }
+        guard onClose != nil else { return floaterSize.trailingInset }
+        return floaterSize.hoverTrailingInset
     }
 
     var body: some View {
@@ -885,17 +885,7 @@ struct FloatNotificationView: View {
         .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            FloaterPalette.strokeStrong.opacity(isHovering ? 0.28 : 0.16),
-                            FloaterPalette.strokeSoft.opacity(isHovering ? 0.38 : 0.24)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1
-                )
+                .strokeBorder(FloaterPalette.highlight.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
         )
         .overlay(alignment: .trailing) {
             if isPersistent {
@@ -907,13 +897,13 @@ struct FloatNotificationView: View {
                 closeButton
                     .padding(.top, 5)
                     .padding(.trailing, 5)
-                    .opacity(isHovering ? 1 : 0)
-                    .scaleEffect(isHovering ? 1 : 0.92)
+                    .opacity(isHovering ? 1 : 0.72)
+                    .scaleEffect(isHovering ? 1 : 0.96)
                     .animation(.easeInOut(duration: 0.15), value: isHovering)
             }
         }
-        .shadow(color: FloaterPalette.panelShadow.opacity(isHovering ? 0.42 : 0.28), radius: isHovering ? floaterSize.cardShadowRadius + 4 : floaterSize.cardShadowRadius, x: 0, y: isHovering ? 8 : 4)
-        .shadow(color: accentColor.opacity(isRunning ? 0.14 : 0.05), radius: isHovering ? 12 : 9, x: 0, y: 3)
+        .shadow(color: FloaterPalette.panelShadow.opacity(isHovering ? 0.22 : 0.16), radius: isHovering ? floaterSize.cardShadowRadius : max(floaterSize.cardShadowRadius - 2, 6), x: 0, y: isHovering ? 5 : 3)
+        .shadow(color: accentColor.opacity(isRunning ? 0.08 : 0.03), radius: isHovering ? 10 : 7, x: 0, y: 2)
         .animation(.easeInOut(duration: 0.18), value: isHovering)
         .animation(.easeInOut(duration: 0.22), value: accentColor)
         .scaleEffect(panelScale)
@@ -923,9 +913,13 @@ struct FloatNotificationView: View {
             if playsEntryAnimation {
                 triggerEntry()
             }
+            syncCompletionAnimation(for: statusState, animateInitialComplete: statusState == .complete)
             if shouldShake {
                 shakeTrigger = UUID()
             }
+        }
+        .onChange(of: statusState) { newValue in
+            syncCompletionAnimation(for: newValue)
         }
         .onChange(of: shouldShake) { newValue in
             if newValue { shakeTrigger = UUID() }
@@ -939,24 +933,22 @@ struct FloatNotificationView: View {
     private var panelBackground: some View {
         ZStack {
             RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .fill(.ultraThinMaterial)
+                .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
                 .overlay(
                     RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.72 : 0.62))
+                        .fill(.thinMaterial.opacity(0.16))
                 )
 
             if isPersistent {
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(
-                        RadialGradient(
+                        LinearGradient(
                             colors: [
-                                accentColor.opacity(isRunning ? 0.08 : 0.035),
-                                accentColor.opacity(isRunning ? 0.025 : 0.01),
+                                accentColor.opacity(isRunning ? 0.14 : 0.08),
                                 .clear
                             ],
-                            center: .leading,
-                            startRadius: 0,
-                            endRadius: floaterSize.panelWidth * 0.48
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
                     )
             }
@@ -965,20 +957,7 @@ struct FloatNotificationView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            accentColor.opacity(isRunning ? 0.045 : 0.025),
-                            .clear
-                        ],
-                        startPoint: .trailing,
-                        endPoint: .leading
-                    )
-                )
-
-            // Top-edge sheen
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            FloaterPalette.highlight.opacity(0.10),
+                            FloaterPalette.highlight.opacity(0.08),
                             .clear
                         ],
                         startPoint: .top,
@@ -1005,33 +984,16 @@ struct FloatNotificationView: View {
             .onHover { isAvatarHovering = $0 }
             .help("Open project in editor")
 
-            if floaterSize.isSingleLine {
-                singleLineBody
-            } else {
-                twoLineBody
-            }
-
-            Spacer(minLength: 0)
-
-            if showsStatusPill, let stateLabel {
-                StatusPill(
-                    color: accentColor,
-                    label: stateLabel,
-                    dotSize: floaterSize.dotSize,
-                    fontSize: floaterSize.metaFontSize,
-                    isPulsing: isRunning && animatesStatus,
-                    showsTypingDots: isRunning && animatesStatus
-                )
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
+            persistentBody
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.leading, floaterSize.horizontalPadding - 2)
         .padding(.trailing, trailingContentInset)
     }
 
     @ViewBuilder
-    private var singleLineBody: some View {
-        HStack(spacing: 6) {
+    private var persistentBody: some View {
+        VStack(alignment: .leading, spacing: floaterSize.bodySpacing) {
             Text(projectName)
                 .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
                 .tracking(-0.2)
@@ -1041,35 +1003,26 @@ struct FloatNotificationView: View {
                 .layoutPriority(1)
                 .help(projectName)
 
-            if showsMetaInline {
-                metaInline
-                    .transition(.opacity)
-                    .layoutPriority(0)
-            }
+            persistentMetaLine
         }
     }
 
     @ViewBuilder
-    private var twoLineBody: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(projectName)
-                .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
-                .tracking(-0.2)
-                .foregroundStyle(FloaterPalette.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .help(projectName)
-
-            if showsMetaInline {
-                metaInline
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var metaInline: some View {
+    private var persistentMetaLine: some View {
         HStack(spacing: 5) {
-            if let timeAgoText {
+            if let stateLabel {
+                StatusPill(
+                    color: accentColor,
+                    label: stateLabel,
+                    dotSize: floaterSize.dotSize,
+                    fontSize: floaterSize.metaFontSize,
+                    isPulsing: isRunning && animatesStatus,
+                    showsTypingDots: isRunning && animatesStatus
+                )
+                .fixedSize(horizontal: true, vertical: false)
+            }
+
+            if floaterSize != .compact, let timeAgoText {
                 Text(timeAgoText)
                     .font(.system(size: floaterSize.metaFontSize, weight: .medium))
                     .monospacedDigit()
@@ -1078,7 +1031,7 @@ struct FloatNotificationView: View {
                     .fixedSize()
             }
 
-            if timeAgoText != nil && modifiedFilesCount > 0 {
+            if floaterSize != .compact, timeAgoText != nil, modifiedFilesCount > 0 {
                 Circle()
                     .fill(FloaterPalette.secondaryText.opacity(0.45))
                     .frame(width: 2, height: 2)
@@ -1095,6 +1048,8 @@ struct FloatNotificationView: View {
                 .foregroundStyle(FloaterPalette.warning)
                 .fixedSize()
             }
+
+            Spacer(minLength: 0)
         }
     }
 
@@ -1207,5 +1162,12 @@ struct FloatNotificationView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
             dismissController.onDismissComplete?()
         }
+    }
+
+    private func syncCompletionAnimation(for newState: ClaudeStatusState?, animateInitialComplete: Bool = false) {
+        let shouldAnimate = newState == .complete && (animateInitialComplete || lastObservedStatusState != .complete)
+        lastObservedStatusState = newState
+        guard shouldAnimate else { return }
+        completionTrigger = UUID()
     }
 }
