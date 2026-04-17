@@ -136,7 +136,15 @@ enum FloaterSize: Equatable {
     }
 
     var avatarHitSize: CGFloat {
-        max(stageSize + 6, rowHeight - 4)
+        rowHeight
+    }
+
+    var persistentStageSize: CGFloat {
+        rowHeight
+    }
+
+    var persistentSpriteSize: CGFloat {
+        max(spriteSize, rowHeight - 8)
     }
 
     var cardShadowRadius: CGFloat {
@@ -409,7 +417,6 @@ private struct SpriteStageView: View {
     @State private var celebrateRotation: Double = 0
     @State private var celebrateRingScale: CGFloat = 0.76
     @State private var celebrateRingOpacity: Double = 0
-    @State private var badgeScale: CGFloat = 0.84
 
     var body: some View {
         ZStack {
@@ -459,12 +466,8 @@ private struct SpriteStageView: View {
                 SparkleBurst(trigger: completeTrigger)
             }
 
-            if isComplete {
-                completeBadge
-                    .offset(x: stageSize * 0.24, y: -stageSize * 0.22)
-            }
         }
-        .frame(width: stageSize + 6, height: stageSize + 6)
+        .frame(width: stageSize, height: stageSize)
         .onAppear {
             if isRunning && isAnimating {
                 withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
@@ -481,23 +484,13 @@ private struct SpriteStageView: View {
         }
     }
 
-    private var completeBadge: some View {
-        Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: max(stageSize * 0.30, 10), weight: .bold))
-            .foregroundStyle(.white, statusColor)
-            .shadow(color: statusColor.opacity(0.45), radius: 4, x: 0, y: 1)
-            .scaleEffect(badgeScale)
-    }
-
     private func celebrate() {
         celebrateRingScale = 0.76
         celebrateRingOpacity = 0.84
-        badgeScale = 0.78
 
         withAnimation(.spring(response: 0.25, dampingFraction: 0.45)) {
             celebrateScale = 1.20
             celebrateRotation = -8
-            badgeScale = 1.16
         }
         withAnimation(.easeOut(duration: 0.45)) {
             celebrateRingScale = 1.42
@@ -511,7 +504,6 @@ private struct SpriteStageView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.58)) {
                 celebrateScale = 1.0
-                badgeScale = 1.0
             }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
@@ -1058,26 +1050,29 @@ struct FloatNotificationView: View {
 
     @ViewBuilder
     private var persistentContent: some View {
-        HStack(spacing: floaterSize.contentSpacing) {
+        HStack(spacing: 0) {
             Button(action: {
                 NSLog("Floatify: Avatar tapped, invoking onTap")
                 onTap?()
             }) {
-                avatarStage
+                ZStack {
+                    persistentAvatarBackground
+                    avatarStage
+                        .scaleEffect(isAvatarHovering ? 1.06 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAvatarHovering)
+                }
             }
             .buttonStyle(.plain)
-            .contentShape(Circle())
+            .contentShape(Rectangle())
             .frame(width: floaterSize.avatarHitSize, height: floaterSize.avatarHitSize)
-            .scaleEffect(isAvatarHovering ? 1.08 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAvatarHovering)
             .onHover { isAvatarHovering = $0 }
             .help("Open project in editor")
 
             persistentBody
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, floaterSize.contentSpacing)
+                .padding(.trailing, trailingContentInset)
         }
-        .padding(.leading, floaterSize.horizontalPadding - 2)
-        .padding(.trailing, trailingContentInset)
     }
 
     @ViewBuilder
@@ -1147,13 +1142,44 @@ struct FloatNotificationView: View {
         SpriteStageView(
             sheetName: sheetName,
             statusColor: accentColor,
-            stageSize: floaterSize.stageSize,
-            spriteSize: floaterSize.spriteSize,
+            stageSize: floaterSize.persistentStageSize,
+            spriteSize: floaterSize.persistentSpriteSize,
             isAnimating: animatesStatus,
             isRunning: isRunning,
             isComplete: statusState == .complete,
             completeTrigger: completeTrigger
         )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var persistentAvatarBackground: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        accentColor.opacity(isRunning ? 0.24 : 0.16),
+                        accentColor.opacity(isRunning ? 0.10 : 0.06)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        FloaterPalette.highlight.opacity(0.10),
+                        .clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(FloaterPalette.highlight.opacity(0.08))
+                    .frame(width: 1)
+                    .padding(.vertical, 4)
+            }
     }
 
     private var statusRail: some View {
