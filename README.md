@@ -217,6 +217,16 @@ Codex example:
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
+          }
+        ]
+      }
     ]
   }
 }
