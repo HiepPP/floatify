@@ -169,7 +169,7 @@ import Layout from '../layouts/Layout.astro';
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
         </svg>
         <h3 class="text-lg font-semibold text-terminal-text mb-2">Claude and Codex</h3>
-        <p class="text-sm text-terminal-text-secondary">Claude uses hook-driven status. Codex uses live process activity, so both tools show up together.</p>
+        <p class="text-sm text-terminal-text-secondary">Live session discovery creates one floater per process. Hooks drive running and complete state updates for both tools.</p>
       </div>
       <!-- Feature 7: Configurable -->
       <div class="bg-terminal-card border border-terminal-border rounded-lg p-6 hover:-translate-y-1 hover:border-terminal-border-hover transition-all duration-200">
@@ -243,7 +243,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="flex-1 flex flex-col items-center text-center relative">
         <div class="w-12 h-12 rounded-full bg-terminal-surface text-terminal-text flex items-center justify-center text-xl font-bold mb-4 z-10">1</div>
         <h3 class="text-lg font-semibold text-terminal-text mb-2">Hook Trigger</h3>
-        <p class="text-sm text-terminal-text-secondary">Claude hooks or session monitors detect live Claude Code and Codex sessions.</p>
+        <p class="text-sm text-terminal-text-secondary">Live Claude Code and Codex processes create one floater per session. Hooks send running and complete status updates.</p>
         <!-- Arrow 1 (hidden on mobile, shown between steps on desktop) -->
         <div class="hidden md:block absolute top-6 right-0 translate-x-1/2 w-8 h-0.5 bg-terminal-border"></div>
       </div>
@@ -315,10 +315,12 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <!-- Claude Code Integration -->
-  <section id="claude-code-integration" aria-labelledby="claude-integration-heading" class="py-20 px-6 max-w-4xl mx-auto">
-    <h2 id="claude-integration-heading" class="text-xs text-terminal-text-tertiary tracking-wider uppercase mb-8">Claude Code Integration</h2>
-    <p class="text-terminal-text-secondary mb-6">Claude should send completion state only. Floatify discovers live Claude sessions itself, and Codex sessions are detected automatically.</p>
+  <!-- Hook Setup -->
+  <section id="hook-setup" aria-labelledby="hook-setup-heading" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 id="hook-setup-heading" class="text-xs text-terminal-text-tertiary tracking-wider uppercase mb-8">Hook Setup</h2>
+    <p class="text-terminal-text-secondary mb-6">Floatify creates one floater per live Claude Code or Codex process. Hooks only update running and complete state through the CLI.</p>
+
+    <div class="space-y-6">
     <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-terminal-card">
       <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border" style="background: #2e3440;">
         <span class="text-xs text-terminal-text-muted font-mono">settings.json</span>
@@ -326,22 +328,70 @@ import Layout from '../layouts/Layout.astro';
       </div>
         <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
   "hooks": {
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "sh -c '/usr/local/bin/floatify --status running >/dev/null 2>&1'"
+      }]
+    }],
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --status complete"
+        "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
       }]
     }],
     "SessionEnd": [{
       "hooks": [{
         "type": "command",
-        "command": "floatify --status complete"
+        "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
       }]
     }]
   }
 }`}</code></pre>
     </div>
-    <p class="text-sm text-terminal-text-tertiary mt-4">Do not use <code class="px-2 py-1 bg-terminal-card rounded text-sm">UserPromptSubmit</code> for <code class="px-2 py-1 bg-terminal-card rounded text-sm">floatify --status running</code>.</p>
+    <p class="text-sm text-terminal-text-tertiary">Claude Code reads hooks from <code class="px-2 py-1 bg-terminal-card rounded text-sm">~/.claude/settings.json</code>.</p>
+
+    <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-terminal-card">
+      <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border" style="background: #2e3440;">
+        <span class="text-xs text-terminal-text-muted font-mono">config.toml</span>
+        <button onclick="copyCode(this)" class="text-xs text-terminal-text-secondary hover:text-terminal-text px-2 py-1 rounded bg-terminal-surface hover:bg-terminal-border-hover transition-colors">Copy</button>
+      </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`[features]
+codex_hooks = true`}</code></pre>
+    </div>
+
+    <div class="relative rounded-lg overflow-hidden border border-terminal-border bg-terminal-card">
+      <div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border" style="background: #2e3440;">
+        <span class="text-xs text-terminal-text-muted font-mono">hooks.json</span>
+        <button onclick="copyCode(this)" class="text-xs text-terminal-text-secondary hover:text-terminal-text px-2 py-1 rounded bg-terminal-surface hover:bg-terminal-border-hover transition-colors">Copy</button>
+      </div>
+        <pre class="p-4 text-sm font-mono text-terminal-text overflow-x-auto"><code>{`{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '/usr/local/bin/floatify --status running >/dev/null 2>&1'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
+          }
+        ]
+      }
+    ]
+  }
+}`}</code></pre>
+    </div>
+    <p class="text-sm text-terminal-text-tertiary">Codex needs <code class="px-2 py-1 bg-terminal-card rounded text-sm">codex_hooks = true</code> in <code class="px-2 py-1 bg-terminal-card rounded text-sm">~/.codex/config.toml</code>, but the command hooks live in <code class="px-2 py-1 bg-terminal-card rounded text-sm">~/.codex/hooks.json</code>.</p>
+    </div>
   </section>
 
   <!-- FAQ Section -->
@@ -371,7 +421,7 @@ import Layout from '../layouts/Layout.astro';
           "name": "How does session tracking work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Claude floaters are discovered from live claude --ide processes and updated by status hooks. Codex floaters are discovered from live codex processes and activity polling. Each session gets its own project-labeled floater."
+            "text": "Floatify discovers live Claude Code and Codex processes and creates one floater per session. Hook commands sent through the floatify CLI update running and complete state for each session."
           }
         },
         {
@@ -384,10 +434,10 @@ import Layout from '../layouts/Layout.astro';
         },
         {
           "@type": "Question",
-          "name": "How do I integrate with Claude Code?",
+          "name": "How do I integrate with Claude Code and Codex?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Add Stop and SessionEnd hooks to your Claude Code settings.json and send floatify --status complete. Avoid UserPromptSubmit for running state. Floatify handles live session discovery and the CLI handles the status payload."
+            "text": "Claude Code reads hooks from ~/.claude/settings.json. Codex needs codex_hooks = true in ~/.codex/config.toml and command hooks in ~/.codex/hooks.json. Both should call /usr/local/bin/floatify with --status running on prompt submit and --status complete on stop."
           }
         },
         {
@@ -432,7 +482,7 @@ import Layout from '../layouts/Layout.astro';
           </svg>
         </summary>
         <p class="mt-3 text-sm text-terminal-text-secondary">
-          Claude floaters are discovered from live claude --ide processes and updated by status hooks. Codex floaters are discovered from live codex processes and activity polling. Each session gets its own project-labeled floater.
+          Floatify discovers live Claude Code and Codex processes and creates one floater per session. Hook commands sent through the floatify CLI update running and complete state for each session.
         </p>
       </details>
       <details class="group bg-terminal-card border border-terminal-border rounded-lg p-4">
@@ -459,13 +509,13 @@ import Layout from '../layouts/Layout.astro';
       </details>
       <details class="group bg-terminal-card border border-terminal-border rounded-lg p-4">
         <summary class="flex items-center justify-between cursor-pointer list-none text-terminal-text font-medium">
-          <span>How do I integrate with Claude Code?</span>
+          <span>How do I integrate with Claude Code and Codex?</span>
           <svg class="w-5 h-5 text-terminal-text-muted group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </summary>
         <p class="mt-3 text-sm text-terminal-text-secondary">
-          Add Stop and SessionEnd hooks to your Claude Code settings.json and send floatify --status complete. Avoid UserPromptSubmit for running state. Floatify handles live session discovery and the CLI handles the status payload.
+          Claude Code reads hooks from <code class="px-2 py-1 bg-terminal-surface rounded text-xs">~/.claude/settings.json</code>. Codex needs <code class="px-2 py-1 bg-terminal-surface rounded text-xs">codex_hooks = true</code> in <code class="px-2 py-1 bg-terminal-surface rounded text-xs">~/.codex/config.toml</code> and command hooks in <code class="px-2 py-1 bg-terminal-surface rounded text-xs">~/.codex/hooks.json</code>. Both should call <code class="px-2 py-1 bg-terminal-surface rounded text-xs">/usr/local/bin/floatify --status running</code> on prompt submit and <code class="px-2 py-1 bg-terminal-surface rounded text-xs">/usr/local/bin/floatify --status complete</code> on stop.
         </p>
       </details>
     </div>

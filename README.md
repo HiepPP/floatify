@@ -27,7 +27,7 @@
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [CLI Reference](#cli-reference)
-- [Claude Code Integration](#claude-code-integration)
+- [Hook Setup](#hook-setup)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
 - [License](#license)
@@ -42,7 +42,7 @@
 - No Dock icon (LSUIElement background app)
 - Stacking support with up to 3 visible notifications
 - Smooth animated transitions
-- Claude Code hook integration for automation
+- Claude Code and Codex hook integration for automation
 - **File changes badge** - Shows git modified files count on each session floater
 - **Activity timestamp** - Displays relative time since last session activity (Just now / 2m ago / 1h ago)
 
@@ -53,7 +53,7 @@
 | Zero distraction | Notifications appear in screen dead zones, never blocking your work |
 | Focus-friendly | Non-activating NSPanel never steals keyboard focus |
 | Blazing fast | FIFO pipe IPC achieves sub-millisecond latency |
-| Clean integration | Works seamlessly with Claude Code hooks |
+| Clean integration | Works with Claude Code and Codex hooks |
 | Lightweight | No network permissions, minimal resource usage |
 | Context-aware | Git changes count and activity timestamps keep you informed |
 
@@ -140,9 +140,13 @@ floatify [options]
 
 ---
 
-## Claude Code Integration
+## Hook Setup
 
-Add to your `~/.claude/settings.json` to drive per-session floater status as Claude Code runs:
+Floatify creates one floater per live Claude Code or Codex session. Hooks only update `running` and `complete` state through the CLI.
+
+### Claude Code
+
+Add this to `~/.claude/settings.json`:
 
 ```json
 {
@@ -152,7 +156,7 @@ Add to your `~/.claude/settings.json` to drive per-session floater status as Cla
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'floatify --status complete >/dev/null 2>&1'"
+            "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
           }
         ]
       }
@@ -162,7 +166,7 @@ Add to your `~/.claude/settings.json` to drive per-session floater status as Cla
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'floatify --status complete >/dev/null 2>&1'"
+            "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
           }
         ]
       }
@@ -172,7 +176,7 @@ Add to your `~/.claude/settings.json` to drive per-session floater status as Cla
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'floatify --status running >/dev/null 2>&1'"
+            "command": "sh -c '/usr/local/bin/floatify --status running >/dev/null 2>&1'"
           }
         ]
       }
@@ -181,11 +185,53 @@ Add to your `~/.claude/settings.json` to drive per-session floater status as Cla
 }
 ```
 
-| Hook | Command | Effect |
-|------|---------|--------|
-| `Stop` | `floatify --status complete` | Session floater turns yellow (idle), then green (complete) after idle timeout |
-| `SessionEnd` | `floatify --status complete` | Same as `Stop`, fires when the Claude Code session ends |
-| `UserPromptSubmit` | `floatify --status running` | Session floater turns red (running) when a prompt is submitted |
+### Codex
+
+First enable hooks in `~/.codex/config.toml`:
+
+```toml
+[features]
+codex_hooks = true
+```
+
+Then create `~/.codex/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '/usr/local/bin/floatify --status running >/dev/null 2>&1'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '/usr/local/bin/floatify --status complete >/dev/null 2>&1'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codex reads hook commands from `~/.codex/hooks.json`, not from `config.toml`.
+
+| Tool | Event | Command |
+|------|-------|---------|
+| Claude Code | `UserPromptSubmit` | `/usr/local/bin/floatify --status running` |
+| Claude Code | `Stop` | `/usr/local/bin/floatify --status complete` |
+| Claude Code | `SessionEnd` | `/usr/local/bin/floatify --status complete` |
+| Codex | `UserPromptSubmit` | `/usr/local/bin/floatify --status running` |
+| Codex | `Stop` | `/usr/local/bin/floatify --status complete` |
 
 ---
 
@@ -224,7 +270,7 @@ Place your custom config at `~/.floatify/positions.json`. User values take prece
 ## Architecture
 
 ```
-Claude Code hooks -> floatify CLI -> FIFO pipe IPC -> Floatify.app -> NSPanel overlay
+Claude Code and Codex hooks -> floatify CLI -> FIFO pipe IPC -> Floatify.app -> NSPanel overlay
 ```
 
 ### Components

@@ -6,6 +6,7 @@ struct SessionDescriptor: Equatable {
     let project: String
     let projectPath: String?
     let isRunning: Bool
+    let isTaskStateKnown: Bool
     let lastActivity: Date
     let modifiedFilesCount: Int
 }
@@ -118,6 +119,7 @@ final class ClaudeSessionMonitor {
                     project: projectContext.name,
                     projectPath: projectContext.path,
                     isRunning: false,
+                    isTaskStateKnown: false,
                     lastActivity: lastActivity,
                     modifiedFilesCount: modifiedCount
                 )
@@ -172,6 +174,7 @@ final class CodexActivityMonitor {
 
     private struct ActivityState {
         let isRunning: Bool
+        let hasTaskState: Bool
         let lastActivity: Date
     }
 
@@ -271,6 +274,7 @@ final class CodexActivityMonitor {
                 project: projectContext.name,
                 projectPath: projectContext.path,
                 isRunning: activityState.isRunning,
+                isTaskStateKnown: activityState.hasTaskState,
                 lastActivity: activityState.lastActivity,
                 modifiedFilesCount: modifiedCount
             )
@@ -317,11 +321,11 @@ final class CodexActivityMonitor {
 
     private func readActivityState(from sessionLogPath: String?, fallbackDate: Date) -> ActivityState {
         guard let sessionLogPath else {
-            return ActivityState(isRunning: false, lastActivity: fallbackDate)
+            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
 
         guard let fileHandle = FileHandle(forReadingAtPath: sessionLogPath) else {
-            return ActivityState(isRunning: false, lastActivity: fallbackDate)
+            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
         defer {
             fileHandle.closeFile()
@@ -330,13 +334,13 @@ final class CodexActivityMonitor {
         let fileSize = (try? fileHandle.seekToEnd()) ?? 0
         let readSize = min(UInt64(sessionTailByteCount), fileSize)
         if readSize == 0 {
-            return ActivityState(isRunning: false, lastActivity: fallbackDate)
+            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
 
         try? fileHandle.seek(toOffset: fileSize - readSize)
         let data = fileHandle.readDataToEndOfFile()
         guard var contents = String(data: data, encoding: .utf8) else {
-            return ActivityState(isRunning: false, lastActivity: fallbackDate)
+            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
 
         if readSize < fileSize, let firstNewline = contents.firstIndex(of: "\n") {
@@ -362,17 +366,18 @@ final class CodexActivityMonitor {
             }
 
             if eventType == "task_complete" {
-                return ActivityState(isRunning: false, lastActivity: timestamp)
+                return ActivityState(isRunning: false, hasTaskState: true, lastActivity: timestamp)
             }
 
             if eventType == "task_started" {
-                return ActivityState(isRunning: true, lastActivity: timestamp)
+                return ActivityState(isRunning: true, hasTaskState: true, lastActivity: timestamp)
             }
         }
 
         let fileModificationDate = (try? FileManager.default.attributesOfItem(atPath: sessionLogPath))?[.modificationDate] as? Date
         return ActivityState(
             isRunning: false,
+            hasTaskState: false,
             lastActivity: fallbackActivityAt ?? fileModificationDate ?? fallbackDate
         )
     }
@@ -428,8 +433,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     private let claudeSessionMonitor = ClaudeSessionMonitor()
     private let codexActivityMonitor = CodexActivityMonitor()
     private var claudeSessionsByID: [String: SessionDescriptor] = [:]
-    private var claudeRunningStateByID: [String: ClaudeStatusState] = [:]
     private var codexSessionsByID: [String: SessionDescriptor] = [:]
+    private var statusItemsByID: [String: PersistentStatusItem] = [:]
     private var idleTransitionTimers: [String: Timer] = [:]
     private var settingsWindow: NSWindow?
 
@@ -445,19 +450,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     func applicationWillTerminate(_ notification: Notification) {
         claudeSessionMonitor.stop()
         codexActivityMonitor.stop()
+        idleTransitionTimers.values.forEach { $0.invalidate() }
     }
 
     private func setupPersistentStatusFloater() {
         claudeSessionMonitor.onSessionsChange = { [weak self] sessions in
             guard let self else { return }
             self.claudeSessionsByID = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
-            self.claudeRunningStateByID = self.claudeRunningStateByID.filter { self.claudeSessionsByID[$0.key] != nil }
-            // Clean up timers for removed sessions
-            let activeIDs = Set(self.claudeSessionsByID.keys)
-            for (id, timer) in self.idleTransitionTimers where !activeIDs.contains(id) {
-                timer.invalidate()
-            }
-            self.idleTransitionTimers = self.idleTransitionTimers.filter { activeIDs.contains($0.key) }
             self.refreshPersistentStatuses()
         }
 
@@ -473,30 +472,67 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     }
 
     private func refreshPersistentStatuses() {
-        var items: [PersistentStatusItem] = claudeSessionsByID.values.map { session in
-            let state = claudeRunningStateByID[session.id] ?? .complete
+        let sessionsByID = activeSessionsByID()
+        pruneInactiveStatuses(activeIDs: Set(sessionsByID.keys))
+
+        let items = sessionsByID.values.map { session in
+            let item = statusItemsByID[session.id]
             return PersistentStatusItem(
                 id: session.id,
                 project: session.project,
                 projectPath: session.projectPath,
-                state: state,
-                lastActivity: session.lastActivity,
+                state: item?.state ?? fallbackState(for: session),
+                lastActivity: item?.lastActivity ?? session.lastActivity,
                 modifiedFilesCount: session.modifiedFilesCount
             )
         }
-
-        items.append(contentsOf: codexSessionsByID.values.map { session in
-            PersistentStatusItem(
-                id: session.id,
-                project: session.project,
-                projectPath: session.projectPath,
-                state: session.isRunning ? .running : .complete,
-                lastActivity: session.lastActivity,
-                modifiedFilesCount: session.modifiedFilesCount
-            )
-        })
-
         FloatNotificationManager.shared.showPersistentStatuses(items)
+    }
+
+    private func activeSessionsByID() -> [String: SessionDescriptor] {
+        claudeSessionsByID.merging(codexSessionsByID) { current, _ in current }
+    }
+
+    private func pruneInactiveStatuses(activeIDs: Set<String>) {
+        for (sessionID, timer) in idleTransitionTimers where !activeIDs.contains(sessionID) {
+            timer.invalidate()
+        }
+
+        idleTransitionTimers = idleTransitionTimers.filter { activeIDs.contains($0.key) }
+        statusItemsByID = statusItemsByID.filter { activeIDs.contains($0.key) }
+    }
+
+    private func monitoredSession(for sessionID: String) -> SessionDescriptor? {
+        claudeSessionsByID[sessionID] ?? codexSessionsByID[sessionID]
+    }
+
+    private func fallbackState(for session: SessionDescriptor) -> ClaudeStatusState {
+        guard session.id.hasPrefix("codex:"), session.isTaskStateKnown else {
+            return .complete
+        }
+
+        if session.isRunning {
+            return .running
+        }
+
+        if Date().timeIntervalSince(session.lastActivity) < idleTimeoutSeconds {
+            return .idle
+        }
+
+        return .complete
+    }
+
+    private func makeStatusItem(sessionID: String, project: String, state: ClaudeStatusState, lastActivity: Date) -> PersistentStatusItem {
+        let monitoredSession = monitoredSession(for: sessionID)
+        let existingItem = statusItemsByID[sessionID]
+        return PersistentStatusItem(
+            id: sessionID,
+            project: monitoredSession?.project ?? existingItem?.project ?? project,
+            projectPath: monitoredSession?.projectPath ?? existingItem?.projectPath,
+            state: state,
+            lastActivity: lastActivity,
+            modifiedFilesCount: monitoredSession?.modifiedFilesCount ?? existingItem?.modifiedFilesCount ?? 0
+        )
     }
 
     private func setupStatusItem() {
@@ -646,33 +682,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
             let project = (projectValue?.isEmpty == false) ? projectValue! : source
             let sessionID = (json["session"] as? String) ?? "\(source):\(project)"
 
-            if source == "claude" {
-                let existingSession = claudeSessionsByID[sessionID]
-                let now = Date()
-                claudeSessionsByID[sessionID] = SessionDescriptor(
-                    id: sessionID,
-                    project: project,
-                    projectPath: existingSession?.projectPath,
-                    isRunning: state == .running,
-                    lastActivity: now,
-                    modifiedFilesCount: existingSession?.modifiedFilesCount ?? 0
-                )
-                // When complete is received: show idle (yellow) for timeout, then auto-transition to complete (green).
-                // Collapse into a single state write so downstream shake detection sees a direct running->idle transition.
-                idleTransitionTimers[sessionID]?.invalidate()
-                idleTransitionTimers.removeValue(forKey: sessionID)
+            let now = Date()
+            idleTransitionTimers[sessionID]?.invalidate()
+            idleTransitionTimers.removeValue(forKey: sessionID)
 
-                let displayState: ClaudeStatusState = (state == .complete) ? .idle : state
-                claudeRunningStateByID[sessionID] = displayState
-                refreshPersistentStatuses()
+            let displayState: ClaudeStatusState = (state == .complete) ? .idle : state
+            statusItemsByID[sessionID] = makeStatusItem(
+                sessionID: sessionID,
+                project: project,
+                state: displayState,
+                lastActivity: now
+            )
+            refreshPersistentStatuses()
 
-                if state == .complete {
-                    idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
-                        guard let self else { return }
-                        self.claudeRunningStateByID[sessionID] = .complete
-                        self.idleTransitionTimers.removeValue(forKey: sessionID)
-                        self.refreshPersistentStatuses()
-                    }
+            if state == .idle || state == .complete {
+                idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
+                    guard let self else { return }
+                    guard let currentItem = self.statusItemsByID[sessionID] else { return }
+                    self.statusItemsByID[sessionID] = PersistentStatusItem(
+                        id: currentItem.id,
+                        project: currentItem.project,
+                        projectPath: self.monitoredSession(for: sessionID)?.projectPath ?? currentItem.projectPath,
+                        state: .complete,
+                        lastActivity: currentItem.lastActivity,
+                        modifiedFilesCount: self.monitoredSession(for: sessionID)?.modifiedFilesCount ?? currentItem.modifiedFilesCount
+                    )
+                    self.idleTransitionTimers.removeValue(forKey: sessionID)
+                    self.refreshPersistentStatuses()
                 }
             }
         }
