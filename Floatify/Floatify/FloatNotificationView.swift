@@ -468,6 +468,55 @@ private struct SparkleBurst: View {
     }
 }
 
+private struct IdleSparkleBurst: View {
+    let trigger: UUID?
+
+    @State private var particles: [IdleSparkleParticle] = []
+
+    private struct IdleSparkleParticle: Identifiable {
+        let id = UUID()
+        let angle: Double
+        let distance: CGFloat
+        let delay: Double
+        let symbol: String
+        let scale: CGFloat
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(particles) { particle in
+                Text(particle.symbol)
+                    .font(.system(size: 8.5 * particle.scale))
+                    .modifier(SparkleParticleAnimation(angle: particle.angle, distance: particle.distance, delay: particle.delay))
+            }
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            if trigger != nil { spawnParticles() }
+        }
+        .onChange(of: trigger) { newValue in
+            guard newValue != nil else { return }
+            spawnParticles()
+        }
+    }
+
+    private func spawnParticles() {
+        let symbols = ["\u{2728}", "\u{2736}"]
+        particles = (0..<3).map { i in
+            IdleSparkleParticle(
+                angle: .pi * 2 * Double(i) / 3 + Double.random(in: -0.35...0.35),
+                distance: CGFloat.random(in: 11...16),
+                delay: Double(i) * 0.03,
+                symbol: symbols.randomElement() ?? "\u{2728}",
+                scale: CGFloat.random(in: 0.75...1.05)
+            )
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
+            particles = []
+        }
+    }
+}
+
 private struct DoneSparkleSweep: View {
     let color: Color
     let stageSize: CGFloat
@@ -605,15 +654,26 @@ private struct SpriteStageView: View {
     let spriteSize: CGFloat
     let isAnimating: Bool
     let isRunning: Bool
+    let isIdle: Bool
     let isComplete: Bool
     let completeTrigger: UUID?
 
     @State private var glowPulse: CGFloat = 1.0
+    @State private var runningAuraOpacity: Double = 0.78
+    @State private var runningRingScale: CGFloat = 0.84
+    @State private var runningRingOpacity: Double = 0
+    @State private var runningOrbitAngle: Double = -90
+    @State private var runningSpriteScale: CGFloat = 1.0
+    @State private var runningArcRotation: Double = -24
+    @State private var runningCounterArcRotation: Double = 132
+    @State private var runningArcOpacity: Double = 0.46
+    @State private var runningSpriteTilt: Double = 0
     @State private var celebrateScale: CGFloat = 1.0
     @State private var celebrateRotation: Double = 0
     @State private var celebrateRingScale: CGFloat = 0.76
     @State private var celebrateRingOpacity: Double = 0
-    @State private var sparkleTrigger: UUID?
+    @State private var idleSparkleTrigger: UUID?
+    @State private var doneSparkleTrigger: UUID?
 
     var body: some View {
         ZStack {
@@ -637,8 +697,8 @@ private struct SpriteStageView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            statusColor.opacity(isRunning ? 0.38 : 0.20),
-                            statusColor.opacity(isRunning ? 0.14 : 0.06),
+                            statusColor.opacity(isRunning ? 0.38 * runningAuraOpacity : 0.20),
+                            statusColor.opacity(isRunning ? 0.16 * runningAuraOpacity : 0.06),
                             .clear
                         ],
                         center: .center,
@@ -649,8 +709,92 @@ private struct SpriteStageView: View {
                 .frame(width: stageSize * 1.35 * glowPulse, height: stageSize * 1.35 * glowPulse)
                 .blur(radius: 5)
 
+            if isRunning {
+                Circle()
+                    .trim(from: 0.08, to: 0.40)
+                    .stroke(
+                        AngularGradient(
+                            colors: [
+                                .clear,
+                                statusColor.opacity(0.28 * runningArcOpacity),
+                                .white.opacity(0.95 * runningArcOpacity),
+                                statusColor.opacity(0.96 * runningArcOpacity),
+                                .clear
+                            ],
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 2.4, lineCap: .round)
+                    )
+                    .frame(width: stageSize * 1.16, height: stageSize * 1.16)
+                    .rotationEffect(.degrees(runningArcRotation))
+                    .blur(radius: 0.4)
+
+                Circle()
+                    .trim(from: 0.56, to: 0.82)
+                    .stroke(
+                        AngularGradient(
+                            colors: [
+                                .clear,
+                                statusColor.opacity(0.18 * runningArcOpacity),
+                                .white.opacity(0.70 * runningArcOpacity),
+                                statusColor.opacity(0.78 * runningArcOpacity),
+                                .clear
+                            ],
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+                    )
+                    .frame(width: stageSize * 0.96, height: stageSize * 0.96)
+                    .rotationEffect(.degrees(runningCounterArcRotation))
+
+                Circle()
+                    .strokeBorder(statusColor.opacity(runningRingOpacity), lineWidth: 1.2)
+                    .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
+                    .blur(radius: 0.9)
+
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(0.98),
+                                statusColor.opacity(0.88),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * 0.12
+                        )
+                    )
+                    .frame(width: stageSize * 0.20, height: stageSize * 0.20)
+                    .shadow(color: statusColor.opacity(0.72), radius: 5, x: 0, y: 0)
+                    .offset(y: -stageSize * 0.43)
+                    .rotationEffect(.degrees(runningOrbitAngle))
+
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(0.92),
+                                statusColor.opacity(0.70),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * 0.09
+                        )
+                    )
+                    .frame(width: stageSize * 0.14, height: stageSize * 0.14)
+                    .shadow(color: statusColor.opacity(0.42), radius: 4, x: 0, y: 0)
+                    .offset(y: -stageSize * 0.34)
+                    .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
+            }
+
+            if isIdle {
+                DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: idleSparkleTrigger)
+            }
+
             if isComplete {
-                DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: sparkleTrigger)
+                DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
 
                 Circle()
                     .strokeBorder(statusColor.opacity(0.85), lineWidth: 1.6)
@@ -673,28 +817,81 @@ private struct SpriteStageView: View {
                 }
             }
             .bobbing(isEnabled: isRunning && isAnimating)
-            .scaleEffect(celebrateScale)
-            .rotationEffect(.degrees(celebrateRotation))
+            .scaleEffect(celebrateScale * (isRunning ? runningSpriteScale : 1.0))
+            .rotationEffect(.degrees(celebrateRotation + (isRunning ? runningSpriteTilt : 0)))
+
+            if isIdle {
+                IdleSparkleBurst(trigger: idleSparkleTrigger)
+            }
 
             if isComplete {
-                SparkleBurst(trigger: sparkleTrigger)
+                SparkleBurst(trigger: doneSparkleTrigger)
             }
 
         }
         .frame(width: stageSize, height: stageSize)
         .onAppear {
-            if isRunning && isAnimating {
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                    glowPulse = 1.10
-                }
-            }
             if isComplete {
                 triggerDoneSparkle(celebrateAvatar: true)
+            }
+        }
+        .task(id: isRunning) {
+            guard isRunning && isAnimating else {
+                await MainActor.run {
+                    resetRunningAura()
+                }
+                return
+            }
+
+            await MainActor.run {
+                glowPulse = 1.0
+                runningAuraOpacity = 0.72
+                runningRingScale = 0.84
+                runningRingOpacity = 0.08
+                runningOrbitAngle = -90
+                runningSpriteScale = 0.97
+                runningArcRotation = -24
+                runningCounterArcRotation = 132
+                runningArcOpacity = 0.48
+                runningSpriteTilt = -1.4
+
+                withAnimation(.easeInOut(duration: 1.55).repeatForever(autoreverses: true)) {
+                    glowPulse = 1.18
+                    runningAuraOpacity = 1.0
+                    runningRingScale = 1.20
+                    runningRingOpacity = 0.42
+                    runningSpriteScale = 1.055
+                    runningArcOpacity = 0.94
+                    runningSpriteTilt = 2.2
+                }
+
+                withAnimation(.linear(duration: 3.6).repeatForever(autoreverses: false)) {
+                    runningOrbitAngle = 270
+                }
+
+                withAnimation(.linear(duration: 2.15).repeatForever(autoreverses: false)) {
+                    runningArcRotation = 336
+                }
+
+                withAnimation(.linear(duration: 3.25).repeatForever(autoreverses: false)) {
+                    runningCounterArcRotation = -228
+                }
             }
         }
         .onChange(of: completeTrigger) { newValue in
             guard newValue != nil, isComplete else { return }
             triggerDoneSparkle(celebrateAvatar: true)
+        }
+        .task(id: isIdle) {
+            guard isIdle else { return }
+            triggerIdleSparkle()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    triggerIdleSparkle()
+                }
+            }
         }
         .task(id: isComplete) {
             guard isComplete else { return }
@@ -708,8 +905,25 @@ private struct SpriteStageView: View {
         }
     }
 
+    private func resetRunningAura() {
+        glowPulse = 1.0
+        runningAuraOpacity = 0.78
+        runningRingScale = 0.84
+        runningRingOpacity = 0
+        runningOrbitAngle = -90
+        runningSpriteScale = 1.0
+        runningArcRotation = -24
+        runningCounterArcRotation = 132
+        runningArcOpacity = 0.46
+        runningSpriteTilt = 0
+    }
+
+    private func triggerIdleSparkle() {
+        idleSparkleTrigger = UUID()
+    }
+
     private func triggerDoneSparkle(celebrateAvatar: Bool) {
-        sparkleTrigger = UUID()
+        doneSparkleTrigger = UUID()
         pulseCelebrateRing()
         guard celebrateAvatar else { return }
 
@@ -1407,6 +1621,7 @@ struct FloatNotificationView: View {
             spriteSize: floaterSize.persistentSpriteSize,
             isAnimating: animatesStatus,
             isRunning: isRunning,
+            isIdle: statusState == .idle,
             isComplete: statusState == .complete,
             completeTrigger: completeTrigger
         )

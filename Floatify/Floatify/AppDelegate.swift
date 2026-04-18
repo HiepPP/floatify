@@ -427,6 +427,8 @@ final class CodexActivityMonitor {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
+    private let idleTimeoutDefaultsKey = "IdleTimeout"
+    private let idleTimeoutMigrationKey = "IdleTimeoutMigratedTo10"
     private var statusItem: NSStatusItem!
     private var pipeSource: DispatchSourceRead?
     private let pipePath = "/var/tmp/floatify.pipe"
@@ -439,6 +441,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        migrateLegacyIdleTimeoutIfNeeded()
         setupStatusItem()
         setupPipeListener()
         installCLIToolIfNeeded()
@@ -749,8 +752,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     }
 
     private var idleTimeoutSeconds: TimeInterval {
-        let stored = UserDefaults.standard.integer(forKey: "IdleTimeout")
-        return stored > 0 ? TimeInterval(stored) : 15.0
+        let stored = UserDefaults.standard.integer(forKey: idleTimeoutDefaultsKey)
+        return stored > 0 ? TimeInterval(stored) : 10.0
+    }
+
+    private func migrateLegacyIdleTimeoutIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: idleTimeoutMigrationKey) else { return }
+
+        if defaults.object(forKey: idleTimeoutDefaultsKey) == nil || defaults.integer(forKey: idleTimeoutDefaultsKey) == 15 {
+            defaults.set(10, forKey: idleTimeoutDefaultsKey)
+        }
+
+        defaults.set(true, forKey: idleTimeoutMigrationKey)
     }
 
     private func claudeStatusState(from rawValue: String) -> ClaudeStatusState? {

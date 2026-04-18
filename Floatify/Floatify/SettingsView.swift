@@ -334,7 +334,7 @@ private struct SetupHealthRow<Actions: View>: View {
 struct SettingsView: View {
     @AppStorage("FloaterSize") private var floaterSize: String = "regular"
     @AppStorage("FloaterTheme") private var floaterTheme: String = "dark"
-    @AppStorage("IdleTimeout") private var idleTimeout: Int = 15
+    @AppStorage("IdleTimeout") private var idleTimeout: Int = 10
 
     @State private var health = SetupHealthSnapshot.capture()
     @State private var actionMessage = ""
