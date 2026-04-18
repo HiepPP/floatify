@@ -1,42 +1,63 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-cd "$(dirname "$0")/Floatify"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$ROOT_DIR/Floatify"
+PROJECT_FILE="$PROJECT_DIR/Floatify.xcodeproj"
+PROJECT_SPEC="$PROJECT_DIR/project.yml"
+DERIVED_DATA_PATH="${FLOATIFY_DERIVED_DATA_PATH:-$HOME/Library/Developer/Xcode/DerivedData/Floatify-local}"
+BUILD_PRODUCTS_DIR="$DERIVED_DATA_PATH/Build/Products/Release"
+APP_NAME="Floatify"
+APP_BUNDLE="$BUILD_PRODUCTS_DIR/$APP_NAME.app"
+CLI_BINARY="$BUILD_PRODUCTS_DIR/floatify"
+INSTALL_DIR="/Applications"
+INSTALLED_APP_BUNDLE="$INSTALL_DIR/$APP_NAME.app"
+CLI_LINK="/usr/local/bin/floatify"
 
-# Generate Xcode project if needed
-if [ ! -f Floatify.xcodeproj ]; then
+cd "$PROJECT_DIR"
+
+# Regenerate only when the project is missing or the spec changed.
+if [ ! -d "$PROJECT_FILE" ] || [ "$PROJECT_SPEC" -nt "$PROJECT_FILE" ]; then
     echo "Generating Xcode project..."
     xcodegen generate
 fi
 
-# Build app (skip install to avoid lsregister creating duplicates)
-echo "Building Floatify.app..."
-xcodebuild -project Floatify.xcodeproj -scheme Floatify -configuration Release build \
-    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
-    INSTALL_PATH="" SKIP_INSTALL=YES
+mkdir -p "$DERIVED_DATA_PATH"
 
-# Build CLI
-echo "Building floatify CLI..."
-xcodebuild -project Floatify.xcodeproj -scheme floatify -configuration Release build \
-    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
+build_target() {
+    local scheme="$1"
+    echo "Building $scheme..."
+    xcodebuild \
+        -project "$PROJECT_FILE" \
+        -scheme "$scheme" \
+        -configuration Release \
+        -derivedDataPath "$DERIVED_DATA_PATH" \
+        build \
+        CODE_SIGN_IDENTITY="-" \
+        CODE_SIGNING_REQUIRED=NO \
+        COMPILER_INDEX_STORE_ENABLE=NO \
+        INSTALL_PATH="" \
+        SKIP_INSTALL=YES
+}
 
-# Quit running Floatify app
-echo "Quitting existing Floatify..."
-pkill -x Floatify || true
+build_target "$APP_NAME"
+build_target "floatify"
+
+echo "Quitting existing $APP_NAME..."
+pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 sleep 1
 
-# Install app to /Applications
-echo "Installing Floatify.app to /Applications..."
-rm -rf /Applications/Floatify.app
-cp -r ~/Library/Developer/Xcode/DerivedData/Floatify-*/Build/Products/Release/Floatify.app /Applications/
+echo "Installing $APP_NAME.app to $INSTALL_DIR..."
+rm -rf "$INSTALLED_APP_BUNDLE"
+ditto "$APP_BUNDLE" "$INSTALLED_APP_BUNDLE"
 
-# Symlink CLI to /usr/local/bin
 echo "Symlinking floatify CLI..."
-FLOATIFY_CLI=$(ls -t ~/Library/Developer/Xcode/DerivedData/Floatify-*/Build/Products/Release/floatify 2>/dev/null | head -1)
-sudo ln -sf "$FLOATIFY_CLI" /usr/local/bin/floatify
+if [ -w "$(dirname "$CLI_LINK")" ]; then
+    ln -sf "$CLI_BINARY" "$CLI_LINK"
+else
+    sudo ln -sf "$CLI_BINARY" "$CLI_LINK"
+fi
 
 echo "Build and install complete!"
-
-# Reopen Floatify
-echo "Reopening Floatify..."
-open /Applications/Floatify.app
+echo "Reopening $APP_NAME..."
+open "$INSTALLED_APP_BUNDLE"
