@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import SwiftUI
 
 class FloatPanel: NSPanel {
@@ -74,6 +75,7 @@ private struct PersistentStatusStyle {
 class FloatNotificationManager {
     static let shared = FloatNotificationManager()
 
+    private let settings = FloatifySettings.shared
     private var panels: [FloatPanel] = []
     private var cursorFollowTimers: [FloatPanel: Timer] = [:]
     private var floaterPanel: FloatPanel?
@@ -95,22 +97,10 @@ class FloatNotificationManager {
     private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
     private lazy var availableSpriteSheets: [String] = SpriteSheetMetadata.bundledSheetNames()
     private var isFloaterPanelCollapsed: Bool
-    private var defaultsObserver: NSObjectProtocol?
-    private var lastFloaterSizeRaw: String
-    private var lastFloaterThemeRaw: String
 
     private init() {
-        isFloaterPanelCollapsed = false
-        lastFloaterSizeRaw = UserDefaults.standard.string(forKey: "FloaterSize") ?? "regular"
-        lastFloaterThemeRaw = UserDefaults.standard.string(forKey: "FloaterTheme") ?? FloaterTheme.dark.rawValue
-
-        defaultsObserver = NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.handleDefaultsChange()
-        }
+        isFloaterPanelCollapsed = UserDefaults.standard.bool(forKey: floaterPanelCollapsedKey)
+        observeSettings()
     }
 
     func show(message: String, corner: Corner, duration: TimeInterval = 6, project: String?) {
@@ -176,12 +166,7 @@ class FloatNotificationManager {
         let size = CGSize(width: config.width, height: config.height)
         NSLog("Floatify: Creating FloatPanel")
         let origin: CGPoint
-        let newPanel = FloatPanel(
-            contentRect: NSRect(origin: .zero, size: size),
-            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
+        let newPanel = makeBasePanel(size: size)
         NSLog("Floatify: FloatPanel created successfully")
 
         switch corner {
@@ -202,24 +187,16 @@ class FloatNotificationManager {
 
         newPanel.notificationCorner = corner
         newPanel.setFrameOrigin(origin)
-        newPanel.level = .popUpMenu
-        newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        newPanel.isOpaque = false
-        newPanel.backgroundColor = .clear
-        newPanel.hasShadow = false
-        newPanel.ignoresMouseEvents = false
-
         let dismissController = DismissController()
         newPanel.dismissController = dismissController
         newPanel.temporaryMessage = message
         newPanel.temporaryProject = project
-        let view = FloatNotificationView(
+        newPanel.contentView = makeTemporaryNotificationHostingView(
             message: message,
             project: project,
             corner: corner,
             dismissController: dismissController
         )
-        newPanel.contentView = NSHostingView(rootView: view)
         newPanel.orderFront(nil)
         NSLog("Floatify: Panel ordered front at origin: %@", NSStringFromPoint(origin))
         panels.append(newPanel)
@@ -263,21 +240,10 @@ class FloatNotificationManager {
             return
         }
 
-        let panel = FloatPanel(
-            contentRect: NSRect(origin: .zero, size: size),
-            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
+        let panel = makeBasePanel(size: size)
 
         panel.isPersistentStatusPanel = true
         panel.notificationCorner = .bottomRight
-        panel.level = .popUpMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.ignoresMouseEvents = false
         panel.hidesOnDeactivate = false
         panel.contentView = hostingView
         panel.setFrameOrigin(restoredFloaterPanelOrigin(for: size))
@@ -334,54 +300,26 @@ class FloatNotificationManager {
         return controller
     }
 
-    private var floaterSizeRaw: String {
-        UserDefaults.standard.string(forKey: "FloaterSize") ?? "regular"
-    }
-
-    private var floaterThemeRaw: String {
-        UserDefaults.standard.string(forKey: "FloaterTheme") ?? FloaterTheme.dark.rawValue
-    }
-
     private var floaterSize: FloaterSize {
-        switch floaterSizeRaw {
-        case "compact": return .compact
-        case "large": return .large
-        case "larger": return .larger
-        case "superLarge": return .superLarge
-        default: return .regular
-        }
+        settings.floaterSize
     }
 
-    private func handleDefaultsChange() {
-        let newSize = floaterSizeRaw
-        let newTheme = floaterThemeRaw
-        let sizeChanged = newSize != lastFloaterSizeRaw
-        let themeChanged = newTheme != lastFloaterThemeRaw
-        guard sizeChanged || themeChanged else { return }
-
-        lastFloaterSizeRaw = newSize
-        lastFloaterThemeRaw = newTheme
-        refreshFloaterPanel(animated: true)
-
-        if themeChanged {
-            for panel in panels {
-                guard let message = panel.temporaryMessage,
-                      let dismissController = panel.dismissController else {
-                    continue
-                }
-
-                panel.contentView = NSHostingView(
-                    rootView: FloatNotificationView(
-                        message: message,
-                        project: panel.temporaryProject,
-                        corner: panel.notificationCorner,
-                        playsEntryAnimation: false,
-                        dismissController: dismissController
-                    )
-                )
-                panel.orderFrontRegardless()
+    private func observeSettings() {
+        withObservationTracking {
+            _ = settings.floaterSize
+            _ = settings.floaterTheme
+        } onChange: {
+            Task { @MainActor in
+                let manager = FloatNotificationManager.shared
+                manager.handleSettingsChange()
+                manager.observeSettings()
             }
         }
+    }
+
+    private func handleSettingsChange() {
+        refreshFloaterPanel(animated: true)
+        refreshTemporaryPanels()
     }
 
     private var sheetAssignments: [String: String] = [:]
@@ -460,6 +398,62 @@ class FloatNotificationManager {
         }
 
         return nil
+    }
+
+    private func makeBasePanel(size: CGSize) -> FloatPanel {
+        let panel = FloatPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        configureBasePanel(panel)
+        return panel
+    }
+
+    private func configureBasePanel(_ panel: FloatPanel) {
+        panel.level = .popUpMenu
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = false
+    }
+
+    private func makeTemporaryNotificationHostingView(
+        message: String,
+        project: String?,
+        corner: Corner,
+        dismissController: DismissController,
+        playsEntryAnimation: Bool = true
+    ) -> NSHostingView<FloatNotificationView> {
+        NSHostingView(
+            rootView: FloatNotificationView(
+                message: message,
+                project: project,
+                corner: corner,
+                playsEntryAnimation: playsEntryAnimation,
+                dismissController: dismissController
+            )
+        )
+    }
+
+    private func refreshTemporaryPanels() {
+        for panel in panels {
+            guard let message = panel.temporaryMessage,
+                  let dismissController = panel.dismissController else {
+                continue
+            }
+
+            panel.contentView = makeTemporaryNotificationHostingView(
+                message: message,
+                project: panel.temporaryProject,
+                corner: panel.notificationCorner,
+                dismissController: dismissController,
+                playsEntryAnimation: false
+            )
+            panel.orderFrontRegardless()
+        }
     }
 
     private func fittingPanelSize(for hostingView: NSView) -> CGSize {

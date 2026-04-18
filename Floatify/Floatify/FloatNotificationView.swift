@@ -1,18 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum FloaterTheme: String {
-    case dark
-    case light
-
-    static let userDefaultsKey = "FloaterTheme"
-
-    static var current: FloaterTheme {
-        let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey) ?? FloaterTheme.dark.rawValue
-        return FloaterTheme(rawValue: rawValue) ?? .dark
-    }
-}
-
 private struct FloaterThemePalette {
     let panelTint: Color
     let panelShadow: Color
@@ -80,203 +68,6 @@ enum FloaterPalette {
     static var warning: Color { palette.warning }
     static var chipFill: Color { palette.chipFill }
     static var closeHover: Color { palette.closeHover }
-}
-
-// MARK: - FloaterSize
-
-enum FloaterSize: Equatable {
-    case compact
-    case regular
-    case large
-    case larger
-    case superLarge
-
-    var rowHeight: CGFloat {
-        switch self {
-        case .compact: return 38
-        case .regular: return 44
-        case .large: return 56
-        case .larger: return 68
-        case .superLarge: return 80
-        }
-    }
-
-    var spriteSize: CGFloat {
-        switch self {
-        case .compact: return 18
-        case .regular: return 24
-        case .large: return 36
-        case .larger: return 44
-        case .superLarge: return 52
-        }
-    }
-
-    var stageSize: CGFloat {
-        switch self {
-        case .compact: return 24
-        case .regular: return 30
-        case .large: return 44
-        case .larger: return 52
-        case .superLarge: return 60
-        }
-    }
-
-    var dotSize: CGFloat {
-        switch self {
-        case .compact: return 5
-        case .regular: return 6
-        case .large: return 9
-        case .larger: return 10
-        case .superLarge: return 12
-        }
-    }
-
-    var cornerRadius: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 10
-        case .large: return 14
-        case .larger: return 16
-        case .superLarge: return 18
-        }
-    }
-
-    var horizontalPadding: CGFloat {
-        switch self {
-        case .compact: return 7
-        case .regular: return 8
-        case .large: return 12
-        case .larger: return 14
-        case .superLarge: return 16
-        }
-    }
-
-    var projectFontSize: CGFloat {
-        switch self {
-        case .compact: return 11.5
-        case .regular: return 12.5
-        case .large: return 14.5
-        case .larger: return 16
-        case .superLarge: return 18
-        }
-    }
-
-    var metaFontSize: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 9.5
-        case .large: return 11.5
-        case .larger: return 12.5
-        case .superLarge: return 14
-        }
-    }
-
-    var isSingleLine: Bool {
-        switch self {
-        case .compact, .regular, .large, .larger, .superLarge: return false
-        }
-    }
-
-    var panelWidth: CGFloat {
-        switch self {
-        case .compact: return 210
-        case .regular: return 262
-        case .large: return 352
-        case .larger: return 420
-        case .superLarge: return 492
-        }
-    }
-
-    var persistentPanelWidth: CGFloat {
-        switch self {
-        case .compact: return 188
-        case .regular: return 236
-        case .large: return 304
-        case .larger: return 356
-        case .superLarge: return 416
-        }
-    }
-
-    var contentSpacing: CGFloat {
-        switch self {
-        case .compact: return 6
-        case .regular: return 7
-        case .large: return 8
-        case .larger: return 10
-        case .superLarge: return 11
-        }
-    }
-
-    var statusRailWidth: CGFloat {
-        switch self {
-        case .compact: return 4
-        case .regular: return 5
-        case .large: return 6
-        case .larger: return 7
-        case .superLarge: return 8
-        }
-    }
-
-    var closeButtonSize: CGFloat {
-        switch self {
-        case .compact: return 12
-        case .regular: return 13
-        case .large: return 14
-        case .larger: return 15
-        case .superLarge: return 16
-        }
-
-    }
-
-    var trailingInset: CGFloat {
-        horizontalPadding + 6
-    }
-
-    var hoverTrailingInset: CGFloat {
-        trailingInset + closeButtonSize + 8
-    }
-
-    var avatarHitSize: CGFloat {
-        rowHeight
-    }
-
-    var persistentStageSize: CGFloat {
-        rowHeight
-    }
-
-    var persistentSpriteSize: CGFloat {
-        max(spriteSize, rowHeight - 8)
-    }
-
-    var cardShadowRadius: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 11
-        case .large: return 14
-        case .larger: return 16
-        case .superLarge: return 18
-        }
-    }
-
-    var statusPillMinWidth: CGFloat {
-        switch self {
-        case .compact: return 42
-        case .regular: return 58
-        case .large: return 66
-        case .larger: return 78
-        case .superLarge: return 90
-        }
-    }
-
-    var bodySpacing: CGFloat {
-        switch self {
-        case .compact: return 1
-        case .regular: return 2
-        case .large: return 3
-        case .larger: return 4
-        case .superLarge: return 5
-        }
-    }
 }
 
 // MARK: - Sprite Sheet Infrastructure
@@ -445,7 +236,7 @@ private struct SparkleBurst: View {
         .onAppear {
             if trigger != nil { spawnParticles() }
         }
-        .onChange(of: trigger) { newValue in
+        .onChange(of: trigger) { _, newValue in
             guard newValue != nil else { return }
             spawnParticles()
         }
@@ -494,7 +285,7 @@ private struct IdleSparkleBurst: View {
         .onAppear {
             if trigger != nil { spawnParticles() }
         }
-        .onChange(of: trigger) { newValue in
+        .onChange(of: trigger) { _, newValue in
             guard newValue != nil else { return }
             spawnParticles()
         }
@@ -572,7 +363,7 @@ private struct DoneSparkleSweep: View {
         .onAppear {
             if trigger != nil { animateSweep() }
         }
-        .onChange(of: trigger) { newValue in
+        .onChange(of: trigger) { _, newValue in
             guard newValue != nil else { return }
             animateSweep()
         }
@@ -957,7 +748,7 @@ private struct SpriteStageView: View {
                 }
             }
         }
-        .onChange(of: completeTrigger) { newValue in
+        .onChange(of: completeTrigger) { _, newValue in
             guard newValue != nil, isComplete else { return }
             triggerDoneSparkle(celebrateAvatar: true)
         }
@@ -1121,7 +912,7 @@ private struct CompletionShakeModifier: ViewModifier {
             .offset(x: shakeOffsetX)
             .rotationEffect(.degrees(shakeRotation))
             .scaleEffect(shakeScale)
-            .onChange(of: shakeTrigger) { newValue in
+            .onChange(of: shakeTrigger) { _, newValue in
                 guard newValue != nil else { return }
                 performShake()
             }
@@ -1556,13 +1347,13 @@ struct FloatNotificationView: View {
                 shakeTrigger = UUID()
             }
         }
-        .onChange(of: statusState) { newValue in
+        .onChange(of: statusState) { _, newValue in
             syncCompletionAnimation(for: newValue)
         }
-        .onChange(of: shouldShake) { newValue in
+        .onChange(of: shouldShake) { _, newValue in
             if newValue { shakeTrigger = UUID() }
         }
-        .onChange(of: dismissController.shouldDismiss) { shouldDismiss in
+        .onChange(of: dismissController.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { triggerExit() }
         }
         .modifier(CompletionShakeModifier(shakeTrigger: shakeTrigger))

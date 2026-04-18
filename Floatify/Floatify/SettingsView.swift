@@ -332,9 +332,7 @@ private struct SetupHealthRow<Actions: View>: View {
 }
 
 struct SettingsView: View {
-    @AppStorage("FloaterSize") private var floaterSize: String = "regular"
-    @AppStorage("FloaterTheme") private var floaterTheme: String = "dark"
-    @AppStorage("IdleTimeout") private var idleTimeout: Int = 10
+    @Environment(FloatifySettings.self) private var settings
 
     @State private var health = SetupHealthSnapshot.capture()
     @State private var actionMessage = ""
@@ -349,20 +347,21 @@ struct SettingsView: View {
     }()
 
     var body: some View {
+        @Bindable var settings = settings
+
         Form {
             Section {
-                Picker("Theme", selection: $floaterTheme) {
-                    Text("Dark").tag("dark")
-                    Text("Light").tag("light")
+                Picker("Theme", selection: $settings.floaterTheme) {
+                    ForEach(FloaterTheme.allCases, id: \.self) { theme in
+                        Text(theme.displayName).tag(theme)
+                    }
                 }
                 .pickerStyle(.inline)
 
-                Picker("Display Style", selection: $floaterSize) {
-                    Text("Compact").tag("compact")
-                    Text("Regular").tag("regular")
-                    Text("Large").tag("large")
-                    Text("Larger").tag("larger")
-                    Text("Super Large").tag("superLarge")
+                Picker("Display Style", selection: $settings.floaterSize) {
+                    ForEach(FloaterSize.allCases, id: \.self) { size in
+                        Text(size.displayName).tag(size)
+                    }
                 }
                 .pickerStyle(.inline)
             } header: {
@@ -376,7 +375,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Idle timeout")
                     Spacer()
-                    TextField("", value: $idleTimeout, formatter: timeoutFormatter)
+                    TextField("", value: $settings.idleTimeout, formatter: timeoutFormatter)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                     Text("seconds")
@@ -507,7 +506,7 @@ struct SettingsView: View {
             }
 
             try fileManager.createSymbolicLink(at: destinationURL, withDestinationURL: sourceURL)
-            UserDefaults.standard.set(true, forKey: "CLISymlinkInstalled")
+            UserDefaults.standard.set(true, forKey: FloatifySettings.cliSymlinkInstalledKey)
             setActionMessage("Installed /usr/local/bin/floatify.", level: .good)
         } catch {
             setActionMessage("Failed to install CLI symlink: \(error.localizedDescription)", level: .error)
@@ -581,4 +580,5 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(FloatifySettings.shared)
 }

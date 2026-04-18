@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		025EE69B7CAB1F0F1B28C730 /* positions.json in Resources */ = {isa = PBXBuildFile; fileRef = 0F0C15189D4A45F901EFE3E3 /* positions.json */; };
+		0A1456C5A82A2D05D537A2C7 /* SessionMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */; };
 		105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440F612B0DBA815B721CCD32 /* FloatEffects.swift */; };
+		1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2573557764743955144C86DA /* FloatifyPipePayload.swift */; };
 		263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */; };
 		2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */; };
 		38B748E447FF06EC65D3FC02 /* dropdown_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 329A7A9B66196600C706A371 /* dropdown_entry.json */; };
@@ -20,6 +22,7 @@
 		92400EB3439E7EA4DDD9B1B5 /* fade_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E2DED432B173764DA471BAF /* fade_entry.json */; };
 		93A3D922228BD48A28118336 /* avatar-sprite-sheet.png in Resources */ = {isa = PBXBuildFile; fileRef = 9D102825DD29872179C0349B /* avatar-sprite-sheet.png */; };
 		B30711D21D567F22226BE83C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5384F019B036F95A28E65D7 /* Assets.xcassets */; };
+		B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */; };
 		C95C6817E7C45A90A43FE657 /* FloatNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C9FF9FF7D99C1C4BEB05A0 /* FloatNotificationManager.swift */; };
 		CB7C73F6C9BF4FB5CFE53039 /* marquee_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = E8C725CAD9973074015DB996 /* marquee_entry.json */; };
 		D848384797D3EEC627B875C1 /* slide_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */; };
@@ -39,6 +42,8 @@
 		0F0C15189D4A45F901EFE3E3 /* positions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = positions.json; sourceTree = "<group>"; };
 		14CB93C3AFE94711410CCED7 /* exit_fade.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = exit_fade.json; sourceTree = "<group>"; };
 		218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMonitoring.swift; sourceTree = "<group>"; };
+		2573557764743955144C86DA /* FloatifyPipePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifyPipePayload.swift; sourceTree = "<group>"; };
 		329A7A9B66196600C706A371 /* dropdown_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dropdown_entry.json; sourceTree = "<group>"; };
 		3486C751C77E07CF2BC60B50 /* trail_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trail_entry.json; sourceTree = "<group>"; };
 		440F612B0DBA815B721CCD32 /* FloatEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatEffects.swift; sourceTree = "<group>"; };
@@ -61,6 +66,7 @@
 		D63DAD4239E10639F6510535 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DD3300C41D39AE34907128BD /* PositionConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionConfigManager.swift; sourceTree = "<group>"; };
 		E8C725CAD9973074015DB996 /* marquee_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = marquee_entry.json; sourceTree = "<group>"; };
+		F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifySettings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,12 +142,15 @@
 				628FC4BFF079783826FBD6EA /* CursorTracker.swift */,
 				440F612B0DBA815B721CCD32 /* FloatEffects.swift */,
 				A1B356A433DF882DBFC363E0 /* FloatifyApp.swift */,
+				2573557764743955144C86DA /* FloatifyPipePayload.swift */,
+				F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */,
 				C2C9FF9FF7D99C1C4BEB05A0 /* FloatNotificationManager.swift */,
 				4DACC97B72E843D8F308AB3E /* FloatNotificationView.swift */,
 				892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */,
 				889D2E95327A399171312B59 /* Info.plist */,
 				BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */,
 				DD3300C41D39AE34907128BD /* PositionConfigManager.swift */,
+				22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */,
 				218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */,
 				4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */,
 				DF3AD548F6AE135DB258AE2A /* Resources */,
@@ -270,9 +279,12 @@
 				C95C6817E7C45A90A43FE657 /* FloatNotificationManager.swift in Sources */,
 				3FDECEC56F61445657E65D3F /* FloatNotificationView.swift in Sources */,
 				E809983A24A30669CA13B384 /* FloatifyApp.swift in Sources */,
+				1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */,
+				B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */,
 				F53714895F8A794904AFE214 /* IdleAnimations.swift in Sources */,
 				263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */,
 				78A8D17ECED33A449E627504 /* PositionConfigManager.swift in Sources */,
+				0A1456C5A82A2D05D537A2C7 /* SessionMonitoring.swift in Sources */,
 				2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */,
 				4DF1E2C00D13115C9933D6A9 /* SoundManager.swift in Sources */,
 			);
@@ -361,7 +373,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -423,7 +435,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

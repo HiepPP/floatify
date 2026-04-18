@@ -1,448 +1,19 @@
 import AppKit
-import SwiftUI
 
-struct SessionDescriptor: Equatable {
-    let id: String
-    let project: String
-    let projectPath: String?
-    let isRunning: Bool
-    let isTaskStateKnown: Bool
-    let lastActivity: Date
-    let modifiedFilesCount: Int
-}
-
-private struct ProjectContext: Equatable {
-    let name: String
-    let path: String?
-}
-
-private func commandOutput(executablePath: String, arguments: [String]) -> String? {
-    let process = Process()
-    let outputPipe = Pipe()
-
-    process.executableURL = URL(fileURLWithPath: executablePath)
-    process.arguments = arguments
-    process.standardOutput = outputPipe
-    process.standardError = Pipe()
-
-    do {
-        try process.run()
-    } catch {
-        return nil
-    }
-
-    let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else {
-        return nil
-    }
-
-    return String(data: data, encoding: .utf8)
-}
-
-private func projectName(for path: String) -> String {
-    let name = URL(fileURLWithPath: path).lastPathComponent
-    return name.isEmpty ? path : name
-}
-
-final class ClaudeSessionMonitor {
-    var onSessionsChange: (([SessionDescriptor]) -> Void)?
-
-    private let queue = DispatchQueue(label: "com.floatify.claude-sessions")
-    private var timer: DispatchSourceTimer?
-    private var lastPublished: [SessionDescriptor] = []
-    private var projectCache: [Int: ProjectContext] = [:]
-    private var lastActivityCache: [Int: Date] = [:]
-    private var modifiedFilesCache: [Int: Int] = [:]
-
-    func start() {
-        stop()
-        publish(force: true)
-
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 2.0, repeating: 2.0)
-        timer.setEventHandler { [weak self] in
-            self?.publish(force: false)
-        }
-        self.timer = timer
-        timer.resume()
-    }
-
-    func stop() {
-        timer?.cancel()
-        timer = nil
-    }
-
-    private func publish(force: Bool) {
-        let sessions = detectSessions()
-        guard force || sessions != lastPublished else { return }
-        lastPublished = sessions
-
-        DispatchQueue.main.async { [weak self] in
-            self?.onSessionsChange?(sessions)
-        }
-    }
-
-    private func detectSessions() -> [SessionDescriptor] {
-        guard let output = commandOutput(executablePath: "/bin/ps", arguments: ["-Ao", "pid=,ppid=,command="]) else {
-            return []
-        }
-
-        var activePIDs = Set<Int>()
-        var sessions: [SessionDescriptor] = []
-
-        for rawLine in output.split(separator: "\n") {
-            let parts = rawLine.split(maxSplits: 2, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard parts.count == 3, let pid = Int(parts[0]) else {
-                continue
-            }
-
-            let command = String(parts[2])
-            guard command.hasPrefix("claude --ide") else {
-                continue
-            }
-
-            activePIDs.insert(pid)
-            let projectContext = cachedProjectContext(for: pid, fallbackProject: "Claude Code")
-
-            // Get or create last activity timestamp
-            let lastActivity = lastActivityCache[pid] ?? Date()
-            lastActivityCache[pid] = lastActivity
-
-            // Count modified files in git repo
-            let modifiedCount = countModifiedFiles(for: projectContext.path)
-            modifiedFilesCache[pid] = modifiedCount
-
-            sessions.append(
-                SessionDescriptor(
-                    id: "claude:\(pid)",
-                    project: projectContext.name,
-                    projectPath: projectContext.path,
-                    isRunning: false,
-                    isTaskStateKnown: false,
-                    lastActivity: lastActivity,
-                    modifiedFilesCount: modifiedCount
-                )
-            )
-        }
-
-        projectCache = projectCache.filter { activePIDs.contains($0.key) }
-        lastActivityCache = lastActivityCache.filter { activePIDs.contains($0.key) }
-        modifiedFilesCache = modifiedFilesCache.filter { activePIDs.contains($0.key) }
-        return sessions.sorted { $0.id < $1.id }
-    }
-
-    private func cachedProjectContext(for pid: Int, fallbackProject: String) -> ProjectContext {
-        if let cached = projectCache[pid] {
-            return cached
-        }
-
-        let projectPath = lookupProjectPath(for: pid)
-        let context = ProjectContext(
-            name: projectPath.map(projectName(for:)) ?? fallbackProject,
-            path: projectPath
-        )
-        projectCache[pid] = context
-        return context
-    }
-
-    private func lookupProjectPath(for pid: Int) -> String? {
-        guard let output = commandOutput(executablePath: "/usr/sbin/lsof", arguments: ["-a", "-d", "cwd", "-p", "\(pid)"]) else {
-            return nil
-        }
-
-        for rawLine in output.split(separator: "\n").dropFirst() {
-            let parts = rawLine.split(maxSplits: 8, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard let pathField = parts.last else { continue }
-            return String(pathField)
-        }
-
-        return nil
-    }
-
-    private func countModifiedFiles(for projectPath: String?) -> Int {
-        guard let path = projectPath else { return 0 }
-        guard let output = commandOutput(executablePath: "/usr/bin/git", arguments: ["-C", path, "status", "--porcelain"]) else {
-            return 0
-        }
-        return output.split(separator: "\n").count
-    }
-}
-
-final class CodexActivityMonitor {
-    var onSessionsChange: (([SessionDescriptor]) -> Void)?
-
-    private struct ActivityState {
-        let isRunning: Bool
-        let hasTaskState: Bool
-        let lastActivity: Date
-    }
-
-    private let queue = DispatchQueue(label: "com.floatify.codex-activity")
-    private var timer: DispatchSourceTimer?
-    private var lastPublished: [SessionDescriptor] = []
-    private var projectCache: [Int: ProjectContext] = [:]
-    private var sessionLogPathCache: [Int: String] = [:]
-    private var modifiedFilesCache: [Int: Int] = [:]
-    private let sessionTailByteCount = 32 * 1024
-    private let timestampFormatterWithFractionalSeconds: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
-    private let timestampFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter
-    }()
-
-    func start() {
-        stop()
-        publishSessions(force: true)
-
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 1.5, repeating: 1.5)
-        timer.setEventHandler { [weak self] in
-            self?.publishSessions(force: false)
-        }
-        self.timer = timer
-        timer.resume()
-    }
-
-    func stop() {
-        timer?.cancel()
-        timer = nil
-    }
-
-    private func publishSessions(force: Bool) {
-        let sessions = detectCodexSessions()
-        guard force || sessions != lastPublished else { return }
-        lastPublished = sessions
-
-        DispatchQueue.main.async { [weak self] in
-            self?.onSessionsChange?(sessions)
-        }
-    }
-
-    private func detectCodexSessions() -> [SessionDescriptor] {
-        guard let output = commandOutput(executablePath: "/bin/ps", arguments: ["-Aww", "-o", "pid=,ppid=,command="]) else {
-            return []
-        }
-
-        var activeNodePIDs = Set<Int>()
-        var vendorPIDByNodePID: [Int: Int] = [:]
-
-        for rawLine in output.split(separator: "\n") {
-            let parts = rawLine.split(maxSplits: 2, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard parts.count == 3,
-                  let pid = Int(parts[0]),
-                  let ppid = Int(parts[1]) else {
-                continue
-            }
-
-            let command = String(parts[2])
-
-            if command.contains("node /opt/homebrew/bin/codex") {
-                activeNodePIDs.insert(pid)
-                continue
-            }
-
-            guard command.contains("/codex/codex") else {
-                continue
-            }
-
-            activeNodePIDs.insert(ppid)
-            vendorPIDByNodePID[ppid] = pid
-        }
-
-        projectCache = projectCache.filter { activeNodePIDs.contains($0.key) }
-        sessionLogPathCache = sessionLogPathCache.filter { activeNodePIDs.contains($0.key) }
-        modifiedFilesCache = modifiedFilesCache.filter { activeNodePIDs.contains($0.key) }
-
-        let now = Date()
-        return activeNodePIDs.sorted().map { nodePID in
-            let id = "codex:\(nodePID)"
-            let projectContext = cachedProjectContext(for: nodePID, fallbackProject: "Codex")
-            let activityState = cachedActivityState(for: nodePID, vendorPID: vendorPIDByNodePID[nodePID], fallbackDate: now)
-
-            // Count modified files in git repo
-            let modifiedCount = countModifiedFiles(for: projectContext.path)
-            modifiedFilesCache[nodePID] = modifiedCount
-
-            return SessionDescriptor(
-                id: id,
-                project: projectContext.name,
-                projectPath: projectContext.path,
-                isRunning: activityState.isRunning,
-                isTaskStateKnown: activityState.hasTaskState,
-                lastActivity: activityState.lastActivity,
-                modifiedFilesCount: modifiedCount
-            )
-        }
-    }
-
-    private func cachedActivityState(for nodePID: Int, vendorPID: Int?, fallbackDate: Date) -> ActivityState {
-        let sessionLogPath = cachedSessionLogPath(for: nodePID, vendorPID: vendorPID)
-        return readActivityState(from: sessionLogPath, fallbackDate: fallbackDate)
-    }
-
-    private func cachedSessionLogPath(for nodePID: Int, vendorPID: Int?) -> String? {
-        if let cached = sessionLogPathCache[nodePID],
-           FileManager.default.fileExists(atPath: cached) {
-            return cached
-        }
-
-        guard let vendorPID else { return nil }
-        let sessionLogPath = lookupSessionLogPath(for: vendorPID)
-        if let sessionLogPath {
-            sessionLogPathCache[nodePID] = sessionLogPath
-        }
-        return sessionLogPath
-    }
-
-    private func lookupSessionLogPath(for pid: Int) -> String? {
-        guard let output = commandOutput(executablePath: "/usr/sbin/lsof", arguments: ["-p", "\(pid)"]) else {
-            return nil
-        }
-
-        let sessionRoot = "\(NSHomeDirectory())/.codex/sessions/"
-        for rawLine in output.split(separator: "\n").dropFirst() {
-            let parts = rawLine.split(maxSplits: 8, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard let pathField = parts.last else { continue }
-            let path = String(pathField)
-            guard path.hasPrefix(sessionRoot), path.hasSuffix(".jsonl") else {
-                continue
-            }
-            return path
-        }
-
-        return nil
-    }
-
-    private func readActivityState(from sessionLogPath: String?, fallbackDate: Date) -> ActivityState {
-        guard let sessionLogPath else {
-            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
-        }
-
-        guard let fileHandle = FileHandle(forReadingAtPath: sessionLogPath) else {
-            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
-        }
-        defer {
-            fileHandle.closeFile()
-        }
-
-        let fileSize = (try? fileHandle.seekToEnd()) ?? 0
-        let readSize = min(UInt64(sessionTailByteCount), fileSize)
-        if readSize == 0 {
-            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
-        }
-
-        try? fileHandle.seek(toOffset: fileSize - readSize)
-        let data = fileHandle.readDataToEndOfFile()
-        guard var contents = String(data: data, encoding: .utf8) else {
-            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
-        }
-
-        if readSize < fileSize, let firstNewline = contents.firstIndex(of: "\n") {
-            contents = String(contents[contents.index(after: firstNewline)...])
-        }
-
-        var fallbackActivityAt: Date?
-        for rawLine in contents.split(separator: "\n").reversed() {
-            guard let lineData = rawLine.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
-                  let timestampRaw = json["timestamp"] as? String,
-                  let timestamp = parsedTimestamp(from: timestampRaw),
-                  let type = json["type"] as? String,
-                  type == "event_msg",
-                  let payload = json["payload"] as? [String: Any],
-                  let eventType = payload["type"] as? String else {
-                continue
-            }
-
-            if fallbackActivityAt == nil,
-               eventType == "user_message" || eventType == "agent_message" {
-                fallbackActivityAt = timestamp
-            }
-
-            if eventType == "task_complete" {
-                return ActivityState(isRunning: false, hasTaskState: true, lastActivity: timestamp)
-            }
-
-            if eventType == "task_started" {
-                return ActivityState(isRunning: true, hasTaskState: true, lastActivity: timestamp)
-            }
-        }
-
-        let fileModificationDate = (try? FileManager.default.attributesOfItem(atPath: sessionLogPath))?[.modificationDate] as? Date
-        return ActivityState(
-            isRunning: false,
-            hasTaskState: false,
-            lastActivity: fallbackActivityAt ?? fileModificationDate ?? fallbackDate
-        )
-    }
-
-    private func parsedTimestamp(from rawValue: String) -> Date? {
-        if let parsed = timestampFormatterWithFractionalSeconds.date(from: rawValue) {
-            return parsed
-        }
-        return timestampFormatter.date(from: rawValue)
-    }
-
-    private func cachedProjectContext(for pid: Int, fallbackProject: String) -> ProjectContext {
-        if let cached = projectCache[pid] {
-            return cached
-        }
-
-        let projectPath = lookupProjectPath(for: pid)
-        let context = ProjectContext(
-            name: projectPath.map(projectName(for:)) ?? fallbackProject,
-            path: projectPath
-        )
-        projectCache[pid] = context
-        return context
-    }
-
-    private func lookupProjectPath(for pid: Int) -> String? {
-        guard let output = commandOutput(executablePath: "/usr/sbin/lsof", arguments: ["-a", "-d", "cwd", "-p", "\(pid)"]) else {
-            return nil
-        }
-
-        for rawLine in output.split(separator: "\n").dropFirst() {
-            let parts = rawLine.split(maxSplits: 8, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard let pathField = parts.last else { continue }
-            return String(pathField)
-        }
-
-        return nil
-    }
-
-    private func countModifiedFiles(for projectPath: String?) -> Int {
-        guard let path = projectPath else { return 0 }
-        guard let output = commandOutput(executablePath: "/usr/bin/git", arguments: ["-C", path, "status", "--porcelain"]) else {
-            return 0
-        }
-        return output.split(separator: "\n").count
-    }
-}
-
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
-    private let idleTimeoutDefaultsKey = "IdleTimeout"
-    private let idleTimeoutMigrationKey = "IdleTimeoutMigratedTo10"
-    private var statusItem: NSStatusItem!
-    private var pipeSource: DispatchSourceRead?
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let settings = FloatifySettings.shared
     private let pipePath = "/var/tmp/floatify.pipe"
+    private let pipeDecoder = JSONDecoder()
     private let claudeSessionMonitor = ClaudeSessionMonitor()
     private let codexActivityMonitor = CodexActivityMonitor()
+
+    private var pipeSource: DispatchSourceRead?
     private var claudeSessionsByID: [String: SessionDescriptor] = [:]
     private var codexSessionsByID: [String: SessionDescriptor] = [:]
     private var statusItemsByID: [String: PersistentStatusItem] = [:]
     private var idleTransitionTimers: [String: Timer] = [:]
-    private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        migrateLegacyIdleTimeoutIfNeeded()
-        setupStatusItem()
         setupPipeListener()
         installCLIToolIfNeeded()
         SoundManager.shared.loadSounds()
@@ -489,6 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
                 modifiedFilesCount: session.modifiedFilesCount
             )
         }
+
         FloatNotificationManager.shared.showPersistentStatuses(items)
     }
 
@@ -518,7 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
             return .running
         }
 
-        if Date().timeIntervalSince(session.lastActivity) < idleTimeoutSeconds {
+        if Date().timeIntervalSince(session.lastActivity) < settings.idleTimeoutSeconds {
             return .idle
         }
 
@@ -528,6 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
     private func makeStatusItem(sessionID: String, project: String, state: ClaudeStatusState, lastActivity: Date) -> PersistentStatusItem {
         let monitoredSession = monitoredSession(for: sessionID)
         let existingItem = statusItemsByID[sessionID]
+
         return PersistentStatusItem(
             id: sessionID,
             project: monitoredSession?.project ?? existingItem?.project ?? project,
@@ -536,105 +109,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
             lastActivity: lastActivity,
             modifiedFilesCount: monitoredSession?.modifiedFilesCount ?? existingItem?.modifiedFilesCount ?? 0
         )
-    }
-
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.title = "🦆"
-        }
-
-        let menu = NSMenu()
-
-        let settingsItem = NSMenuItem(title: "Settings...", action: nil, keyEquivalent: ",")
-        settingsItem.target = nil
-        settingsItem.representedObject = self
-        settingsItem.action = #selector(AppDelegate.openSettings(_:))
-        menu.addItem(settingsItem)
-
-        menu.addItem(NSMenuItem.separator())
-
-        let testItem = NSMenuItem(title: "Test Notification", action: #selector(testNotification), keyEquivalent: "")
-        testItem.target = self
-        menu.addItem(testItem)
-
-        let arrangeItem = NSMenuItem(title: "Arrange", action: #selector(arrangeFloaters), keyEquivalent: "")
-        arrangeItem.target = self
-        menu.addItem(arrangeItem)
-
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "Quit Floatify", action: #selector(quit), keyEquivalent: "q")
-
-        menu.delegate = self
-        statusItem.menu = menu
-    }
-
-    @objc func openSettings(_ sender: Any?) {
-        NSLog("Floatify: openSettings called with sender: \(String(describing: sender))")
-        if let window = settingsWindow {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 640),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Floatify Settings"
-        window.contentView = NSHostingView(rootView: SettingsView())
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        settingsWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        NSLog("Floatify: Settings window created and shown")
-    }
-
-    @objc func openSettings() {
-        NSLog("Floatify: openSettings called")
-        if let window = settingsWindow {
-            window.makeKeyAndOrderFront(nil)
-            return
-        }
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 640),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Floatify Settings"
-        window.contentView = NSHostingView(rootView: SettingsView())
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        settingsWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSLog("Floatify: Settings window created and shown")
-    }
-
-    @objc private func testNotification() {
-        for corner in Corner.allCases {
-            FloatNotificationManager.shared.show(message: "Test: \(corner.rawValue)", corner: corner, duration: 5, project: "Test")
-        }
-    }
-
-    @objc private func arrangeFloaters() {
-        FloatNotificationManager.shared.arrangePersistentStatuses()
-    }
-
-    @objc private func quit() {
-        NSApplication.shared.terminate(nil)
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        if let window = notification.object as? NSWindow, window == settingsWindow {
-            settingsWindow = nil
-        }
     }
 
     private func setupPipeListener() {
@@ -658,16 +132,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
 
         pipeSource = DispatchSource.makeReadSource(fileDescriptor: pipeFd, queue: .main)
         pipeSource?.setEventHandler { [weak self] in
+            guard let self else { return }
+
             NSLog("Floatify: Pipe event triggered")
             var buffer = [UInt8](repeating: 0, count: 4096)
             let bytesRead = read(pipeFd, &buffer, buffer.count)
             NSLog("Floatify: Bytes read: %d", bytesRead)
-            if bytesRead > 0 {
-                let data = Data(bytes: buffer, count: bytesRead)
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    NSLog("Floatify: Received JSON: %@", json)
-                    self?.handleJSON(json)
-                }
+
+            guard bytesRead > 0 else { return }
+            let data = Data(buffer.prefix(bytesRead))
+
+            if let payload = try? self.pipeDecoder.decode(FloatifyPipePayload.self, from: data) {
+                self.handlePayload(payload)
             }
         }
         pipeSource?.setCancelHandler {
@@ -676,95 +152,59 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
         pipeSource?.resume()
     }
 
-    private func handleJSON(_ json: [String: Any]) {
-        NSLog("Floatify: handleJSON called with: %@", json)
-        if let statusString = json["status"] as? String,
+    private func handlePayload(_ payload: FloatifyPipePayload) {
+        if let statusString = payload.status,
            let state = claudeStatusState(from: statusString) {
-            let source = (json["source"] as? String)?.lowercased() ?? "claude"
-            let projectValue = (json["project"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let project = (projectValue?.isEmpty == false) ? projectValue! : source
-            let sessionID = (json["session"] as? String) ?? "\(source):\(project)"
+            applyStatusUpdate(state: state, payload: payload)
+        }
 
-            let now = Date()
-            idleTransitionTimers[sessionID]?.invalidate()
-            idleTransitionTimers.removeValue(forKey: sessionID)
+        guard payload.message != nil else { return }
+        showNotification(payload)
+    }
 
-            let displayState: ClaudeStatusState = (state == .complete) ? .idle : state
-            statusItemsByID[sessionID] = makeStatusItem(
-                sessionID: sessionID,
-                project: project,
-                state: displayState,
-                lastActivity: now
+    private func applyStatusUpdate(state: ClaudeStatusState, payload: FloatifyPipePayload) {
+        let sessionID = payload.statusSessionID
+        let now = Date()
+
+        idleTransitionTimers[sessionID]?.invalidate()
+        idleTransitionTimers.removeValue(forKey: sessionID)
+
+        let displayState: ClaudeStatusState = state == .complete ? .idle : state
+        statusItemsByID[sessionID] = makeStatusItem(
+            sessionID: sessionID,
+            project: payload.statusProject,
+            state: displayState,
+            lastActivity: now
+        )
+        refreshPersistentStatuses()
+
+        guard state == .idle || state == .complete else { return }
+
+        idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: settings.idleTimeoutSeconds, repeats: false) { [weak self] _ in
+            guard let self, let currentItem = self.statusItemsByID[sessionID] else { return }
+
+            self.statusItemsByID[sessionID] = PersistentStatusItem(
+                id: currentItem.id,
+                project: currentItem.project,
+                projectPath: self.monitoredSession(for: sessionID)?.projectPath ?? currentItem.projectPath,
+                state: .complete,
+                lastActivity: currentItem.lastActivity,
+                modifiedFilesCount: self.monitoredSession(for: sessionID)?.modifiedFilesCount ?? currentItem.modifiedFilesCount
             )
-            refreshPersistentStatuses()
-
-            if state == .idle || state == .complete {
-                idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: idleTimeoutSeconds, repeats: false) { [weak self] _ in
-                    guard let self else { return }
-                    guard let currentItem = self.statusItemsByID[sessionID] else { return }
-                    self.statusItemsByID[sessionID] = PersistentStatusItem(
-                        id: currentItem.id,
-                        project: currentItem.project,
-                        projectPath: self.monitoredSession(for: sessionID)?.projectPath ?? currentItem.projectPath,
-                        state: .complete,
-                        lastActivity: currentItem.lastActivity,
-                        modifiedFilesCount: self.monitoredSession(for: sessionID)?.modifiedFilesCount ?? currentItem.modifiedFilesCount
-                    )
-                    self.idleTransitionTimers.removeValue(forKey: sessionID)
-                    self.refreshPersistentStatuses()
-                }
-            }
+            self.idleTransitionTimers.removeValue(forKey: sessionID)
+            self.refreshPersistentStatuses()
         }
+    }
 
-        guard json["message"] != nil else { return }
-
-        let message = json["message"] as? String ?? "Task complete!"
-        let project = json["project"] as? String ?? "Claude Code"
-        let cornerStr = json["corner"] as? String ?? "bottomRight"
-        let corner: Corner
-
-        switch cornerStr {
-        case "bottomLeft":
-            corner = .bottomLeft
-        case "bottomRight":
-            corner = .bottomRight
-        case "topLeft":
-            corner = .topLeft
-        case "topRight":
-            corner = .topRight
-        case "center":
-            corner = .center
-        case "menubar":
-            corner = .menubar
-        case "horizontal":
-            corner = .horizontal
-        case "cursorFollow":
-            corner = .cursorFollow
-        default:
-            corner = .bottomRight
-        }
-
-        let duration = json["duration"] as? TimeInterval ?? 6.0
-
+    private func showNotification(_ payload: FloatifyPipePayload) {
         DispatchQueue.main.async {
-            FloatNotificationManager.shared.show(message: message, corner: corner, duration: duration, project: project)
+            FloatNotificationManager.shared.show(
+                message: payload.notificationMessage,
+                corner: payload.notificationCorner,
+                duration: payload.notificationDuration,
+                project: payload.notificationProject
+            )
         }
-    }
-
-    private var idleTimeoutSeconds: TimeInterval {
-        let stored = UserDefaults.standard.integer(forKey: idleTimeoutDefaultsKey)
-        return stored > 0 ? TimeInterval(stored) : 10.0
-    }
-
-    private func migrateLegacyIdleTimeoutIfNeeded() {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: idleTimeoutMigrationKey) else { return }
-
-        if defaults.object(forKey: idleTimeoutDefaultsKey) == nil || defaults.integer(forKey: idleTimeoutDefaultsKey) == 15 {
-            defaults.set(10, forKey: idleTimeoutDefaultsKey)
-        }
-
-        defaults.set(true, forKey: idleTimeoutMigrationKey)
     }
 
     private func claudeStatusState(from rawValue: String) -> ClaudeStatusState? {
@@ -782,7 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
 
     private func installCLIToolIfNeeded() {
         let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: "CLISymlinkInstalled") else { return }
+        guard !defaults.bool(forKey: FloatifySettings.cliSymlinkInstalledKey) else { return }
 
         let src = Bundle.main.url(forResource: "floatify", withExtension: nil)
         guard let srcURL = src else {
@@ -795,7 +235,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDele
 
         do {
             try FileManager.default.createSymbolicLink(at: dest, withDestinationURL: srcURL)
-            defaults.set(true, forKey: "CLISymlinkInstalled")
+            defaults.set(true, forKey: FloatifySettings.cliSymlinkInstalledKey)
             NSLog("Floatify: Installed floatify to /usr/local/bin/")
         } catch {
             NSLog("Floatify: Failed to install floatify CLI: %@", error.localizedDescription)
