@@ -497,6 +497,63 @@ private struct RunningSheenSweep: View {
     }
 }
 
+private struct DonePanelVictoryFlash: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let sweepOffset: CGFloat
+    let flashOpacity: Double
+    let glowScale: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            let sweepWidth = max(size.width * 0.34, 74)
+            let travel = size.width + sweepWidth + size.height * 0.92
+
+            ZStack {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(flashOpacity * 0.18),
+                                color.opacity(flashOpacity * 0.16),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: max(size.width, size.height) * 0.82
+                        )
+                    )
+                    .scaleEffect(glowScale)
+                    .blur(radius: 12)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.00),
+                                .init(color: color.opacity(flashOpacity * 0.12), location: 0.22),
+                                .init(color: .white.opacity(flashOpacity * 0.84), location: 0.50),
+                                .init(color: color.opacity(flashOpacity * 0.24), location: 0.78),
+                                .init(color: .clear, location: 1.00)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: sweepWidth, height: size.height * 2.1)
+                    .blur(radius: 10)
+                    .offset(x: travel * sweepOffset - sweepWidth)
+                    .rotationEffect(.degrees(-16))
+                    .blendMode(.screen)
+            }
+            .frame(width: size.width, height: size.height)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Wiggle Effect
 
 private struct WiggleModifier: ViewModifier {
@@ -550,6 +607,17 @@ private struct SpriteStageView: View {
     @State private var celebrateRotation: Double = 0
     @State private var celebrateRingScale: CGFloat = 0.76
     @State private var celebrateRingOpacity: Double = 0
+    @State private var doneFlashScale: CGFloat = 0.56
+    @State private var doneFlashOpacity: Double = 0
+    @State private var doneCoreScale: CGFloat = 0.34
+    @State private var doneCoreOpacity: Double = 0
+    @State private var doneRayExpansion: CGFloat = 0.18
+    @State private var doneRayOpacity: Double = 0
+    @State private var doneRayRotation: Double = -26
+    @State private var doneOrbitScale: CGFloat = 0.72
+    @State private var doneOrbitOpacity: Double = 0
+    @State private var doneOrbitRotation: Double = -90
+    @State private var doneSpriteLift: CGFloat = 0
     @State private var idleSparkleTrigger: UUID?
     @State private var doneSparkleTrigger: UUID?
 
@@ -672,6 +740,87 @@ private struct SpriteStageView: View {
             }
 
             if isComplete {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(doneFlashOpacity * 0.92),
+                                statusColor.opacity(doneFlashOpacity * 0.72),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * 0.54
+                        )
+                    )
+                    .frame(width: stageSize * doneFlashScale, height: stageSize * doneFlashScale)
+                    .blur(radius: 7)
+
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(doneCoreOpacity * 0.96),
+                                statusColor.opacity(doneCoreOpacity * 0.82),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * 0.40
+                        )
+                    )
+                    .frame(width: stageSize * doneCoreScale, height: stageSize * doneCoreScale)
+                    .blur(radius: 2.5)
+
+                ForEach(0..<10, id: \.self) { index in
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(doneRayOpacity * 0.98),
+                                    statusColor.opacity(doneRayOpacity * 0.82),
+                                    .clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(
+                            width: index.isMultiple(of: 3) ? 4.0 : 2.6,
+                            height: stageSize * (0.18 + doneRayExpansion * (index.isMultiple(of: 2) ? 0.50 : 0.40))
+                        )
+                        .offset(y: -stageSize * (0.18 + doneRayExpansion * 0.30))
+                        .rotationEffect(.degrees(Double(index) * 36 + doneRayRotation))
+                        .opacity(doneRayOpacity)
+                        .blur(radius: index.isMultiple(of: 4) ? 0.8 : 0.2)
+                        .blendMode(.screen)
+                }
+
+                ForEach(0..<6, id: \.self) { index in
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    .white.opacity(doneOrbitOpacity),
+                                    statusColor.opacity(doneOrbitOpacity * 0.84),
+                                    .clear
+                                ],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: stageSize * 0.12
+                            )
+                        )
+                        .frame(
+                            width: stageSize * (index.isMultiple(of: 2) ? 0.14 : 0.11),
+                            height: stageSize * (index.isMultiple(of: 2) ? 0.14 : 0.11)
+                        )
+                        .offset(y: -stageSize * 0.48 * doneOrbitScale)
+                        .rotationEffect(.degrees(Double(index) * 60 + doneOrbitRotation))
+                        .opacity(doneOrbitOpacity)
+                        .shadow(color: statusColor.opacity(doneOrbitOpacity * 0.52), radius: 5, x: 0, y: 0)
+                        .blendMode(.screen)
+                }
+
                 DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
 
                 Circle()
@@ -697,6 +846,7 @@ private struct SpriteStageView: View {
             .bobbing(isEnabled: isRunning && isAnimating)
             .scaleEffect(celebrateScale * (isRunning ? runningSpriteScale : 1.0))
             .rotationEffect(.degrees(celebrateRotation + (isRunning ? runningSpriteTilt : 0)))
+            .offset(y: doneSpriteLift)
 
             if isIdle {
                 IdleSparkleBurst(trigger: idleSparkleTrigger)
@@ -708,11 +858,6 @@ private struct SpriteStageView: View {
 
         }
         .frame(width: stageSize, height: stageSize)
-        .onAppear {
-            if isComplete {
-                triggerDoneSparkle(celebrateAvatar: true)
-            }
-        }
         .task(id: isRunning) {
             guard isRunning && isAnimating else {
                 await MainActor.run {
@@ -775,9 +920,9 @@ private struct SpriteStageView: View {
             guard isComplete else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
-                guard !Task.isCancelled else { break }
+                guard !Task.isCancelled, isComplete else { break }
                 await MainActor.run {
-                    triggerDoneSparkle(celebrateAvatar: false)
+                    triggerDonePulse()
                 }
             }
         }
@@ -803,11 +948,13 @@ private struct SpriteStageView: View {
     private func triggerDoneSparkle(celebrateAvatar: Bool) {
         doneSparkleTrigger = UUID()
         pulseCelebrateRing()
+        primeDoneSupernova(isMajorBlast: celebrateAvatar)
         guard celebrateAvatar else { return }
 
         withAnimation(.spring(response: 0.25, dampingFraction: 0.45)) {
             celebrateScale = 1.20
             celebrateRotation = -8
+            doneSpriteLift = -4
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.11) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) {
@@ -817,6 +964,7 @@ private struct SpriteStageView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.58)) {
                 celebrateScale = 1.0
+                doneSpriteLift = 0
             }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
@@ -833,6 +981,49 @@ private struct SpriteStageView: View {
         withAnimation(.easeOut(duration: 0.58)) {
             celebrateRingScale = 1.38
             celebrateRingOpacity = 0
+        }
+    }
+
+    private func triggerDonePulse() {
+        doneSparkleTrigger = UUID()
+        pulseCelebrateRing()
+    }
+
+    private func primeDoneSupernova(isMajorBlast: Bool) {
+        doneFlashScale = isMajorBlast ? 0.48 : 0.62
+        doneFlashOpacity = isMajorBlast ? 0.96 : 0.60
+        doneCoreScale = 0.32
+        doneCoreOpacity = isMajorBlast ? 0.98 : 0.72
+        doneRayExpansion = isMajorBlast ? 0.10 : 0.18
+        doneRayOpacity = isMajorBlast ? 0.94 : 0.58
+        doneRayRotation = isMajorBlast ? -42 : -18
+        doneOrbitScale = isMajorBlast ? 0.70 : 0.76
+        doneOrbitOpacity = isMajorBlast ? 0.88 : 0.38
+        doneOrbitRotation = -90
+
+        withAnimation(.easeOut(duration: isMajorBlast ? 0.18 : 0.24)) {
+            doneFlashScale = isMajorBlast ? 1.72 : 1.18
+            doneFlashOpacity = 0
+        }
+
+        withAnimation(.spring(response: isMajorBlast ? 0.34 : 0.44, dampingFraction: isMajorBlast ? 0.56 : 0.70)) {
+            doneCoreScale = isMajorBlast ? 1.26 : 0.94
+            doneCoreOpacity = 0
+            doneRayExpansion = isMajorBlast ? 0.92 : 0.58
+            doneOrbitScale = isMajorBlast ? 1.06 : 0.92
+            doneOrbitOpacity = isMajorBlast ? 0.54 : 0.22
+            doneRayRotation += isMajorBlast ? 126 : 72
+        }
+
+        withAnimation(.linear(duration: isMajorBlast ? 1.15 : 0.90)) {
+            doneOrbitRotation = isMajorBlast ? 264 : 170
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + (isMajorBlast ? 0.34 : 0.24)) {
+            withAnimation(.easeOut(duration: isMajorBlast ? 0.62 : 0.48)) {
+                doneRayOpacity = 0
+                doneOrbitOpacity = 0
+            }
         }
     }
 }
@@ -1174,6 +1365,9 @@ struct FloatNotificationView: View {
     @State private var shakeTrigger: UUID?
     @State private var completionTrigger: UUID?
     @State private var lastObservedStatusState: ClaudeStatusState?
+    @State private var panelVictoryFlashOffset: CGFloat
+    @State private var panelVictoryFlashOpacity: Double
+    @State private var panelVictoryFlashScale: CGFloat
     @StateObject private var particleSystem = ParticleSystem()
 
     init(
@@ -1221,6 +1415,9 @@ struct FloatNotificationView: View {
         _shakeTrigger = State(initialValue: shouldShake ? UUID() : nil)
         _completionTrigger = State(initialValue: nil)
         _lastObservedStatusState = State(initialValue: statusState)
+        _panelVictoryFlashOffset = State(initialValue: -1.2)
+        _panelVictoryFlashOpacity = State(initialValue: 0)
+        _panelVictoryFlashScale = State(initialValue: 0.94)
     }
 
     private var effectiveSound: String? {
@@ -1338,11 +1535,24 @@ struct FloatNotificationView: View {
                 .strokeBorder(FloaterPalette.highlight.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
         )
         .overlay {
-            if isPersistent, isRunning {
-                RunningSheenSweep(
-                    color: accentColor,
-                    cornerRadius: floaterSize.cornerRadius
-                )
+            if isPersistent {
+                ZStack {
+                    if isRunning {
+                        RunningSheenSweep(
+                            color: accentColor,
+                            cornerRadius: floaterSize.cornerRadius
+                        )
+                    }
+
+                    DonePanelVictoryFlash(
+                        color: accentColor,
+                        cornerRadius: floaterSize.cornerRadius,
+                        sweepOffset: panelVictoryFlashOffset,
+                        flashOpacity: panelVictoryFlashOpacity,
+                        glowScale: panelVictoryFlashScale
+                    )
+                    .opacity(panelVictoryFlashOpacity)
+                }
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -1656,5 +1866,38 @@ struct FloatNotificationView: View {
         let trigger = UUID()
         completionTrigger = trigger
         shakeTrigger = trigger
+        triggerPanelVictoryFlash()
+    }
+
+    private func triggerPanelVictoryFlash() {
+        panelVictoryFlashOffset = -1.2
+        panelVictoryFlashOpacity = 0
+        panelVictoryFlashScale = 0.92
+
+        withAnimation(.easeOut(duration: 0.14)) {
+            panelVictoryFlashOpacity = 1
+            panelVictoryFlashScale = 1.04
+        }
+
+        withAnimation(.easeInOut(duration: 0.72)) {
+            panelVictoryFlashOffset = 1.18
+        }
+
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.58)) {
+            panelScale = 1.035
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.74)) {
+                panelScale = 1.0
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) {
+            withAnimation(.easeOut(duration: 0.42)) {
+                panelVictoryFlashOpacity = 0
+                panelVictoryFlashScale = 1.12
+            }
+        }
     }
 }
