@@ -80,7 +80,7 @@ enum FloaterPalette {
 
 // MARK: - Sprite Sheet Infrastructure
 
-struct SpriteSheetMetadata {
+struct SpriteSheetMetadata: Hashable {
     let frameRects: [CGRect]
 
     static let defaultSheetName = "avatar-sprite-sheet"
@@ -118,64 +118,122 @@ struct SpriteSheetMetadata {
     }
 }
 
-private enum SpriteSheetCache {
-    static var sheetCache: [String: CGImage] = [:]
-    static var frames: [String: NSImage] = [:]
+private enum AvatarImageCache {
+    static var spriteSheets: [String: CGImage] = [:]
+    static var croppedFrames: [String: NSImage] = [:]
+    static var staticImages: [String: NSImage] = [:]
 
-    static func cgImage(for sheetName: String) -> CGImage? {
-        if let cached = sheetCache[sheetName] {
+    static func cgImage(for source: FloaterAvatarImageSource) -> CGImage? {
+        let key = cacheKey(for: source)
+        if let cached = spriteSheets[key] {
             return cached
         }
 
-        guard let url = Bundle.main.url(forResource: sheetName, withExtension: "png"),
+        guard let url = url(for: source),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             return nil
         }
 
-        sheetCache[sheetName] = image
+        spriteSheets[key] = image
         return image
     }
 
-    static func image(for rect: CGRect, sheetName: String) -> NSImage? {
-        let key = "\(sheetName):\(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.size.width)):\(Int(rect.size.height))"
-        if let cached = frames[key] {
+    static func staticImage(for source: FloaterAvatarImageSource) -> NSImage? {
+        let key = cacheKey(for: source)
+        if let cached = staticImages[key] {
             return cached
         }
 
-        guard let sheet = cgImage(for: sheetName),
+        guard let url = url(for: source),
+              let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+
+        staticImages[key] = image
+        return image
+    }
+
+    static func frameImage(for rect: CGRect, source: FloaterAvatarImageSource) -> NSImage? {
+        let key = "\(cacheKey(for: source)):\(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.size.width)):\(Int(rect.size.height))"
+        if let cached = croppedFrames[key] {
+            return cached
+        }
+
+        guard let sheet = cgImage(for: source),
               let cropped = sheet.cropping(to: rect) else {
             return nil
         }
 
         let image = NSImage(cgImage: cropped, size: rect.size)
-        frames[key] = image
+        croppedFrames[key] = image
         return image
+    }
+
+    private static func cacheKey(for source: FloaterAvatarImageSource) -> String {
+        switch source {
+        case let .bundledResource(name):
+            return "bundle:\(name)"
+        case let .file(path):
+            return "file:\(path)"
+        }
+    }
+
+    private static func url(for source: FloaterAvatarImageSource) -> URL? {
+        switch source {
+        case let .bundledResource(name):
+            return Bundle.main.url(forResource: name, withExtension: "png")
+        case let .file(path):
+            return URL(fileURLWithPath: path)
+        }
     }
 }
 
 private struct SpriteAnimationView: View {
-    let sheetName: String?
+    let avatar: FloaterAvatarDefinition
     let isAnimating: Bool
     var size: CGFloat = 34
 
     @State private var frameIndex = 0
 
-    private var effectiveSheetName: String {
-        sheetName ?? SpriteSheetMetadata.defaultSheetName
+    private var imageSource: FloaterAvatarImageSource? {
+        switch avatar.source {
+        case let .spriteSheet(imageSource, _, _):
+            return imageSource
+        case .automatic, .staticImage:
+            return nil
+        }
     }
 
     private var metadata: SpriteSheetMetadata {
-        SpriteSheetMetadata.forSheet(effectiveSheetName)
+        switch avatar.source {
+        case let .spriteSheet(_, metadata, _):
+            return metadata
+        case .automatic, .staticImage:
+            return SpriteSheetMetadata.defaultMetadata
+        }
     }
 
     private var frameRects: [CGRect] {
         metadata.frameRects
     }
 
+    private var frameDuration: UInt64 {
+        let duration: TimeInterval
+        switch avatar.source {
+        case let .spriteSheet(_, _, frameDuration):
+            duration = frameDuration
+        case .automatic, .staticImage:
+            duration = 0.16
+        }
+
+        return UInt64(max(duration, 0.04) * 1_000_000_000)
+    }
+
     var body: some View {
         Group {
-            if let image = SpriteSheetCache.image(for: frameRects[frameIndex], sheetName: effectiveSheetName) {
+            if let imageSource,
+               let image = AvatarImageCache.frameImage(for: frameRects[frameIndex], source: imageSource) {
                 Image(nsImage: image)
                     .interpolation(.none)
                     .resizable()
@@ -183,15 +241,62 @@ private struct SpriteAnimationView: View {
             }
         }
         .frame(width: size, height: size)
-        .task(id: "\(effectiveSheetName)-\(isAnimating)") {
+        .task(id: "\(avatar.id)-\(isAnimating)") {
             frameIndex = 0
             guard isAnimating else { return }
 
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 160_000_000)
+                try? await Task.sleep(nanoseconds: frameDuration)
                 guard !Task.isCancelled else { break }
                 await MainActor.run {
                     frameIndex = (frameIndex + 1) % frameRects.count
+                }
+            }
+        }
+    }
+}
+
+private struct StaticAvatarImageView: View {
+    let avatar: FloaterAvatarDefinition
+    var size: CGFloat
+
+    private var imageSource: FloaterAvatarImageSource? {
+        switch avatar.source {
+        case let .staticImage(imageSource):
+            return imageSource
+        case .automatic, .spriteSheet:
+            return nil
+        }
+    }
+
+    var body: some View {
+        Group {
+            if let imageSource,
+               let image = AvatarImageCache.staticImage(for: imageSource) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct AvatarArtView: View {
+    let avatar: FloaterAvatarDefinition?
+    let isAnimating: Bool
+    var size: CGFloat
+
+    var body: some View {
+        Group {
+            if let avatar {
+                switch avatar.source {
+                case .automatic:
+                    EmptyView()
+                case .spriteSheet:
+                    SpriteAnimationView(avatar: avatar, isAnimating: isAnimating, size: size)
+                case .staticImage:
+                    StaticAvatarImageView(avatar: avatar, size: size)
                 }
             }
         }
@@ -434,12 +539,17 @@ private struct RunningSheenSweep: View {
     let color: Color
     let cornerRadius: CGFloat
     let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
 
     @State private var sweepProgress: CGFloat = 0
     @State private var didStartAnimating = false
 
     private var isSuperSlay: Bool {
         renderMode == .superSlay
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * effectTuning.glowMultiplier, 1.0)
     }
 
     var body: some View {
@@ -455,9 +565,9 @@ private struct RunningSheenSweep: View {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0.00),
-                                .init(color: color.opacity(isSuperSlay ? 0.10 : 0.05), location: 0.22),
-                                .init(color: .white.opacity(isSuperSlay ? 0.30 : 0.17), location: 0.50),
-                                .init(color: color.opacity(isSuperSlay ? 0.16 : 0.08), location: 0.78),
+                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.10 : 0.05)), location: 0.22),
+                                .init(color: .white.opacity(scaledOpacity(isSuperSlay ? 0.30 : 0.17)), location: 0.50),
+                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.16 : 0.08)), location: 0.78),
                                 .init(color: .clear, location: 1.00)
                             ],
                             startPoint: .leading,
@@ -465,7 +575,7 @@ private struct RunningSheenSweep: View {
                         )
                     )
                     .frame(width: sweepWidth, height: size.height * 1.92)
-                    .blur(radius: isSuperSlay ? 5 : 4)
+                    .blur(radius: (isSuperSlay ? 5 : 4) * effectTuning.glowMultiplier)
                     .offset(x: offset)
                     .rotationEffect(.degrees(-16))
                     .blendMode(.screen)
@@ -476,9 +586,9 @@ private struct RunningSheenSweep: View {
                             LinearGradient(
                                 stops: [
                                     .init(color: .clear, location: 0.00),
-                                    .init(color: .white.opacity(0.10), location: 0.36),
-                                    .init(color: .white.opacity(0.44), location: 0.52),
-                                    .init(color: color.opacity(0.18), location: 0.72),
+                                    .init(color: .white.opacity(scaledOpacity(0.10)), location: 0.36),
+                                    .init(color: .white.opacity(scaledOpacity(0.44)), location: 0.52),
+                                    .init(color: color.opacity(scaledOpacity(0.18)), location: 0.72),
                                     .init(color: .clear, location: 1.00)
                                 ],
                                 startPoint: .leading,
@@ -493,7 +603,7 @@ private struct RunningSheenSweep: View {
                 }
 
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(color.opacity(isSuperSlay ? 0.09 : 0.055), lineWidth: isSuperSlay ? 0.9 : 0.7)
+                    .strokeBorder(color.opacity(scaledOpacity(isSuperSlay ? 0.09 : 0.055)), lineWidth: isSuperSlay ? 0.9 : 0.7)
             }
             .mask(
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -506,7 +616,7 @@ private struct RunningSheenSweep: View {
             didStartAnimating = true
             sweepProgress = 0
 
-            withAnimation(.linear(duration: isSuperSlay ? 3.1 : 11.8).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: (isSuperSlay ? 3.1 : 11.8) * effectTuning.sheenDurationMultiplier).repeatForever(autoreverses: false)) {
                 sweepProgress = 1
             }
         }
@@ -604,11 +714,12 @@ private struct WiggleModifier: ViewModifier {
 // MARK: - Sprite Stage
 
 private struct SpriteStageView: View {
-    let sheetName: String?
+    let avatar: FloaterAvatarDefinition?
     let statusColor: Color
     let stageSize: CGFloat
     let spriteSize: CGFloat
     let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
     let isAnimating: Bool
     let isRunning: Bool
     let isIdle: Bool
@@ -647,6 +758,34 @@ private struct SpriteStageView: View {
         renderMode == .superSlay
     }
 
+    private var showsCounterArc: Bool {
+        effectTuning.showsCounterArc ?? isSuperSlay
+    }
+
+    private var showsSecondaryOrbit: Bool {
+        effectTuning.showsSecondaryOrbit ?? isSuperSlay
+    }
+
+    private var glowMultiplier: Double {
+        max(effectTuning.glowMultiplier, 0.2)
+    }
+
+    private var completionRayCount: Int {
+        max((isSuperSlay ? 10 : 6) + effectTuning.extraCompletionRays, 1)
+    }
+
+    private var completionOrbitCount: Int {
+        max((isSuperSlay ? 6 : 3) + effectTuning.extraCompletionOrbs, 1)
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * glowMultiplier, 1.0)
+    }
+
+    private func scaledRadius(_ value: CGFloat) -> CGFloat {
+        value * CGFloat(glowMultiplier)
+    }
+
     var body: some View {
         ZStack {
             Circle()
@@ -654,7 +793,7 @@ private struct SpriteStageView: View {
                     RadialGradient(
                         colors: [
                             Color.black.opacity(isRunning ? 0.42 : 0.34),
-                            FloaterPalette.panelShadow.opacity(isRunning ? 0.66 : 0.54),
+                            FloaterPalette.panelShadow.opacity(scaledOpacity(isRunning ? 0.66 : 0.54)),
                             .clear
                         ],
                         center: .center,
@@ -669,8 +808,8 @@ private struct SpriteStageView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            statusColor.opacity(isRunning ? 0.38 * runningAuraOpacity : 0.20),
-                            statusColor.opacity(isRunning ? 0.16 * runningAuraOpacity : 0.06),
+                            statusColor.opacity(scaledOpacity(isRunning ? 0.38 * runningAuraOpacity : 0.20)),
+                            statusColor.opacity(scaledOpacity(isRunning ? 0.16 * runningAuraOpacity : 0.06)),
                             .clear
                         ],
                         center: .center,
@@ -679,27 +818,27 @@ private struct SpriteStageView: View {
                     )
                 )
                 .frame(width: stageSize * 1.35 * glowPulse, height: stageSize * 1.35 * glowPulse)
-                .blur(radius: isSuperSlay ? 5 : 3)
+                .blur(radius: scaledRadius(isSuperSlay ? 5 : 3))
 
             if isRunning {
                 Circle()
                     .trim(from: 0.08, to: 0.40)
-                    .stroke(statusColor.opacity((isSuperSlay ? 0.92 : 0.76) * runningArcOpacity), style: StrokeStyle(lineWidth: isSuperSlay ? 2.4 : 2.0, lineCap: .round))
+                    .stroke(statusColor.opacity(scaledOpacity((isSuperSlay ? 0.92 : 0.76) * runningArcOpacity)), style: StrokeStyle(lineWidth: isSuperSlay ? 2.4 : 2.0, lineCap: .round))
                     .frame(width: stageSize * 1.16, height: stageSize * 1.16)
                     .rotationEffect(.degrees(runningArcRotation))
-                    .shadow(color: .white.opacity(isSuperSlay ? 0.10 * runningArcOpacity : 0), radius: isSuperSlay ? 1.2 : 0, x: 0, y: 0)
-                    .shadow(color: statusColor.opacity((isSuperSlay ? 0.30 : 0.18) * runningArcOpacity), radius: isSuperSlay ? 2.6 : 1.6, x: 0, y: 0)
+                    .shadow(color: .white.opacity(scaledOpacity(isSuperSlay ? 0.10 * runningArcOpacity : 0)), radius: scaledRadius(isSuperSlay ? 1.2 : 0), x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(scaledOpacity((isSuperSlay ? 0.30 : 0.18) * runningArcOpacity)), radius: scaledRadius(isSuperSlay ? 2.6 : 1.6), x: 0, y: 0)
 
-                if isSuperSlay {
+                if showsCounterArc {
                     Circle()
                         .trim(from: 0.56, to: 0.82)
-                        .stroke(statusColor.opacity(0.52 * runningArcOpacity), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                        .stroke(statusColor.opacity(scaledOpacity(0.52 * runningArcOpacity)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
                         .frame(width: stageSize * 0.96, height: stageSize * 0.96)
                         .rotationEffect(.degrees(runningCounterArcRotation))
-                        .shadow(color: statusColor.opacity(0.20 * runningArcOpacity), radius: 1.8, x: 0, y: 0)
+                        .shadow(color: statusColor.opacity(scaledOpacity(0.20 * runningArcOpacity)), radius: scaledRadius(1.8), x: 0, y: 0)
 
                     Circle()
-                        .strokeBorder(statusColor.opacity(runningRingOpacity), lineWidth: 1.2)
+                        .strokeBorder(statusColor.opacity(scaledOpacity(runningRingOpacity)), lineWidth: 1.2)
                         .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
                         .blur(radius: 0.5)
                 }
@@ -712,11 +851,11 @@ private struct SpriteStageView: View {
                         .frame(width: stageSize * 0.08, height: stageSize * 0.08)
                 }
                     .frame(width: stageSize * 0.20, height: stageSize * 0.20)
-                    .shadow(color: statusColor.opacity(isSuperSlay ? 0.54 : 0.38), radius: isSuperSlay ? 4 : 3, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(scaledOpacity(isSuperSlay ? 0.54 : 0.38)), radius: scaledRadius(isSuperSlay ? 4 : 3), x: 0, y: 0)
                     .offset(y: -stageSize * 0.43)
                     .rotationEffect(.degrees(runningOrbitAngle))
 
-                if isSuperSlay {
+                if showsSecondaryOrbit {
                     ZStack {
                         Circle()
                             .fill(statusColor.opacity(0.62))
@@ -725,7 +864,7 @@ private struct SpriteStageView: View {
                             .frame(width: stageSize * 0.05, height: stageSize * 0.05)
                     }
                     .frame(width: stageSize * 0.14, height: stageSize * 0.14)
-                    .shadow(color: statusColor.opacity(0.28), radius: 3, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(scaledOpacity(0.28)), radius: scaledRadius(3), x: 0, y: 0)
                     .offset(y: -stageSize * 0.34)
                     .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
                 }
@@ -768,13 +907,13 @@ private struct SpriteStageView: View {
                     .frame(width: stageSize * doneCoreScale, height: stageSize * doneCoreScale)
                     .blur(radius: 2.5)
 
-                ForEach(0..<(isSuperSlay ? 10 : 6), id: \.self) { index in
+                ForEach(0..<completionRayCount, id: \.self) { index in
                     Capsule()
                         .fill(
                             LinearGradient(
                                 colors: [
                                     .white.opacity(doneRayOpacity * 0.98),
-                                    statusColor.opacity(doneRayOpacity * 0.82),
+                                    statusColor.opacity(scaledOpacity(doneRayOpacity * 0.82)),
                                     .clear
                                 ],
                                 startPoint: .top,
@@ -786,13 +925,13 @@ private struct SpriteStageView: View {
                             height: stageSize * ((isSuperSlay ? 0.18 : 0.16) + doneRayExpansion * (index.isMultiple(of: 2) ? (isSuperSlay ? 0.50 : 0.42) : (isSuperSlay ? 0.40 : 0.34)))
                         )
                         .offset(y: -stageSize * ((isSuperSlay ? 0.18 : 0.17) + doneRayExpansion * (isSuperSlay ? 0.30 : 0.28)))
-                        .rotationEffect(.degrees(Double(index) * (isSuperSlay ? 36 : 60) + doneRayRotation))
+                        .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionRayCount)) + doneRayRotation))
                         .opacity(doneRayOpacity)
                         .blur(radius: index.isMultiple(of: 4) ? (isSuperSlay ? 0.8 : 0.5) : (isSuperSlay ? 0.2 : 0.1))
                         .blendMode(.screen)
                 }
 
-                ForEach(0..<(isSuperSlay ? 6 : 3), id: \.self) { index in
+                ForEach(0..<completionOrbitCount, id: \.self) { index in
                     Circle()
                         .fill(
                             RadialGradient(
@@ -811,9 +950,9 @@ private struct SpriteStageView: View {
                             height: stageSize * (index.isMultiple(of: 2) ? (isSuperSlay ? 0.14 : 0.13) : (isSuperSlay ? 0.11 : 0.10))
                         )
                         .offset(y: -stageSize * (isSuperSlay ? 0.48 : 0.44) * doneOrbitScale)
-                        .rotationEffect(.degrees(Double(index) * (isSuperSlay ? 60 : 120) + doneOrbitRotation))
+                        .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionOrbitCount)) + doneOrbitRotation))
                         .opacity(doneOrbitOpacity)
-                        .shadow(color: statusColor.opacity(doneOrbitOpacity * (isSuperSlay ? 0.52 : 0.36)), radius: isSuperSlay ? 5 : 3, x: 0, y: 0)
+                        .shadow(color: statusColor.opacity(scaledOpacity(doneOrbitOpacity * (isSuperSlay ? 0.52 : 0.36))), radius: scaledRadius(isSuperSlay ? 5 : 3), x: 0, y: 0)
                         .blendMode(.screen)
                 }
 
@@ -828,9 +967,9 @@ private struct SpriteStageView: View {
 
             // Sprite - motion gated on state
             Group {
-                if let sheetName {
-                    SpriteAnimationView(
-                        sheetName: sheetName,
+                if let avatar {
+                    AvatarArtView(
+                        avatar: avatar,
                         isAnimating: isRunning && isAnimating,
                         size: spriteSize
                     )
@@ -874,26 +1013,26 @@ private struct SpriteStageView: View {
                 runningArcOpacity = isSuperSlay ? 0.48 : 0.54
                 runningSpriteTilt = isSuperSlay ? -1.4 : -0.8
 
-                withAnimation(.easeInOut(duration: isSuperSlay ? 1.55 : 3.0).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: (isSuperSlay ? 1.55 : 3.0) * effectTuning.pulseDurationMultiplier).repeatForever(autoreverses: true)) {
                     glowPulse = isSuperSlay ? 1.18 : 1.12
                     runningAuraOpacity = isSuperSlay ? 1.0 : 0.90
-                    runningRingScale = isSuperSlay ? 1.20 : 0.84
+                    runningRingScale = showsCounterArc ? (isSuperSlay ? 1.20 : 1.08) : 0.84
                     runningRingOpacity = isSuperSlay ? 0.42 : 0
                     runningSpriteScale = isSuperSlay ? 1.055 : 1.03
                     runningArcOpacity = isSuperSlay ? 0.94 : 0.78
                     runningSpriteTilt = isSuperSlay ? 2.2 : 1.0
                 }
 
-                withAnimation(.linear(duration: isSuperSlay ? 3.6 : 6.8).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: (isSuperSlay ? 3.6 : 6.8) * effectTuning.orbitDurationMultiplier).repeatForever(autoreverses: false)) {
                     runningOrbitAngle = 270
                 }
 
-                withAnimation(.linear(duration: isSuperSlay ? 2.15 : 5.8).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: (isSuperSlay ? 2.15 : 5.8) * effectTuning.arcDurationMultiplier).repeatForever(autoreverses: false)) {
                     runningArcRotation = 336
                 }
 
-                if isSuperSlay {
-                    withAnimation(.linear(duration: 3.25).repeatForever(autoreverses: false)) {
+                if showsCounterArc {
+                    withAnimation(.linear(duration: 3.25 * effectTuning.arcDurationMultiplier).repeatForever(autoreverses: false)) {
                         runningCounterArcRotation = -228
                     }
                 }
@@ -907,7 +1046,7 @@ private struct SpriteStageView: View {
             guard isIdle else { return }
             triggerIdleSparkle()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: isSuperSlay ? 700_000_000 : 1_800_000_000)
+                try? await Task.sleep(nanoseconds: UInt64((isSuperSlay ? 700_000_000.0 : 1_800_000_000.0) * effectTuning.pulseDurationMultiplier))
                 guard !Task.isCancelled else { break }
                 await MainActor.run {
                     triggerIdleSparkle()
@@ -917,7 +1056,7 @@ private struct SpriteStageView: View {
         .task(id: isComplete) {
             guard isComplete else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: isSuperSlay ? 10_000_000_000 : 18_000_000_000)
+                try? await Task.sleep(nanoseconds: UInt64((isSuperSlay ? 10_000_000_000.0 : 18_000_000_000.0) * effectTuning.completionDurationMultiplier))
                 guard !Task.isCancelled, isComplete else { break }
                 await MainActor.run {
                     triggerDonePulse()
@@ -974,10 +1113,10 @@ private struct SpriteStageView: View {
 
     private func pulseCelebrateRing() {
         celebrateRingScale = 0.76
-        celebrateRingOpacity = 0.84
+        celebrateRingOpacity = scaledOpacity(0.84)
 
-        withAnimation(.easeOut(duration: isSuperSlay ? 0.58 : 0.92)) {
-            celebrateRingScale = isSuperSlay ? 1.38 : 1.24
+        withAnimation(.easeOut(duration: (isSuperSlay ? 0.58 : 0.92) * effectTuning.completionDurationMultiplier)) {
+            celebrateRingScale = (isSuperSlay ? 1.38 : 1.24) * CGFloat(effectTuning.flashIntensityMultiplier)
             celebrateRingOpacity = 0
         }
     }
@@ -989,36 +1128,36 @@ private struct SpriteStageView: View {
 
     private func primeDoneSupernova(isMajorBlast: Bool) {
         doneFlashScale = isMajorBlast ? 0.48 : 0.62
-        doneFlashOpacity = isMajorBlast ? 0.96 : 0.60
+        doneFlashOpacity = scaledOpacity(isMajorBlast ? 0.96 : 0.60)
         doneCoreScale = 0.32
-        doneCoreOpacity = isMajorBlast ? 0.98 : 0.72
+        doneCoreOpacity = scaledOpacity(isMajorBlast ? 0.98 : 0.72)
         doneRayExpansion = isMajorBlast ? 0.10 : 0.18
-        doneRayOpacity = isMajorBlast ? 0.94 : 0.58
+        doneRayOpacity = scaledOpacity(isMajorBlast ? 0.94 : 0.58)
         doneRayRotation = isMajorBlast ? -42 : -18
         doneOrbitScale = isMajorBlast ? 0.70 : 0.76
-        doneOrbitOpacity = isMajorBlast ? 0.88 : 0.38
+        doneOrbitOpacity = scaledOpacity(isMajorBlast ? 0.88 : 0.38)
         doneOrbitRotation = -90
 
-        withAnimation(.easeOut(duration: isMajorBlast ? 0.18 : 0.24)) {
-            doneFlashScale = isMajorBlast ? 1.72 : 1.18
+        withAnimation(.easeOut(duration: (isMajorBlast ? 0.18 : 0.24) * effectTuning.completionDurationMultiplier)) {
+            doneFlashScale = (isMajorBlast ? 1.72 : 1.18) * CGFloat(effectTuning.flashIntensityMultiplier)
             doneFlashOpacity = 0
         }
 
-        withAnimation(.spring(response: isMajorBlast ? 0.34 : 0.44, dampingFraction: isMajorBlast ? 0.56 : 0.70)) {
-            doneCoreScale = isMajorBlast ? 1.26 : 0.94
+        withAnimation(.spring(response: (isMajorBlast ? 0.34 : 0.44) * effectTuning.completionDurationMultiplier, dampingFraction: isMajorBlast ? 0.56 : 0.70)) {
+            doneCoreScale = (isMajorBlast ? 1.26 : 0.94) * CGFloat(effectTuning.flashIntensityMultiplier)
             doneCoreOpacity = 0
             doneRayExpansion = isMajorBlast ? 0.92 : 0.58
             doneOrbitScale = isMajorBlast ? 1.06 : 0.92
-            doneOrbitOpacity = isMajorBlast ? 0.54 : 0.22
+            doneOrbitOpacity = scaledOpacity(isMajorBlast ? 0.54 : 0.22)
             doneRayRotation += isMajorBlast ? 126 : 72
         }
 
-        withAnimation(.linear(duration: isMajorBlast ? 1.15 : 0.90)) {
+        withAnimation(.linear(duration: (isMajorBlast ? 1.15 : 0.90) * effectTuning.completionDurationMultiplier)) {
             doneOrbitRotation = isMajorBlast ? 264 : 170
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + (isMajorBlast ? 0.34 : 0.24)) {
-            withAnimation(.easeOut(duration: isMajorBlast ? 0.62 : 0.48)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + ((isMajorBlast ? 0.34 : 0.24) * effectTuning.completionDurationMultiplier)) {
+            withAnimation(.easeOut(duration: (isMajorBlast ? 0.62 : 0.48) * effectTuning.completionDurationMultiplier)) {
                 doneRayOpacity = 0
                 doneOrbitOpacity = 0
             }
@@ -1034,6 +1173,7 @@ private struct StatusPill: View {
     let dotSize: CGFloat
     let fontSize: CGFloat
     let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
     let isPulsing: Bool
     let showsTypingDots: Bool
 
@@ -1083,8 +1223,8 @@ private struct StatusPill: View {
         )
         .onAppear {
             guard isPulsing else { return }
-            withAnimation(.easeInOut(duration: isSuperSlay ? 1.1 : 2.1).repeatForever(autoreverses: true)) {
-                pulseScale = isSuperSlay ? 1.46 : 1.22
+            withAnimation(.easeInOut(duration: (isSuperSlay ? 1.1 : 2.1) * effectTuning.statusPulseDurationMultiplier).repeatForever(autoreverses: true)) {
+                pulseScale = (isSuperSlay ? 1.46 : 1.22) * CGFloat(effectTuning.glowMultiplier)
                 pulseOpacity = 0
             }
         }
@@ -1305,12 +1445,13 @@ struct FloaterPanelView: View {
                             onClose: { onItemClose(item.item) },
                             statusIndicatorColor: item.item.state.indicatorColor,
                             statusState: item.item.state,
-                            sheetName: item.sheetName,
+                            avatar: item.avatar,
                             animatesStatus: item.item.state.animatesIndicator,
                             isDraggablePanel: true,
                             playsEntryAnimation: item.playsEntryAnimation,
                             floaterSize: item.floaterSize,
                             renderMode: item.renderMode,
+                            effectPreset: item.effectPreset,
                             lastActivity: item.item.lastActivity,
                             modifiedFilesCount: item.item.modifiedFilesCount,
                             shouldShake: item.shouldShake,
@@ -1350,12 +1491,13 @@ struct FloatNotificationView: View {
     var onClose: (() -> Void)?
     var statusIndicatorColor: Color?
     var statusState: ClaudeStatusState?
-    var sheetName: String?
+    var avatar: FloaterAvatarDefinition?
     var animatesStatus = true
     var isDraggablePanel = false
     var playsEntryAnimation = true
     var floaterSize: FloaterSize = .regular
     var renderMode: FloaterRenderMode = .slay
+    var effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0]
     var isCompact: Bool = false
     var lastActivity: Date?
     var modifiedFilesCount: Int = 0
@@ -1385,12 +1527,13 @@ struct FloatNotificationView: View {
         onClose: (() -> Void)? = nil,
         statusIndicatorColor: Color? = nil,
         statusState: ClaudeStatusState? = nil,
-        sheetName: String? = nil,
+        avatar: FloaterAvatarDefinition? = nil,
         animatesStatus: Bool = true,
         isDraggablePanel: Bool = false,
         playsEntryAnimation: Bool = true,
         floaterSize: FloaterSize = .regular,
         renderMode: FloaterRenderMode = .slay,
+        effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0],
         isCompact: Bool = false,
         lastActivity: Date? = nil,
         modifiedFilesCount: Int = 0,
@@ -1406,12 +1549,13 @@ struct FloatNotificationView: View {
         self.onClose = onClose
         self.statusIndicatorColor = statusIndicatorColor
         self.statusState = statusState
-        self.sheetName = sheetName
+        self.avatar = avatar
         self.animatesStatus = animatesStatus
         self.isDraggablePanel = isDraggablePanel
         self.playsEntryAnimation = playsEntryAnimation
         self.floaterSize = floaterSize
         self.renderMode = renderMode
+        self.effectPreset = effectPreset
         self.isCompact = isCompact || floaterSize == .compact
         self.lastActivity = lastActivity
         self.modifiedFilesCount = modifiedFilesCount
@@ -1439,6 +1583,14 @@ struct FloatNotificationView: View {
         statusIndicatorColor ?? .blue
     }
 
+    private var effectTuning: FloaterEffectTuning {
+        effectPreset.tuning
+    }
+
+    private var effectGlowMultiplier: Double {
+        max(effectTuning.glowMultiplier, 0.2)
+    }
+
     private var usesMinimalRenderMode: Bool {
         isPersistent && renderMode == .lame
     }
@@ -1449,6 +1601,14 @@ struct FloatNotificationView: View {
 
     private var showsFancyFloaterEffects: Bool {
         isPersistent && renderMode != .lame
+    }
+
+    private var showsParticleTrail: Bool {
+        corner == .cursorFollow && renderMode != .lame && (effectTuning.showsParticleTrail ?? true)
+    }
+
+    private func scaledGlow(_ value: Double) -> Double {
+        min(value * effectGlowMultiplier, 1.0)
     }
 
     private var animatesPersistentStatus: Bool {
@@ -1535,7 +1695,7 @@ struct FloatNotificationView: View {
 
     var body: some View {
         ZStack {
-            if corner == .cursorFollow, renderMode != .lame {
+            if showsParticleTrail {
                 ParticleTrailView(system: particleSystem, color: FloaterPalette.idle)
                     .frame(width: 300, height: 100)
             }
@@ -1560,11 +1720,12 @@ struct FloatNotificationView: View {
         .overlay {
             if showsFancyFloaterEffects {
                 ZStack {
-                    if isRunning {
+                    if isRunning, effectTuning.showsSheen ?? true {
                         RunningSheenSweep(
                             color: accentColor,
                             cornerRadius: floaterSize.cornerRadius,
-                            renderMode: renderMode
+                            renderMode: renderMode,
+                            effectTuning: effectTuning
                         )
                     }
 
@@ -1593,7 +1754,7 @@ struct FloatNotificationView: View {
             }
         }
         .shadow(color: FloaterPalette.panelShadow.opacity(isHovering ? 0.22 : 0.16), radius: isHovering ? floaterSize.cardShadowRadius : max(floaterSize.cardShadowRadius - 2, 6), x: 0, y: isHovering ? 5 : 3)
-        .shadow(color: accentColor.opacity(isRunning ? 0.08 : 0.03), radius: isHovering ? 10 : 7, x: 0, y: 2)
+        .shadow(color: accentColor.opacity(scaledGlow(isRunning ? 0.08 : 0.03)), radius: isHovering ? 10 : 7, x: 0, y: 2)
         .animation(.easeInOut(duration: 0.18), value: isHovering)
         .animation(.easeInOut(duration: 0.22), value: accentColor)
         .scaleEffect(panelScale)
@@ -1723,6 +1884,7 @@ struct FloatNotificationView: View {
                     dotSize: floaterSize.dotSize,
                     fontSize: floaterSize.metaFontSize,
                     renderMode: renderMode,
+                    effectTuning: effectTuning,
                     isPulsing: isRunning && animatesPersistentStatus,
                     showsTypingDots: isRunning && animatesPersistentStatus
                 )
@@ -1794,11 +1956,12 @@ struct FloatNotificationView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             SpriteStageView(
-                sheetName: sheetName,
+                avatar: avatar,
                 statusColor: accentColor,
                 stageSize: floaterSize.persistentStageSize,
                 spriteSize: floaterSize.persistentSpriteSize,
                 renderMode: renderMode,
+                effectTuning: effectTuning,
                 isAnimating: animatesStatus,
                 isRunning: isRunning,
                 isIdle: statusState == .idle,
@@ -1844,8 +2007,8 @@ struct FloatNotificationView: View {
         return AnyShapeStyle(
             LinearGradient(
                 colors: [
-                    accentColor.opacity(avatarBackgroundPrimaryOpacity),
-                    accentColor.opacity(avatarBackgroundSecondaryOpacity),
+                    accentColor.opacity(scaledGlow(avatarBackgroundPrimaryOpacity)),
+                    accentColor.opacity(scaledGlow(avatarBackgroundSecondaryOpacity)),
                     FloaterPalette.panelShadow.opacity(0.92)
                 ],
                 startPoint: .topLeading,
@@ -1858,18 +2021,11 @@ struct FloatNotificationView: View {
     private var temporaryContent: some View {
         HStack(spacing: 10) {
             // Sprite avatar (or duck fallback) for personality
-            Group {
-                if let sheetName {
-                    SpriteAnimationView(
-                        sheetName: sheetName,
-                        isAnimating: animatesStatus,
-                        size: floaterSize.spriteSize - 4
-                    )
-                } else {
-                    Text("\u{1F986}")
-                        .font(.system(size: floaterSize.spriteSize - 8))
-                }
-            }
+            AvatarArtView(
+                avatar: avatar,
+                isAnimating: animatesStatus,
+                size: floaterSize.spriteSize - 4
+            )
             .bobbing(isEnabled: animatesStatus)
             .floatDrift(isEnabled: animatesStatus)
 
@@ -1943,31 +2099,31 @@ struct FloatNotificationView: View {
     private func triggerPanelVictoryFlash() {
         panelVictoryFlashOffset = -1.2
         panelVictoryFlashOpacity = 0
-        panelVictoryFlashScale = isSuperSlayRenderMode ? 0.84 : 0.92
+        panelVictoryFlashScale = (isSuperSlayRenderMode ? 0.84 : 0.92) * CGFloat(effectTuning.flashIntensityMultiplier)
 
-        withAnimation(.easeOut(duration: isSuperSlayRenderMode ? 0.10 : 0.12)) {
-            panelVictoryFlashOpacity = isSuperSlayRenderMode ? 1.0 : 0.96
-            panelVictoryFlashScale = isSuperSlayRenderMode ? 1.08 : 1.03
+        withAnimation(.easeOut(duration: (isSuperSlayRenderMode ? 0.10 : 0.12) * effectTuning.completionDurationMultiplier)) {
+            panelVictoryFlashOpacity = scaledGlow(isSuperSlayRenderMode ? 1.0 : 0.96)
+            panelVictoryFlashScale = (isSuperSlayRenderMode ? 1.08 : 1.03) * CGFloat(effectTuning.flashIntensityMultiplier)
         }
 
-        withAnimation(.linear(duration: isSuperSlayRenderMode ? 0.54 : 0.64)) {
+        withAnimation(.linear(duration: (isSuperSlayRenderMode ? 0.54 : 0.64) * effectTuning.completionDurationMultiplier)) {
             panelVictoryFlashOffset = 1.18
         }
 
-        withAnimation(.spring(response: isSuperSlayRenderMode ? 0.20 : 0.26, dampingFraction: isSuperSlayRenderMode ? 0.50 : 0.58)) {
-            panelScale = isSuperSlayRenderMode ? 1.055 : 1.035
+        withAnimation(.spring(response: (isSuperSlayRenderMode ? 0.20 : 0.26) * effectTuning.completionDurationMultiplier, dampingFraction: isSuperSlayRenderMode ? 0.50 : 0.58)) {
+            panelScale = (isSuperSlayRenderMode ? 1.055 : 1.035) * CGFloat(min(effectTuning.flashIntensityMultiplier, 1.08))
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (0.20 * effectTuning.completionDurationMultiplier)) {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.74)) {
                 panelScale = 1.0
             }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            withAnimation(.easeIn(duration: isSuperSlayRenderMode ? 0.42 : 0.36)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (0.18 * effectTuning.completionDurationMultiplier)) {
+            withAnimation(.easeIn(duration: (isSuperSlayRenderMode ? 0.42 : 0.36) * effectTuning.completionDurationMultiplier)) {
                 panelVictoryFlashOpacity = 0
-                panelVictoryFlashScale = isSuperSlayRenderMode ? 1.18 : 1.12
+                panelVictoryFlashScale = (isSuperSlayRenderMode ? 1.18 : 1.12) * CGFloat(effectTuning.flashIntensityMultiplier)
             }
         }
     }

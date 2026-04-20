@@ -84,7 +84,8 @@ struct FloaterPanelItem: Identifiable {
     let playsEntryAnimation: Bool
     let shouldShake: Bool
     let effect: String
-    let sheetName: String?
+    let avatar: FloaterAvatarDefinition?
+    let effectPreset: FloaterEffectPreset
     let floaterSize: FloaterSize
     let renderMode: FloaterRenderMode
 
@@ -93,18 +94,21 @@ struct FloaterPanelItem: Identifiable {
 
 private struct PersistentStatusStyle {
     let effect: String
-    let sheetName: String?
+    let avatar: FloaterAvatarDefinition?
+    let effectPreset: FloaterEffectPreset
 }
 
 class FloatNotificationManager {
     static let shared = FloatNotificationManager()
 
     private let settings = FloatifySettings.shared
+    private let visualCatalog = FloaterVisualCatalog.shared
     private var panels: [FloatPanel] = []
     private var cursorFollowTimers: [FloatPanel: Timer] = [:]
     private var floaterPanel: FloatPanel?
     private var floaterHostingView: NSHostingView<FloaterPanelView>?
     private var floaterPanelMoveObserver: NSObjectProtocol?
+    private var visualCatalogObserver: NSObjectProtocol?
     private var currentStatusItemsByID: [String: PersistentStatusItem] = [:]
     private var floaterDismissControllers: [String: DismissController] = [:]
     private var hiddenStatusPanelIDs: Set<String> = []
@@ -119,12 +123,18 @@ class FloatNotificationManager {
     private let floaterPanelSpringDamping: CGFloat = 0.82
     private let floaterPanelSpringVelocity: CGFloat = 0.45
     private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
-    private lazy var availableSpriteSheets: [String] = SpriteSheetMetadata.bundledSheetNames()
     private var isFloaterPanelCollapsed: Bool
 
     private init() {
         isFloaterPanelCollapsed = UserDefaults.standard.bool(forKey: floaterPanelCollapsedKey)
         observeSettings()
+        observeVisualCatalog()
+    }
+
+    deinit {
+        if let visualCatalogObserver {
+            NotificationCenter.default.removeObserver(visualCatalogObserver)
+        }
     }
 
     func show(message: String, corner: Corner, duration: TimeInterval = 6, project: String?) {
@@ -251,7 +261,8 @@ class FloatNotificationManager {
                 playsEntryAnimation: animatedItemIDs.contains(item.id),
                 shouldShake: shakingItemIDs.contains(item.id),
                 effect: style.effect,
-                sheetName: style.sheetName,
+                avatar: style.avatar,
+                effectPreset: style.effectPreset,
                 floaterSize: floaterSize,
                 renderMode: settings.floaterRenderMode
             )
@@ -335,6 +346,9 @@ class FloatNotificationManager {
             _ = settings.floaterSize
             _ = settings.floaterTheme
             _ = settings.floaterRenderMode
+            _ = settings.selectedVisualPackID
+            _ = settings.selectedAvatarID
+            _ = settings.selectedEffectPresetID
         } onChange: {
             Task { @MainActor in
                 let manager = FloatNotificationManager.shared
@@ -344,34 +358,38 @@ class FloatNotificationManager {
         }
     }
 
+    private func observeVisualCatalog() {
+        visualCatalogObserver = NotificationCenter.default.addObserver(
+            forName: .floaterVisualCatalogDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSettingsChange()
+        }
+    }
+
     private func handleSettingsChange() {
+        settings.normalizeVisualSelection(catalog: visualCatalog)
         refreshFloaterPanel(animated: true)
         refreshTemporaryPanels()
     }
 
-    private var sheetAssignments: [String: String] = [:]
-
     private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
-        guard settings.floaterRenderMode != .lame else {
-            return PersistentStatusStyle(effect: "fade", sheetName: nil)
-        }
-
         let seed = stableSeed(for: item.id)
         let effect = statusEffects[seed % statusEffects.count]
-        let avatarKey = item.project.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let avatarSeed = item.project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? item.id : item.project
+        let resolvedStyle = visualCatalog.resolveStyle(
+            packID: settings.selectedVisualPackID,
+            avatarID: settings.selectedAvatarID,
+            effectPresetID: settings.selectedEffectPresetID,
+            seedText: avatarSeed
+        )
 
-        if let assignedSheet = sheetAssignments[avatarKey] {
-            return PersistentStatusStyle(effect: effect, sheetName: assignedSheet)
-        }
-
-        guard !availableSpriteSheets.isEmpty else {
-            return PersistentStatusStyle(effect: effect, sheetName: nil)
-        }
-
-        let index = stableSeed(for: avatarKey) % availableSpriteSheets.count
-        let sheetName = availableSpriteSheets[index]
-        sheetAssignments[avatarKey] = sheetName
-        return PersistentStatusStyle(effect: effect, sheetName: sheetName)
+        return PersistentStatusStyle(
+            effect: effect,
+            avatar: settings.floaterRenderMode == .lame ? nil : resolvedStyle.avatar,
+            effectPreset: resolvedStyle.effectPreset
+        )
     }
 
     private func stableSeed(for text: String) -> Int {
@@ -458,13 +476,22 @@ class FloatNotificationManager {
         dismissController: DismissController,
         playsEntryAnimation: Bool = true
     ) -> NSHostingView<FloatNotificationView> {
-        NSHostingView(
+        let resolvedStyle = visualCatalog.resolveStyle(
+            packID: settings.selectedVisualPackID,
+            avatarID: settings.selectedAvatarID,
+            effectPresetID: settings.selectedEffectPresetID,
+            seedText: project ?? message
+        )
+
+        return NSHostingView(
             rootView: FloatNotificationView(
                 message: message,
                 project: project,
                 corner: corner,
+                avatar: resolvedStyle.avatar,
                 playsEntryAnimation: playsEntryAnimation,
                 renderMode: settings.floaterRenderMode,
+                effectPreset: resolvedStyle.effectPreset,
                 dismissController: dismissController
             )
         )

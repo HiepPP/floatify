@@ -1,6 +1,7 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum SetupHealthLevel {
     case good
@@ -333,10 +334,21 @@ private struct SetupHealthRow<Actions: View>: View {
 
 struct SettingsView: View {
     @Environment(FloatifySettings.self) private var settings
+    @Environment(FloaterVisualCatalog.self) private var visualCatalog
 
     @State private var health = SetupHealthSnapshot.capture()
     @State private var actionMessage = ""
     @State private var actionLevel: SetupHealthLevel = .good
+    @State private var visualCatalogMessage = ""
+    @State private var visualCatalogLevel: SetupHealthLevel = .good
+    @State private var importAvatarName = ""
+    @State private var isImportingAvatar = false
+    @State private var managedPackID = FloaterVisualConstants.personalPackID
+    @State private var managedAvatarID = ""
+    @State private var managedAvatarName = ""
+    @State private var isManagingAvatar = false
+    @State private var pendingDeleteAvatarID: String?
+    @State private var pendingDeleteAvatarName = ""
 
     private let timeoutFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -348,6 +360,18 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
+        let selectedPack = visualCatalog.resolvedPack(id: settings.selectedVisualPackID)
+        let customPacks = visualCatalog.packs.filter { !$0.isBuiltIn }
+        let resolvedManagedPack = resolvedManagedPack(
+            customPacks: customPacks,
+            selectedPackID: settings.selectedVisualPackID
+        )
+        let manageableAvatars = manageableAvatars(in: resolvedManagedPack)
+        let selectedManagedAvatar = selectedManagedAvatar(in: resolvedManagedPack)
+        let canImportAvatar = !trimmedImportAvatarName.isEmpty
+        let canRenameAvatar = selectedManagedAvatar != nil
+            && !trimmedManagedAvatarName.isEmpty
+            && trimmedManagedAvatarName != (selectedManagedAvatar?.displayName ?? "")
 
         Form {
             Section {
@@ -375,6 +399,174 @@ struct SettingsView: View {
                 Text("Floater Appearance")
             } footer: {
                 Text("Slay keeps full effects. Super Slay pushes extra effects for high-end machines. Lame removes heavy repeat effects for the lowest CPU.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker(
+                    "Avatar Pack",
+                    selection: Binding(
+                        get: { settings.selectedVisualPackID },
+                        set: { settings.selectVisualPack($0, catalog: visualCatalog) }
+                    )
+                ) {
+                    ForEach(visualCatalog.packs, id: \.id) { pack in
+                        Text(pack.displayName).tag(pack.id)
+                    }
+                }
+                .pickerStyle(.inline)
+
+                Picker("Avatar", selection: $settings.selectedAvatarID) {
+                    ForEach(selectedPack.avatars, id: \.id) { avatar in
+                        Text(avatar.displayName).tag(avatar.id)
+                    }
+                }
+                .pickerStyle(.inline)
+
+                Picker("Effect Style", selection: $settings.selectedEffectPresetID) {
+                    ForEach(selectedPack.effectPresets, id: \.id) { preset in
+                        Text(preset.displayName).tag(preset.id)
+                    }
+                }
+                .pickerStyle(.inline)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Avatar name")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    TextField("Required", text: $importAvatarName)
+                        .textFieldStyle(.roundedBorder)
+
+                    HStack(spacing: 10) {
+                        Button("Import Image...") {
+                            openAvatarImportPanel(for: selectedPack)
+                        }
+                        .disabled(isImportingAvatar || !canImportAvatar)
+
+                        Button("Paste Image") {
+                            importAvatarFromPasteboard(into: selectedPack)
+                        }
+                        .disabled(isImportingAvatar || !canImportAvatar)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Manage uploaded avatars")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if customPacks.isEmpty {
+                        Text("No custom pack yet. Import an avatar to create Personal pack.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if let resolvedManagedPack {
+                        Picker(
+                            "Manage Pack",
+                            selection: Binding(
+                                get: { resolvedManagedPack.id },
+                                set: { newValue in
+                                    managedPackID = newValue
+                                    syncManagedAvatarSelection(
+                                        customPacks: customPacks,
+                                        selectedPackID: settings.selectedVisualPackID
+                                    )
+                                }
+                            )
+                        ) {
+                            ForEach(customPacks) { pack in
+                                Text(pack.displayName).tag(pack.id)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        if manageableAvatars.isEmpty {
+                            Text("This pack has no uploaded avatars yet.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if let selectedManagedAvatar {
+                            Picker(
+                                "Uploaded Avatar",
+                                selection: Binding(
+                                    get: { selectedManagedAvatar.id },
+                                    set: { newValue in
+                                        managedAvatarID = newValue
+                                        managedAvatarName = manageableAvatars.first(where: { $0.id == newValue })?.displayName ?? ""
+                                    }
+                                )
+                            ) {
+                                ForEach(manageableAvatars) { avatar in
+                                    Text(avatar.displayName).tag(avatar.id)
+                                }
+                            }
+                            .pickerStyle(.inline)
+
+                            TextField("Display name", text: $managedAvatarName)
+                                .textFieldStyle(.roundedBorder)
+
+                            HStack(spacing: 10) {
+                                Button("Save Name") {
+                                    renameManagedAvatar(
+                                        avatarID: selectedManagedAvatar.id,
+                                        pack: resolvedManagedPack
+                                    )
+                                }
+                                .disabled(isManagingAvatar || !canRenameAvatar)
+
+                                Button("Delete Avatar", role: .destructive) {
+                                    pendingDeleteAvatarID = selectedManagedAvatar.id
+                                    pendingDeleteAvatarName = selectedManagedAvatar.displayName
+                                }
+                                .disabled(isManagingAvatar)
+
+                                Spacer(minLength: 0)
+                            }
+                        } else {
+                            Text("Pick an uploaded avatar to rename or delete it.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                HStack {
+                    Button("Reveal Packs Folder") {
+                        visualCatalog.revealPacksDirectory()
+                        setVisualCatalogMessage("Opened \(visualCatalog.packsDirectoryPath).", level: .good)
+                    }
+
+                    Button("Reload Packs") {
+                        visualCatalog.reload()
+                        settings.normalizeVisualSelection(catalog: visualCatalog)
+                        setVisualCatalogMessage(visualCatalog.lastReloadMessage ?? "Reloaded visual packs.", level: .good)
+                    }
+                }
+
+                if let sourceURL = selectedPack.sourceURL {
+                    Text(sourceURL.path)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                if !visualCatalogMessage.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Circle()
+                            .fill(visualCatalogLevel.tint)
+                            .frame(width: 8, height: 8)
+                            .padding(.top, 5)
+
+                        Text(visualCatalogMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Visual Packs")
+            } footer: {
+                Text("Drop custom packs into ~/.floatify/packs. Import Image and Paste Image auto-run the sprite extractor. Built-in pack imports land in Personal.")
                     .foregroundStyle(.secondary)
             }
 
@@ -487,7 +679,36 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 420)
         .padding()
-        .onAppear(perform: refreshHealth)
+        .onAppear {
+            settings.normalizeVisualSelection(catalog: visualCatalog)
+            syncManagedAvatarSelection(
+                customPacks: visualCatalog.packs.filter { !$0.isBuiltIn },
+                selectedPackID: settings.selectedVisualPackID
+            )
+            refreshHealth()
+        }
+        .onChange(of: settings.selectedVisualPackID) { _, _ in
+            syncManagedAvatarSelection(
+                customPacks: visualCatalog.packs.filter { !$0.isBuiltIn },
+                selectedPackID: settings.selectedVisualPackID
+            )
+        }
+        .onChange(of: visualCatalog.packs) { _, packs in
+            syncManagedAvatarSelection(
+                customPacks: packs.filter { !$0.isBuiltIn },
+                selectedPackID: settings.selectedVisualPackID
+            )
+        }
+        .alert("Delete uploaded avatar?", isPresented: deleteAvatarAlertBinding) {
+            Button("Delete", role: .destructive) {
+                confirmDeleteManagedAvatar()
+            }
+            Button("Cancel", role: .cancel) {
+                clearPendingDeleteAvatar()
+            }
+        } message: {
+            Text("Delete '\(pendingDeleteAvatarName)' from this pack?")
+        }
     }
 
     private func refreshHealth() {
@@ -583,9 +804,299 @@ struct SettingsView: View {
         actionMessage = message
         actionLevel = level
     }
+
+    private func setVisualCatalogMessage(_ message: String, level: SetupHealthLevel) {
+        visualCatalogMessage = message
+        visualCatalogLevel = level
+    }
+
+    private func openAvatarImportPanel(for pack: FloaterVisualPack) {
+        guard validateAvatarNameInput() else { return }
+
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.image]
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            importAvatar(from: url, cleanupURL: nil, requestedPack: pack)
+        }
+    }
+
+    private func importAvatarFromPasteboard(into pack: FloaterVisualPack) {
+        guard validateAvatarNameInput() else { return }
+
+        do {
+            let temporaryURL = try writePasteboardImageToTemporaryFile()
+            importAvatar(from: temporaryURL, cleanupURL: temporaryURL, requestedPack: pack)
+        } catch {
+            setVisualCatalogMessage("Paste image failed: \(error.localizedDescription)", level: .error)
+        }
+    }
+
+    private func importAvatar(from sourceURL: URL, cleanupURL: URL?, requestedPack: FloaterVisualPack) {
+        guard validateAvatarNameInput() else { return }
+
+        isImportingAvatar = true
+        setVisualCatalogMessage("Importing avatar sprite...", level: .good)
+
+        let requestedPackID = requestedPack.id
+        let requestedPackName = requestedPack.displayName
+        let requestedPackDirectoryURL = requestedPack.sourceURL
+        let requestedPackIsBuiltIn = requestedPack.isBuiltIn
+        let packsDirectoryURL = visualCatalog.packsDirectoryURL
+        let displayName = trimmedImportAvatarName
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            defer {
+                if let cleanupURL {
+                    try? FileManager.default.removeItem(at: cleanupURL)
+                }
+            }
+
+            do {
+                let result = try FloaterVisualCatalog.importAvatarAsset(
+                    from: sourceURL,
+                    preferredPackID: requestedPackID,
+                    preferredPackName: requestedPackName,
+                    preferredPackDirectoryURL: requestedPackDirectoryURL,
+                    preferredPackIsBuiltIn: requestedPackIsBuiltIn,
+                    packsDirectoryURL: packsDirectoryURL,
+                    displayName: displayName
+                )
+
+                DispatchQueue.main.async {
+                    visualCatalog.reload()
+                    settings.selectVisualPack(result.packID, catalog: visualCatalog)
+                    settings.selectedAvatarID = result.avatarID
+                    importAvatarName = ""
+                    isImportingAvatar = false
+                    managedPackID = result.packID
+                    managedAvatarID = result.avatarID
+                    syncManagedAvatarSelection(
+                        customPacks: visualCatalog.packs.filter { !$0.isBuiltIn },
+                        selectedPackID: settings.selectedVisualPackID
+                    )
+
+                    let destinationNote = result.packID == requestedPackID
+                        ? result.packName
+                        : "\(result.packName) (fallback from \(requestedPackName))"
+                    setVisualCatalogMessage(
+                        "Imported \(result.avatarName) to \(destinationNote). \(result.frameCount) frame(s) ready.",
+                        level: .good
+                    )
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isImportingAvatar = false
+                    setVisualCatalogMessage("Avatar import failed: \(error.localizedDescription)", level: .error)
+                }
+            }
+        }
+    }
+
+    private func writePasteboardImageToTemporaryFile() throws -> URL {
+        let pasteboard = NSPasteboard.general
+        if let image = pasteboard.readObjects(forClasses: [NSImage.self], options: nil)?.first as? NSImage,
+           let tiff = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiff),
+           let png = bitmap.representation(using: .png, properties: [:]) {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("floatify-avatar-\(UUID().uuidString).png")
+            try png.write(to: url, options: .atomic)
+            return url
+        }
+
+        throw AvatarImportUIError.pasteboardImageMissing
+    }
+
+    private var trimmedImportAvatarName: String {
+        importAvatarName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func validateAvatarNameInput() -> Bool {
+        guard !trimmedImportAvatarName.isEmpty else {
+            setVisualCatalogMessage("Avatar name is required before import.", level: .warning)
+            return false
+        }
+        return true
+    }
+
+    private var trimmedManagedAvatarName: String {
+        managedAvatarName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var deleteAvatarAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDeleteAvatarID != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearPendingDeleteAvatar()
+                }
+            }
+        )
+    }
+
+    private func resolvedManagedPack(
+        customPacks: [FloaterVisualPack],
+        selectedPackID: String
+    ) -> FloaterVisualPack? {
+        if let explicit = customPacks.first(where: { $0.id == managedPackID }) {
+            return explicit
+        }
+
+        if let selected = customPacks.first(where: { $0.id == selectedPackID }) {
+            return selected
+        }
+
+        if let personal = customPacks.first(where: { $0.id == FloaterVisualConstants.personalPackID }) {
+            return personal
+        }
+
+        return customPacks.first
+    }
+
+    private func manageableAvatars(in pack: FloaterVisualPack?) -> [FloaterAvatarDefinition] {
+        guard let pack else { return [] }
+        return pack.avatars.filter { !$0.isAutomatic }
+    }
+
+    private func selectedManagedAvatar(in pack: FloaterVisualPack?) -> FloaterAvatarDefinition? {
+        let avatars = manageableAvatars(in: pack)
+        return avatars.first(where: { $0.id == managedAvatarID }) ?? avatars.first
+    }
+
+    private func syncManagedAvatarSelection(
+        customPacks: [FloaterVisualPack],
+        selectedPackID: String
+    ) {
+        guard let pack = resolvedManagedPack(customPacks: customPacks, selectedPackID: selectedPackID) else {
+            managedPackID = FloaterVisualConstants.personalPackID
+            managedAvatarID = ""
+            managedAvatarName = ""
+            return
+        }
+
+        managedPackID = pack.id
+
+        let avatars = manageableAvatars(in: pack)
+        let avatar = avatars.first(where: { $0.id == managedAvatarID }) ?? avatars.first
+        managedAvatarID = avatar?.id ?? ""
+        managedAvatarName = avatar?.displayName ?? ""
+    }
+
+    private func renameManagedAvatar(avatarID: String, pack: FloaterVisualPack) {
+        guard let packDirectoryURL = pack.sourceURL else {
+            setVisualCatalogMessage("This pack cannot be edited.", level: .warning)
+            return
+        }
+
+        let nextName = trimmedManagedAvatarName
+        guard !nextName.isEmpty else {
+            setVisualCatalogMessage("Avatar display name is required.", level: .warning)
+            return
+        }
+
+        isManagingAvatar = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let result = try FloaterVisualCatalog.renameAvatarAsset(
+                    avatarID: avatarID,
+                    in: packDirectoryURL,
+                    displayName: nextName
+                )
+
+                DispatchQueue.main.async {
+                    visualCatalog.reload()
+                    managedPackID = result.packID
+                    if let avatarID = result.avatarID {
+                        managedAvatarID = avatarID
+                    }
+                    settings.normalizeVisualSelection(catalog: visualCatalog)
+                    syncManagedAvatarSelection(
+                        customPacks: visualCatalog.packs.filter { !$0.isBuiltIn },
+                        selectedPackID: settings.selectedVisualPackID
+                    )
+                    isManagingAvatar = false
+                    setVisualCatalogMessage("Renamed avatar to \(result.avatarName ?? nextName).", level: .good)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isManagingAvatar = false
+                    setVisualCatalogMessage("Rename failed: \(error.localizedDescription)", level: .error)
+                }
+            }
+        }
+    }
+
+    private func confirmDeleteManagedAvatar() {
+        guard
+            let avatarID = pendingDeleteAvatarID,
+            let packDirectoryURL = visualCatalog.resolvedPack(id: managedPackID).sourceURL
+        else {
+            clearPendingDeleteAvatar()
+            return
+        }
+
+        let shouldFallbackToBuiltIn =
+            settings.selectedVisualPackID == managedPackID
+            && settings.selectedAvatarID == avatarID
+
+        clearPendingDeleteAvatar()
+        isManagingAvatar = true
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let result = try FloaterVisualCatalog.deleteAvatarAsset(
+                    avatarID: avatarID,
+                    in: packDirectoryURL
+                )
+
+                DispatchQueue.main.async {
+                    visualCatalog.reload()
+                    managedPackID = result.packID
+                    managedAvatarID = result.avatarID ?? ""
+                    if shouldFallbackToBuiltIn {
+                        settings.selectVisualPack(FloaterVisualConstants.builtInPackID, catalog: visualCatalog)
+                    } else {
+                        settings.normalizeVisualSelection(catalog: visualCatalog)
+                    }
+                    syncManagedAvatarSelection(
+                        customPacks: visualCatalog.packs.filter { !$0.isBuiltIn },
+                        selectedPackID: settings.selectedVisualPackID
+                    )
+                    isManagingAvatar = false
+                    setVisualCatalogMessage("Deleted avatar \(result.avatarName ?? avatarID).", level: .good)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isManagingAvatar = false
+                    setVisualCatalogMessage("Delete failed: \(error.localizedDescription)", level: .error)
+                }
+            }
+        }
+    }
+
+    private func clearPendingDeleteAvatar() {
+        pendingDeleteAvatarID = nil
+        pendingDeleteAvatarName = ""
+    }
+}
+
+private enum AvatarImportUIError: LocalizedError {
+    case pasteboardImageMissing
+
+    var errorDescription: String? {
+        switch self {
+        case .pasteboardImageMissing:
+            return "Pasteboard does not contain an image."
+        }
+    }
 }
 
 #Preview {
     SettingsView()
         .environment(FloatifySettings.shared)
+        .environment(FloaterVisualCatalog.shared)
 }

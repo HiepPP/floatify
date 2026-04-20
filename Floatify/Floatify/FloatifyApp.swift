@@ -5,6 +5,7 @@ import SwiftUI
 struct FloatifyApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let settings = FloatifySettings.shared
+    private let visualCatalog = FloaterVisualCatalog.shared
 
     var body: some Scene {
         MenuBarExtra("🦆") {
@@ -14,6 +15,7 @@ struct FloatifyApp: App {
         Settings {
             SettingsView()
                 .environment(settings)
+                .environment(visualCatalog)
         }
     }
 }

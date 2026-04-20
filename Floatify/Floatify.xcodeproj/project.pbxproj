@@ -10,6 +10,7 @@
 		025EE69B7CAB1F0F1B28C730 /* positions.json in Resources */ = {isa = PBXBuildFile; fileRef = 0F0C15189D4A45F901EFE3E3 /* positions.json */; };
 		0A1456C5A82A2D05D537A2C7 /* SessionMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */; };
 		105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440F612B0DBA815B721CCD32 /* FloatEffects.swift */; };
+		11C58FF874EFE69F055B4A8D /* FloaterVisualCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5625AC91F75B69EEFB20AC /* FloaterVisualCatalog.swift */; };
 		1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2573557764743955144C86DA /* FloatifyPipePayload.swift */; };
 		263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */; };
 		2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */; };
@@ -38,6 +39,7 @@
 
 /* Begin PBXFileReference section */
 		04830C59EC2F08805CED8332 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0A5625AC91F75B69EEFB20AC /* FloaterVisualCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterVisualCatalog.swift; sourceTree = "<group>"; };
 		0E2DED432B173764DA471BAF /* fade_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fade_entry.json; sourceTree = "<group>"; };
 		0F0C15189D4A45F901EFE3E3 /* positions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = positions.json; sourceTree = "<group>"; };
 		14CB93C3AFE94711410CCED7 /* exit_fade.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = exit_fade.json; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				64F6A91E7F736FCB8819CA6F /* Corner.swift */,
 				628FC4BFF079783826FBD6EA /* CursorTracker.swift */,
 				440F612B0DBA815B721CCD32 /* FloatEffects.swift */,
+				0A5625AC91F75B69EEFB20AC /* FloaterVisualCatalog.swift */,
 				A1B356A433DF882DBFC363E0 /* FloatifyApp.swift */,
 				2573557764743955144C86DA /* FloatifyPipePayload.swift */,
 				F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */,
@@ -278,6 +281,7 @@
 				105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */,
 				C95C6817E7C45A90A43FE657 /* FloatNotificationManager.swift in Sources */,
 				3FDECEC56F61445657E65D3F /* FloatNotificationView.swift in Sources */,
+				11C58FF874EFE69F055B4A8D /* FloaterVisualCatalog.swift in Sources */,
 				E809983A24A30669CA13B384 /* FloatifyApp.swift in Sources */,
 				1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */,
 				B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */,

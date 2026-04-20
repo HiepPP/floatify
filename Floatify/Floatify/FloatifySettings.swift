@@ -252,6 +252,9 @@ final class FloatifySettings {
         static let floaterSize = "FloaterSize"
         static let floaterTheme = "FloaterTheme"
         static let floaterRenderMode = "FloaterRenderMode"
+        static let selectedVisualPackID = "SelectedVisualPackID"
+        static let selectedAvatarID = "SelectedAvatarID"
+        static let selectedEffectPresetID = "SelectedEffectPresetID"
         static let idleTimeout = "IdleTimeout"
         static let idleTimeoutMigration = "IdleTimeoutMigratedTo10"
     }
@@ -276,6 +279,24 @@ final class FloatifySettings {
         }
     }
 
+    var selectedVisualPackID: String {
+        didSet {
+            defaults.set(selectedVisualPackID, forKey: Key.selectedVisualPackID)
+        }
+    }
+
+    var selectedAvatarID: String {
+        didSet {
+            defaults.set(selectedAvatarID, forKey: Key.selectedAvatarID)
+        }
+    }
+
+    var selectedEffectPresetID: String {
+        didSet {
+            defaults.set(selectedEffectPresetID, forKey: Key.selectedEffectPresetID)
+        }
+    }
+
     var idleTimeout: Int {
         didSet {
             let sanitized = max(1, idleTimeout)
@@ -297,9 +318,14 @@ final class FloatifySettings {
         self.floaterTheme = FloaterTheme(rawValue: defaults.string(forKey: Key.floaterTheme) ?? FloaterTheme.dark.rawValue) ?? .dark
         self.floaterSize = FloaterSize(rawValue: defaults.string(forKey: Key.floaterSize) ?? FloaterSize.regular.rawValue) ?? .regular
         self.floaterRenderMode = FloaterRenderMode(rawValue: defaults.string(forKey: Key.floaterRenderMode) ?? FloaterRenderMode.slay.rawValue) ?? .slay
+        self.selectedVisualPackID = defaults.string(forKey: Key.selectedVisualPackID) ?? FloaterVisualConstants.builtInPackID
+        self.selectedAvatarID = defaults.string(forKey: Key.selectedAvatarID) ?? FloaterVisualConstants.autoAvatarID
+        self.selectedEffectPresetID = defaults.string(forKey: Key.selectedEffectPresetID) ?? FloaterVisualConstants.defaultEffectPresetID
 
         let storedIdleTimeout = defaults.integer(forKey: Key.idleTimeout)
         self.idleTimeout = storedIdleTimeout > 0 ? storedIdleTimeout : 10
+
+        normalizeVisualSelection()
     }
 
     private static func migrateLegacyIdleTimeoutIfNeeded(defaults: UserDefaults) {
@@ -310,5 +336,25 @@ final class FloatifySettings {
         }
 
         defaults.set(true, forKey: Key.idleTimeoutMigration)
+    }
+
+    func normalizeVisualSelection(catalog: FloaterVisualCatalog = .shared) {
+        let resolvedPack = catalog.resolvedPack(id: selectedVisualPackID)
+        if selectedVisualPackID != resolvedPack.id {
+            selectedVisualPackID = resolvedPack.id
+        }
+
+        if !resolvedPack.avatars.contains(where: { $0.id == selectedAvatarID }) {
+            selectedAvatarID = resolvedPack.defaultAvatarID
+        }
+
+        if !resolvedPack.effectPresets.contains(where: { $0.id == selectedEffectPresetID }) {
+            selectedEffectPresetID = resolvedPack.defaultEffectPresetID
+        }
+    }
+
+    func selectVisualPack(_ packID: String, catalog: FloaterVisualCatalog = .shared) {
+        selectedVisualPackID = packID
+        normalizeVisualSelection(catalog: catalog)
     }
 }
