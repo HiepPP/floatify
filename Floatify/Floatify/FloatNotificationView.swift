@@ -435,13 +435,13 @@ private struct RunningSheenSweep: View {
     let cornerRadius: CGFloat
 
     @State private var sweepProgress: CGFloat = 0
-    @State private var intensity: Double = 0.58
+    @State private var intensity: Double = 0.64
     @State private var didStartAnimating = false
 
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
-            let sweepWidth = max(size.width * 0.34, 76)
+            let sweepWidth = max(size.width * 0.22, 58)
             let travel = size.width + sweepWidth + size.height * 0.95
             let offset = travel * sweepProgress - sweepWidth - size.height * 0.46
 
@@ -451,79 +451,48 @@ private struct RunningSheenSweep: View {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0.00),
-                                .init(color: color.opacity(0.08 * intensity), location: 0.18),
-                                .init(color: .white.opacity(0.28 * intensity), location: 0.50),
-                                .init(color: color.opacity(0.16 * intensity), location: 0.78),
+                                .init(color: color.opacity(0.06 * intensity), location: 0.22),
+                                .init(color: .white.opacity(0.20 * intensity), location: 0.50),
+                                .init(color: color.opacity(0.10 * intensity), location: 0.78),
                                 .init(color: .clear, location: 1.00)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: sweepWidth, height: size.height * 2.35)
-                    .blur(radius: 13)
+                    .frame(width: sweepWidth, height: size.height * 1.92)
+                    .blur(radius: 5)
                     .offset(x: offset)
                     .rotationEffect(.degrees(-16))
-
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0.00),
-                                .init(color: .white.opacity(0.00), location: 0.30),
-                                .init(color: .white.opacity(0.54 * intensity), location: 0.50),
-                                .init(color: color.opacity(0.22 * intensity), location: 0.66),
-                                .init(color: .clear, location: 1.00)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: sweepWidth * 0.24, height: size.height * 2.05)
-                    .blur(radius: 1.4)
-                    .offset(x: offset + sweepWidth * 0.07)
-                    .rotationEffect(.degrees(-16))
+                    .blendMode(.screen)
 
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(0.02),
-                                color.opacity(0.08 * intensity),
-                                .white.opacity(0.02)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        lineWidth: 0.8
-                    )
-                    .opacity(0.82)
+                    .strokeBorder(color.opacity(0.04 + intensity * 0.03), lineWidth: 0.7)
             }
             .mask(
                 RoundedRectangle(cornerRadius: cornerRadius)
             )
         }
-        .drawingGroup(opaque: false, colorMode: .linear)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .allowsHitTesting(false)
         .onAppear {
             guard !didStartAnimating else { return }
             didStartAnimating = true
             sweepProgress = 0
-            intensity = 0.58
+            intensity = 0.64
 
-            withAnimation(.linear(duration: 2.9).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: 3.6).repeatForever(autoreverses: false)) {
                 sweepProgress = 1
             }
 
-            withAnimation(.easeInOut(duration: 1.45).repeatForever(autoreverses: true)) {
-                intensity = 1.0
+            withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) {
+                intensity = 0.92
             }
         }
         .onDisappear {
             didStartAnimating = false
             sweepProgress = 0
-            intensity = 0.58
+            intensity = 0.64
         }
     }
 }
@@ -690,79 +659,45 @@ private struct SpriteStageView: View {
             if isRunning {
                 Circle()
                     .trim(from: 0.08, to: 0.40)
-                    .stroke(
-                        AngularGradient(
-                            colors: [
-                                .clear,
-                                statusColor.opacity(0.28 * runningArcOpacity),
-                                .white.opacity(0.95 * runningArcOpacity),
-                                statusColor.opacity(0.96 * runningArcOpacity),
-                                .clear
-                            ],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 2.4, lineCap: .round)
-                    )
+                    .stroke(statusColor.opacity(0.82 * runningArcOpacity), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
                     .frame(width: stageSize * 1.16, height: stageSize * 1.16)
                     .rotationEffect(.degrees(runningArcRotation))
-                    .blur(radius: 0.4)
+                    .shadow(color: .white.opacity(0.08 * runningArcOpacity), radius: 1.0, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(0.26 * runningArcOpacity), radius: 2.2, x: 0, y: 0)
 
                 Circle()
                     .trim(from: 0.56, to: 0.82)
-                    .stroke(
-                        AngularGradient(
-                            colors: [
-                                .clear,
-                                statusColor.opacity(0.18 * runningArcOpacity),
-                                .white.opacity(0.70 * runningArcOpacity),
-                                statusColor.opacity(0.78 * runningArcOpacity),
-                                .clear
-                            ],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
-                    )
+                    .stroke(statusColor.opacity(0.46 * runningArcOpacity), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
                     .frame(width: stageSize * 0.96, height: stageSize * 0.96)
                     .rotationEffect(.degrees(runningCounterArcRotation))
+                    .shadow(color: statusColor.opacity(0.16 * runningArcOpacity), radius: 1.4, x: 0, y: 0)
 
                 Circle()
                     .strokeBorder(statusColor.opacity(runningRingOpacity), lineWidth: 1.2)
                     .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
-                    .blur(radius: 0.9)
+                    .blur(radius: 0.5)
 
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                .white.opacity(0.98),
-                                statusColor.opacity(0.88),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: stageSize * 0.12
-                        )
-                    )
+                ZStack {
+                    Circle()
+                        .fill(statusColor.opacity(0.86))
+                    Circle()
+                        .fill(.white.opacity(0.86))
+                        .frame(width: stageSize * 0.08, height: stageSize * 0.08)
+                }
                     .frame(width: stageSize * 0.20, height: stageSize * 0.20)
-                    .shadow(color: statusColor.opacity(0.72), radius: 5, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(0.54), radius: 4, x: 0, y: 0)
                     .offset(y: -stageSize * 0.43)
                     .rotationEffect(.degrees(runningOrbitAngle))
 
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                .white.opacity(0.92),
-                                statusColor.opacity(0.70),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: stageSize * 0.09
-                        )
-                    )
+                ZStack {
+                    Circle()
+                        .fill(statusColor.opacity(0.62))
+                    Circle()
+                        .fill(.white.opacity(0.66))
+                        .frame(width: stageSize * 0.05, height: stageSize * 0.05)
+                }
                     .frame(width: stageSize * 0.14, height: stageSize * 0.14)
-                    .shadow(color: statusColor.opacity(0.42), radius: 4, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(0.28), radius: 3, x: 0, y: 0)
                     .offset(y: -stageSize * 0.34)
                     .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
             }
@@ -890,6 +825,7 @@ private struct SpriteStageView: View {
 
         }
         .frame(width: stageSize, height: stageSize)
+        .drawingGroup(opaque: false, colorMode: .linear)
         .task(id: isRunning) {
             guard isRunning && isAnimating else {
                 await MainActor.run {

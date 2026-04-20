@@ -16,17 +16,39 @@ private struct ProjectContext: Equatable {
 }
 
 private enum ProcessInspection {
+    private struct CommandCacheEntry {
+        let output: String?
+        let timestamp: Date
+    }
+
     private struct ModifiedFilesCacheEntry {
         let count: Int
         let timestamp: Date
     }
 
-    private static let modifiedFilesCacheTTL: TimeInterval = 4
+    private static let commandCacheMaxEntries = 64
+    private static let commandCachePruneAge: TimeInterval = 120
+    private static let modifiedFilesCacheTTL: TimeInterval = 30
     private static let modifiedFilesCacheMaxEntries = 32
+    private static var commandOutputCache: [String: CommandCacheEntry] = [:]
     private static var modifiedFilesCache: [String: ModifiedFilesCacheEntry] = [:]
+    private static let commandOutputCacheLock = NSLock()
     private static let modifiedFilesCacheLock = NSLock()
 
-    static func commandOutput(executablePath: String, arguments: [String]) -> String? {
+    static func commandOutput(executablePath: String, arguments: [String], cacheTTL: TimeInterval? = nil) -> String? {
+        let cacheKey = ([executablePath] + arguments).joined(separator: "\u{1F}")
+        let now = Date()
+
+        if let cacheTTL {
+            commandOutputCacheLock.lock()
+            if let cached = commandOutputCache[cacheKey],
+               now.timeIntervalSince(cached.timestamp) < cacheTTL {
+                commandOutputCacheLock.unlock()
+                return cached.output
+            }
+            commandOutputCacheLock.unlock()
+        }
+
         let process = Process()
         let outputPipe = Pipe()
 
@@ -35,23 +57,36 @@ private enum ProcessInspection {
         process.standardOutput = outputPipe
         process.standardError = Pipe()
 
+        let output: String?
+
         do {
             try process.run()
+            let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            output = process.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil
         } catch {
-            return nil
+            output = nil
         }
 
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            return nil
+        if cacheTTL != nil {
+            commandOutputCacheLock.lock()
+            commandOutputCache[cacheKey] = CommandCacheEntry(output: output, timestamp: now)
+            if commandOutputCache.count > commandCacheMaxEntries {
+                let cutoff = now.addingTimeInterval(-commandCachePruneAge)
+                commandOutputCache = commandOutputCache.filter { $0.value.timestamp > cutoff }
+            }
+            commandOutputCacheLock.unlock()
         }
 
-        return String(data: data, encoding: .utf8)
+        return output
     }
 
     static func workingDirectory(for pid: Int) -> String? {
-        guard let output = commandOutput(executablePath: "/usr/sbin/lsof", arguments: ["-a", "-d", "cwd", "-p", "\(pid)"]) else {
+        guard let output = commandOutput(
+            executablePath: "/usr/sbin/lsof",
+            arguments: ["-a", "-d", "cwd", "-p", "\(pid)"],
+            cacheTTL: 60
+        ) else {
             return nil
         }
 
@@ -95,7 +130,11 @@ private enum ProcessInspection {
     }
 
     static func codexSessionLogPath(for pid: Int) -> String? {
-        guard let output = commandOutput(executablePath: "/usr/sbin/lsof", arguments: ["-p", "\(pid)"]) else {
+        guard let output = commandOutput(
+            executablePath: "/usr/sbin/lsof",
+            arguments: ["-p", "\(pid)"],
+            cacheTTL: 20
+        ) else {
             return nil
         }
 
@@ -158,7 +197,11 @@ final class ClaudeSessionMonitor {
     }
 
     private func detectSessions() -> [SessionDescriptor] {
-        guard let output = ProcessInspection.commandOutput(executablePath: "/bin/ps", arguments: ["-Ao", "pid=,ppid=,command="]) else {
+        guard let output = ProcessInspection.commandOutput(
+            executablePath: "/bin/ps",
+            arguments: ["-Aww", "-o", "pid=,ppid=,command="],
+            cacheTTL: 3
+        ) else {
             return []
         }
 
@@ -227,12 +270,19 @@ final class CodexActivityMonitor {
         let lastActivity: Date
     }
 
+    private struct ActivityStateCacheEntry {
+        let fileSize: UInt64
+        let modificationDate: Date?
+        let state: ActivityState
+    }
+
     private let queue = DispatchQueue(label: "com.floatify.codex-activity")
     private var timer: DispatchSourceTimer?
     private var lastPublished: [SessionDescriptor] = []
     private var projectCache: [Int: ProjectContext] = [:]
     private var sessionLogPathCache: [Int: String] = [:]
     private var modifiedFilesCache: [Int: Int] = [:]
+    private var activityStateCache: [String: ActivityStateCacheEntry] = [:]
     private let sessionTailByteCount = 32 * 1024
     private let timestampFormatterWithFractionalSeconds: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -274,7 +324,11 @@ final class CodexActivityMonitor {
     }
 
     private func detectCodexSessions() -> [SessionDescriptor] {
-        guard let output = ProcessInspection.commandOutput(executablePath: "/bin/ps", arguments: ["-Aww", "-o", "pid=,ppid=,command="]) else {
+        guard let output = ProcessInspection.commandOutput(
+            executablePath: "/bin/ps",
+            arguments: ["-Aww", "-o", "pid=,ppid=,command="],
+            cacheTTL: 3
+        ) else {
             return []
         }
 
@@ -307,6 +361,8 @@ final class CodexActivityMonitor {
         projectCache = projectCache.filter { activeNodePIDs.contains($0.key) }
         sessionLogPathCache = sessionLogPathCache.filter { activeNodePIDs.contains($0.key) }
         modifiedFilesCache = modifiedFilesCache.filter { activeNodePIDs.contains($0.key) }
+        let activeLogPaths = Set(sessionLogPathCache.values)
+        activityStateCache = activityStateCache.filter { activeLogPaths.contains($0.key) }
 
         let now = Date()
         return activeNodePIDs.sorted().map { nodePID in
@@ -352,6 +408,16 @@ final class CodexActivityMonitor {
             return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
 
+        let attributes = try? FileManager.default.attributesOfItem(atPath: sessionLogPath)
+        let fileSize = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
+        let fileModificationDate = attributes?[.modificationDate] as? Date
+
+        if let cached = activityStateCache[sessionLogPath],
+           cached.fileSize == fileSize,
+           cached.modificationDate == fileModificationDate {
+            return cached.state
+        }
+
         guard let fileHandle = FileHandle(forReadingAtPath: sessionLogPath) else {
             return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
@@ -359,19 +425,25 @@ final class CodexActivityMonitor {
             fileHandle.closeFile()
         }
 
-        let fileSize = (try? fileHandle.seekToEnd()) ?? 0
-        let readSize = min(UInt64(sessionTailByteCount), fileSize)
+        let actualFileSize = max((try? fileHandle.seekToEnd()) ?? 0, fileSize)
+        let readSize = min(UInt64(sessionTailByteCount), actualFileSize)
         if readSize == 0 {
-            return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
+            let state = ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
+            activityStateCache[sessionLogPath] = ActivityStateCacheEntry(
+                fileSize: actualFileSize,
+                modificationDate: fileModificationDate,
+                state: state
+            )
+            return state
         }
 
-        try? fileHandle.seek(toOffset: fileSize - readSize)
+        try? fileHandle.seek(toOffset: actualFileSize - readSize)
         let data = fileHandle.readDataToEndOfFile()
         guard var contents = String(data: data, encoding: .utf8) else {
             return ActivityState(isRunning: false, hasTaskState: false, lastActivity: fallbackDate)
         }
 
-        if readSize < fileSize, let firstNewline = contents.firstIndex(of: "\n") {
+        if readSize < actualFileSize, let firstNewline = contents.firstIndex(of: "\n") {
             contents = String(contents[contents.index(after: firstNewline)...])
         }
 
@@ -394,20 +466,37 @@ final class CodexActivityMonitor {
             }
 
             if eventType == "task_complete" {
-                return ActivityState(isRunning: false, hasTaskState: true, lastActivity: timestamp)
+                let state = ActivityState(isRunning: false, hasTaskState: true, lastActivity: timestamp)
+                activityStateCache[sessionLogPath] = ActivityStateCacheEntry(
+                    fileSize: actualFileSize,
+                    modificationDate: fileModificationDate,
+                    state: state
+                )
+                return state
             }
 
             if eventType == "task_started" {
-                return ActivityState(isRunning: true, hasTaskState: true, lastActivity: timestamp)
+                let state = ActivityState(isRunning: true, hasTaskState: true, lastActivity: timestamp)
+                activityStateCache[sessionLogPath] = ActivityStateCacheEntry(
+                    fileSize: actualFileSize,
+                    modificationDate: fileModificationDate,
+                    state: state
+                )
+                return state
             }
         }
 
-        let fileModificationDate = (try? FileManager.default.attributesOfItem(atPath: sessionLogPath))?[.modificationDate] as? Date
-        return ActivityState(
+        let state = ActivityState(
             isRunning: false,
             hasTaskState: false,
             lastActivity: fallbackActivityAt ?? fileModificationDate ?? fallbackDate
         )
+        activityStateCache[sessionLogPath] = ActivityStateCacheEntry(
+            fileSize: actualFileSize,
+            modificationDate: fileModificationDate,
+            state: state
+        )
+        return state
     }
 
     private func parsedTimestamp(from rawValue: String) -> Date? {
