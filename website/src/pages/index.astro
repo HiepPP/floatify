@@ -44,6 +44,11 @@ import Layout from '../layouts/Layout.astro';
   <!-- Main Content -->
   <main id="main-content" class="relative z-10">
 
+    <!-- Scroll-following character -->
+    <div id="scroll-char" class="scroll-character hidden md:block" aria-hidden="true"
+      style="bottom: 20px; background: #F5C518; border-radius: 2px; box-shadow: 2px 0 0 #C84C09, -2px 0 0 #C84C09, 0 2px 0 #C84C09, 0 -2px 0 #C84C09, 0 -4px 0 #E52521, 2px -4px 0 #E52521, -2px -4px 0 #E52521, 0 -6px 0 #E52521;"
+    ></div>
+
   <!-- Section 1: Hero - Game Start Screen -->
   <section aria-labelledby="hero-heading" class="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
     <div class="text-center max-w-3xl mx-auto mb-12">
@@ -104,9 +109,333 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <!-- Remaining sections added by subsequent tasks -->
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 2: Demo - World 1-1 -->
+  <section aria-labelledby="demo-heading" class="py-20 px-6">
+    <div class="max-w-4xl mx-auto">
+      <h2 id="demo-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-10 tracking-wider">
+        WORLD 1-1
+      </h2>
+      <div class="relative pixel-border rounded-lg overflow-hidden">
+        <div id="video-overlay" class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 cursor-pointer transition-opacity duration-300">
+          <div class="flex flex-col items-center gap-3">
+            <div class="w-16 h-16 rounded-full border-4 border-game-mario-red flex items-center justify-center">
+              <svg class="w-6 h-6 text-game-mario-red ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <span class="font-pixel text-xs text-game-mario-red">PRESS PLAY</span>
+          </div>
+        </div>
+        <video
+          id="demo-video"
+          src="/demo.mp4"
+          class="w-full block"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Floatify demo video showing session floaters in action"
+        >
+          Your browser does not support the demo video.
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 3: Features - Power-Ups -->
+  <section aria-labelledby="features-heading" class="py-20 px-6 max-w-6xl mx-auto">
+    <h2 id="features-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-12 tracking-wider">
+      POWER-UPS
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Per-Session Floaters</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Each Claude Code or Codex session gets its own floater instead of one global status box.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Zero Focus Stealing</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Non-activating NSPanel windows stay above apps without interrupting typing or mouse focus.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Project-Aware Labels</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Each floater shows the current folder name, so multiple sessions stay easy to scan.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Drag, Close, Arrange</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Move floaters anywhere, close the ones you do not need, restack them from the menu bar, or click a floater to open its project in VS Code.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Color-First Status</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Red means running. Green means complete. Status stays readable without extra words.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Claude and Codex</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Both tools get live session discovery. Codex can infer task state from session logs. Claude still works best with hooks.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="square" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Render Modes</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">Super Slay turns effects up, Slay keeps the standard animated look, and Lame strips heavy repeat effects for the lowest CPU.</p>
+      </div>
+      <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
+        <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+          <path stroke-linecap="square" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">File Changes & Activity</h3>
+        <p class="text-sm font-body text-game-cloud-white/70">See git modified files count and time since last activity. Stay informed about what is happening in each session at a glance.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 4: Interactive Floater Playground - Mini-Game -->
+  <section aria-labelledby="playground-heading" class="py-20 px-6">
+    <div class="max-w-lg mx-auto">
+      <h2 id="playground-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-10 tracking-wider">
+        MINI-GAME
+      </h2>
+      <div class="pixel-border-double rounded-lg p-1">
+        <div class="bg-game-sky-dark rounded-lg overflow-hidden">
+          <div class="px-4 py-2 border-b-2 border-game-brick-brown bg-game-brick-brown/20">
+            <span class="font-pixel text-[10px] text-game-coin-gold">FLOATER DEMO</span>
+          </div>
+          <div class="p-6">
+            <div
+              id="floater-mockup"
+              class="relative mx-auto rounded-xl p-4 transition-all duration-300 glow-red-pulse"
+              style="background: rgba(30, 30, 50, 0.9); max-width: 280px; border: 1px solid rgba(255,255,255,0.1);"
+            >
+              <div class="flex items-center gap-3">
+                <div id="status-dot" class="w-3 h-3 rounded-full bg-game-mario-red transition-colors duration-300"></div>
+                <span class="font-mono text-sm text-game-cloud-white">floatify</span>
+                <div class="ml-auto pixel-sprite" style="width: 16px; height: 16px; background: #F5C518; border-radius: 2px;" aria-hidden="true"></div>
+              </div>
+              <div class="flex items-center gap-4 mt-2 text-xs font-mono text-game-cloud-white/50">
+                <span>3 files</span>
+                <span>Just now</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-center gap-4 p-4 border-t-2 border-game-brick-brown/30">
+            <button data-status="running" class="status-btn px-4 py-2 rounded-full bg-game-mario-red text-white font-pixel text-[10px] active:scale-95 transition-transform border-2 border-red-800">Running</button>
+            <button data-status="idle" class="status-btn px-4 py-2 rounded-full bg-game-coin-gold text-game-sky-dark font-pixel text-[10px] active:scale-95 transition-transform border-2 border-yellow-700">Idle</button>
+            <button data-status="complete" class="status-btn px-4 py-2 rounded-full bg-game-pipe-green text-white font-pixel text-[10px] active:scale-95 transition-transform border-2 border-green-800">Complete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 5: How It Works - Warp Zone -->
+  <section aria-labelledby="warp-heading" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 id="warp-heading" class="font-pixel text-sm text-game-pipe-green text-center mb-12 tracking-wider">
+      WARP ZONE
+    </h2>
+    <div id="warp-flow" class="relative flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+      <div class="flex-1 flex flex-col items-center text-center">
+        <div class="warp-pipe mb-4" aria-hidden="true"></div>
+        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">Hook Trigger</h3>
+        <p class="text-sm font-body text-game-cloud-white/60">Live process scan discovers sessions</p>
+      </div>
+      <div class="hidden md:block text-game-coin-gold font-pixel text-lg" aria-hidden="true">&#9654;</div>
+      <div class="flex-1 flex flex-col items-center text-center">
+        <div class="warp-pipe mb-4" aria-hidden="true"></div>
+        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">CLI Command</h3>
+        <p class="text-sm font-body text-game-cloud-white/60">CLI sends status via FIFO pipe</p>
+      </div>
+      <div class="hidden md:block text-game-coin-gold font-pixel text-lg" aria-hidden="true">&#9654;</div>
+      <div class="flex-1 flex flex-col items-center text-center">
+        <div class="warp-pipe mb-4" aria-hidden="true"></div>
+        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">Floater Appears</h3>
+        <p class="text-sm font-body text-game-cloud-white/60">Persistent floater appears per session</p>
+      </div>
+      <div id="data-packet" class="data-packet hidden md:block" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 6: Installation - Start Game -->
+  <section id="installation" aria-labelledby="install-heading" class="py-20 px-6 max-w-4xl mx-auto">
+    <h2 id="install-heading" class="font-pixel text-sm text-game-mario-red text-center mb-10 tracking-wider">
+      START GAME
+    </h2>
+    <div class="pixel-border rounded-lg overflow-hidden" style="background: #0f0f1a;">
+      <ol class="divide-y divide-game-brick-brown/30">
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">1</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">Clone the repository</p>
+            <div class="relative scanlines rounded" style="background: #161625;">
+              <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> git clone https://github.com/hieppp/floatify.git</code></pre>
+              <button onclick="copyAndCoin(this, 'git clone https://github.com/hieppp/floatify.git')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+            </div>
+          </div>
+        </li>
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">2</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">Build and install</p>
+            <div class="relative scanlines rounded" style="background: #161625;">
+              <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> cd floatify && ./build.sh</code></pre>
+              <button onclick="copyAndCoin(this, 'cd floatify && ./build.sh')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+            </div>
+          </div>
+        </li>
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">3</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">What build.sh does</p>
+            <p class="text-sm font-body text-game-cloud-white/60">Builds the app and CLI, installs Floatify.app to /Applications, updates /usr/local/bin/floatify, and relaunches the app.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">4</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">Claude Code hooks <span class="text-xs text-game-cloud-white/40 font-mono">~/.claude/settings.json</span></p>
+            <div class="relative scanlines rounded" style="background: #161625;">
+              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --status complete"
+      }]
+    }],
+    "SessionEnd": [{
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --status complete"
+      }]
+    }]
+  }
+}</code></pre>
+              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}],&quot;SessionEnd&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+            </div>
+          </div>
+        </li>
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">5</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">Codex hooks <span class="text-xs text-game-cloud-white/40 font-mono">~/.codex/hooks.json</span></p>
+            <div class="relative scanlines rounded" style="background: #161625;">
+              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --status running"
+      }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "floatify --status complete"
+      }]
+    }]
+  }
+}</code></pre>
+              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;UserPromptSubmit&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status running&quot;}]}],&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+            </div>
+          </div>
+        </li>
+        <li class="flex items-start gap-4 p-5">
+          <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">6</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-body text-game-cloud-white mb-2">Test it</p>
+            <div class="relative scanlines rounded" style="background: #161625;">
+              <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> floatify --status running
+<span class="text-game-coin-gold">$</span> floatify --status complete</code></pre>
+              <button onclick="copyAndCoin(this, 'floatify --status running')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+    <div class="mt-10 text-center">
+      <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-game-coin-gold text-game-coin-gold font-pixel text-xs rounded-lg hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">
+        CONTINUE?
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- Ground divider -->
+  <div class="ground-divider" aria-hidden="true"></div>
+
+  <!-- Section 7: Game Options -->
+  <section aria-labelledby="options-heading" class="py-12 px-6 max-w-4xl mx-auto">
+    <h2 id="options-heading" class="font-pixel text-[10px] text-game-coin-gold text-center mb-8 tracking-wider">
+      GAME OPTIONS
+    </h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
+        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Render</p>
+        <p class="text-xs font-body text-game-cloud-white/70">Super Slay, Slay, or Lame</p>
+      </div>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
+        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Theme</p>
+        <p class="text-xs font-body text-game-cloud-white/70">Dark or light palette</p>
+      </div>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
+        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Display</p>
+        <p class="text-xs font-body text-game-cloud-white/70">Compact, regular, or large</p>
+      </div>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
+        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Timeout</p>
+        <p class="text-xs font-body text-game-cloud-white/70">Seconds before idle and complete</p>
+      </div>
+    </div>
+    <p class="mt-4 text-xs font-body text-game-cloud-white/40 text-center">Codex infers task state from logs. Claude needs hooks for precise status.</p>
+  </section>
 
   </main>
+
+  <!-- Footer -->
+  <footer class="py-8 px-6" style="background: linear-gradient(180deg, #3d2510 0%, #1a1a2e 100%);">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="font-pixel text-[8px] text-game-cloud-white/40">2026 FLOATIFY</p>
+        <span class="px-3 py-1 rounded border border-game-coin-gold/30 font-pixel text-[8px] text-game-coin-gold/60">MIT LICENSE</span>
+        <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="font-pixel text-[8px] text-game-cloud-white/40 hover:text-game-cloud-white transition-colors">GITHUB &#9654;</a>
+      </div>
+    </div>
+  </footer>
 
 </Layout>
 
@@ -180,5 +509,101 @@ import Layout from '../layouts/Layout.astro';
       navbar.style.backdropFilter = "none";
       navbar.style.borderBottom = "none";
     }
+  });
+
+  // --- Video overlay play ---
+  const overlay = document.getElementById("video-overlay");
+  const video = document.getElementById("demo-video") as HTMLVideoElement | null;
+  overlay?.addEventListener("click", () => {
+    video?.play();
+    overlay.style.opacity = "0";
+    overlay.style.pointerEvents = "none";
+  });
+
+  // --- Intersection Observer for scroll animations ---
+  const observeEls = document.querySelectorAll("[data-observe]");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const el = entry.target as HTMLElement;
+        const siblings = Array.from(el.parentElement?.querySelectorAll("[data-observe]") || []);
+        const idx = siblings.indexOf(el);
+        setTimeout(() => {
+          el.classList.remove("observe-hidden");
+          el.classList.add("observe-visible", "block-hit");
+          el.addEventListener("animationend", () => el.classList.remove("block-hit"), { once: true });
+        }, idx * 100);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.2 });
+  observeEls.forEach((el) => observer.observe(el));
+
+  // --- Floater Playground ---
+  const mockup = document.getElementById("floater-mockup");
+  const dot = document.getElementById("status-dot");
+  const statusBtns = document.querySelectorAll(".status-btn");
+  statusBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const status = (btn as HTMLElement).dataset.status;
+      if (!mockup || !dot) return;
+      mockup.classList.remove("glow-red", "glow-yellow", "glow-green", "glow-red-pulse");
+      if (status === "running") {
+        dot.style.background = "#E52521";
+        mockup.classList.add("glow-red-pulse");
+      } else if (status === "idle") {
+        dot.style.background = "#F5C518";
+        mockup.classList.add("glow-yellow");
+      } else if (status === "complete") {
+        dot.style.background = "#049C2F";
+        mockup.classList.add("glow-green");
+        for (let i = 0; i < 18; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti-piece";
+          const colors = ["#E52521", "#F5C518", "#049C2F", "#6185F8", "#F0F0F0"];
+          c.style.background = colors[Math.floor(Math.random() * colors.length)];
+          const angle = (Math.PI * 2 * i) / 18;
+          const dist = 40 + Math.random() * 60;
+          c.style.setProperty("--cx", `${Math.cos(angle) * dist}px`);
+          c.style.setProperty("--cy", `${Math.sin(angle) * dist - 30}px`);
+          c.style.setProperty("--cr", `${Math.random() * 720 - 360}deg`);
+          c.style.left = "50%";
+          c.style.top = "50%";
+          mockup.appendChild(c);
+          setTimeout(() => c.remove(), 1000);
+        }
+      }
+    });
+  });
+
+  // --- Warp zone data packet animation ---
+  const warpFlow = document.getElementById("warp-flow");
+  const packet = document.getElementById("data-packet");
+  if (warpFlow && packet) {
+    const warpObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          packet.classList.add("animate");
+          warpObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    warpObserver.observe(warpFlow);
+  }
+
+  // --- Scroll-following character ---
+  const scrollChar = document.getElementById("scroll-char");
+  let scrollTimeout: ReturnType<typeof setTimeout>;
+  window.addEventListener("scroll", () => {
+    if (!scrollChar) return;
+    const scrollPct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+    const viewH = window.innerHeight;
+    const charBottom = 20 + scrollPct * (viewH - 60);
+    scrollChar.style.bottom = `${charBottom}px`;
+    scrollChar.classList.add("walking");
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      scrollChar.classList.remove("walking");
+    }, 150);
   });
 </script>
