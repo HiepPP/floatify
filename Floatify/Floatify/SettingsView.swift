@@ -364,10 +364,17 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.inline)
+
+                Picker("Render Mode", selection: $settings.floaterRenderMode) {
+                    ForEach(FloaterRenderMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.inline)
             } header: {
                 Text("Floater Appearance")
             } footer: {
-                Text("Changes apply immediately to all visible floaters.")
+                Text("Slay keeps full effects. Lame removes heavy repeat effects for the lowest CPU.")
                     .foregroundStyle(.secondary)
             }
 

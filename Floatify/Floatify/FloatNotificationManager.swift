@@ -86,6 +86,7 @@ struct FloaterPanelItem: Identifiable {
     let effect: String
     let sheetName: String?
     let floaterSize: FloaterSize
+    let renderMode: FloaterRenderMode
 
     var id: String { item.id }
 }
@@ -251,7 +252,8 @@ class FloatNotificationManager {
                 shouldShake: shakingItemIDs.contains(item.id),
                 effect: style.effect,
                 sheetName: style.sheetName,
-                floaterSize: floaterSize
+                floaterSize: floaterSize,
+                renderMode: settings.floaterRenderMode
             )
         }
 
@@ -332,6 +334,7 @@ class FloatNotificationManager {
         withObservationTracking {
             _ = settings.floaterSize
             _ = settings.floaterTheme
+            _ = settings.floaterRenderMode
         } onChange: {
             Task { @MainActor in
                 let manager = FloatNotificationManager.shared
@@ -349,6 +352,10 @@ class FloatNotificationManager {
     private var sheetAssignments: [String: String] = [:]
 
     private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
+        guard settings.floaterRenderMode == .slay else {
+            return PersistentStatusStyle(effect: "fade", sheetName: nil)
+        }
+
         let seed = stableSeed(for: item.id)
         let effect = statusEffects[seed % statusEffects.count]
         let avatarKey = item.project.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -457,6 +464,7 @@ class FloatNotificationManager {
                 project: project,
                 corner: corner,
                 playsEntryAnimation: playsEntryAnimation,
+                renderMode: settings.floaterRenderMode,
                 dismissController: dismissController
             )
         )

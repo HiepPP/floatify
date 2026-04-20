@@ -226,6 +226,20 @@ enum FloaterSize: String, CaseIterable, Equatable {
     }
 }
 
+enum FloaterRenderMode: String, CaseIterable, Equatable {
+    case slay
+    case lame
+
+    var displayName: String {
+        switch self {
+        case .slay:
+            return "Slay"
+        case .lame:
+            return "Lame"
+        }
+    }
+}
+
 @Observable
 final class FloatifySettings {
     static let shared = FloatifySettings()
@@ -234,6 +248,7 @@ final class FloatifySettings {
     private enum Key {
         static let floaterSize = "FloaterSize"
         static let floaterTheme = "FloaterTheme"
+        static let floaterRenderMode = "FloaterRenderMode"
         static let idleTimeout = "IdleTimeout"
         static let idleTimeoutMigration = "IdleTimeoutMigratedTo10"
     }
@@ -249,6 +264,12 @@ final class FloatifySettings {
     var floaterSize: FloaterSize {
         didSet {
             defaults.set(floaterSize.rawValue, forKey: Key.floaterSize)
+        }
+    }
+
+    var floaterRenderMode: FloaterRenderMode {
+        didSet {
+            defaults.set(floaterRenderMode.rawValue, forKey: Key.floaterRenderMode)
         }
     }
 
@@ -272,6 +293,7 @@ final class FloatifySettings {
         Self.migrateLegacyIdleTimeoutIfNeeded(defaults: defaults)
         self.floaterTheme = FloaterTheme(rawValue: defaults.string(forKey: Key.floaterTheme) ?? FloaterTheme.dark.rawValue) ?? .dark
         self.floaterSize = FloaterSize(rawValue: defaults.string(forKey: Key.floaterSize) ?? FloaterSize.regular.rawValue) ?? .regular
+        self.floaterRenderMode = FloaterRenderMode(rawValue: defaults.string(forKey: Key.floaterRenderMode) ?? FloaterRenderMode.slay.rawValue) ?? .slay
 
         let storedIdleTimeout = defaults.integer(forKey: Key.idleTimeout)
         self.idleTimeout = storedIdleTimeout > 0 ? storedIdleTimeout : 10

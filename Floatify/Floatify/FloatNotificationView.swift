@@ -1275,6 +1275,7 @@ struct FloaterPanelView: View {
                             isDraggablePanel: true,
                             playsEntryAnimation: item.playsEntryAnimation,
                             floaterSize: item.floaterSize,
+                            renderMode: item.renderMode,
                             lastActivity: item.item.lastActivity,
                             modifiedFilesCount: item.item.modifiedFilesCount,
                             shouldShake: item.shouldShake,
@@ -1319,6 +1320,7 @@ struct FloatNotificationView: View {
     var isDraggablePanel = false
     var playsEntryAnimation = true
     var floaterSize: FloaterSize = .regular
+    var renderMode: FloaterRenderMode = .slay
     var isCompact: Bool = false
     var lastActivity: Date?
     var modifiedFilesCount: Int = 0
@@ -1353,6 +1355,7 @@ struct FloatNotificationView: View {
         isDraggablePanel: Bool = false,
         playsEntryAnimation: Bool = true,
         floaterSize: FloaterSize = .regular,
+        renderMode: FloaterRenderMode = .slay,
         isCompact: Bool = false,
         lastActivity: Date? = nil,
         modifiedFilesCount: Int = 0,
@@ -1373,6 +1376,7 @@ struct FloatNotificationView: View {
         self.isDraggablePanel = isDraggablePanel
         self.playsEntryAnimation = playsEntryAnimation
         self.floaterSize = floaterSize
+        self.renderMode = renderMode
         self.isCompact = isCompact || floaterSize == .compact
         self.lastActivity = lastActivity
         self.modifiedFilesCount = modifiedFilesCount
@@ -1398,6 +1402,18 @@ struct FloatNotificationView: View {
 
     private var accentColor: Color {
         statusIndicatorColor ?? .blue
+    }
+
+    private var usesMinimalRenderMode: Bool {
+        isPersistent && renderMode == .lame
+    }
+
+    private var showsFancyFloaterEffects: Bool {
+        isPersistent && renderMode == .slay
+    }
+
+    private var animatesPersistentStatus: Bool {
+        renderMode == .slay && animatesStatus
     }
 
     private var avatarBackgroundPrimaryOpacity: Double {
@@ -1443,7 +1459,7 @@ struct FloatNotificationView: View {
     }
 
     private var showsRunningDuration: Bool {
-        isRunning && lastActivity != nil
+        !usesMinimalRenderMode && isRunning && lastActivity != nil
     }
 
     private var showsActivitySection: Bool {
@@ -1480,7 +1496,7 @@ struct FloatNotificationView: View {
 
     var body: some View {
         ZStack {
-            if corner == .cursorFollow {
+            if corner == .cursorFollow, renderMode == .slay {
                 ParticleTrailView(system: particleSystem, color: FloaterPalette.idle)
                     .frame(width: 300, height: 100)
             }
@@ -1503,7 +1519,7 @@ struct FloatNotificationView: View {
                 .strokeBorder(FloaterPalette.highlight.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
         )
         .overlay {
-            if isPersistent {
+            if showsFancyFloaterEffects {
                 ZStack {
                     if isRunning {
                         RunningSheenSweep(
@@ -1566,38 +1582,46 @@ struct FloatNotificationView: View {
 
     private var panelBackground: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
-                .overlay(
-                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .fill(.thinMaterial.opacity(0.16))
-                )
+            if usesMinimalRenderMode {
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
 
-            if isPersistent {
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .fill(accentColor.opacity(isRunning ? 0.10 : 0.06))
+            } else {
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                            .fill(.thinMaterial.opacity(0.16))
+                    )
+
+                if isPersistent {
+                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accentColor.opacity(isRunning ? 0.14 : 0.08),
+                                    .clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                }
+
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(
                         LinearGradient(
                             colors: [
-                                accentColor.opacity(isRunning ? 0.14 : 0.08),
+                                FloaterPalette.highlight.opacity(0.08),
                                 .clear
                             ],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                            startPoint: .top,
+                            endPoint: .center
                         )
                     )
             }
-
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            FloaterPalette.highlight.opacity(0.08),
-                            .clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                )
         }
     }
 
@@ -1611,7 +1635,7 @@ struct FloatNotificationView: View {
                 ZStack {
                     persistentAvatarBackground
                     avatarStage
-                        .scaleEffect(isAvatarHovering ? 1.06 : 1.0)
+                        .scaleEffect(usesMinimalRenderMode ? 1.0 : (isAvatarHovering ? 1.06 : 1.0))
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAvatarHovering)
                 }
             }
@@ -1653,8 +1677,8 @@ struct FloatNotificationView: View {
                     label: stateLabel,
                     dotSize: floaterSize.dotSize,
                     fontSize: floaterSize.metaFontSize,
-                    isPulsing: isRunning && animatesStatus,
-                    showsTypingDots: isRunning && animatesStatus
+                    isPulsing: isRunning && animatesPersistentStatus,
+                    showsTypingDots: isRunning && animatesPersistentStatus
                 )
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -1705,43 +1729,54 @@ struct FloatNotificationView: View {
 
     @ViewBuilder
     private var avatarStage: some View {
-        SpriteStageView(
-            sheetName: sheetName,
-            statusColor: accentColor,
-            stageSize: floaterSize.persistentStageSize,
-            spriteSize: floaterSize.persistentSpriteSize,
-            isAnimating: animatesStatus,
-            isRunning: isRunning,
-            isIdle: statusState == .idle,
-            isComplete: statusState == .complete,
-            completeTrigger: completeTrigger
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        if usesMinimalRenderMode {
+            ZStack {
+                Circle()
+                    .fill(accentColor.opacity(0.18))
+                    .frame(
+                        width: floaterSize.persistentStageSize * 0.58,
+                        height: floaterSize.persistentStageSize * 0.58
+                    )
+
+                Circle()
+                    .fill(accentColor.opacity(0.94))
+                    .frame(
+                        width: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22),
+                        height: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22)
+                    )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            SpriteStageView(
+                sheetName: sheetName,
+                statusColor: accentColor,
+                stageSize: floaterSize.persistentStageSize,
+                spriteSize: floaterSize.persistentSpriteSize,
+                isAnimating: animatesStatus,
+                isRunning: isRunning,
+                isIdle: statusState == .idle,
+                isComplete: statusState == .complete,
+                completeTrigger: completeTrigger
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     private var persistentAvatarBackground: some View {
         Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        accentColor.opacity(avatarBackgroundPrimaryOpacity),
-                        accentColor.opacity(avatarBackgroundSecondaryOpacity),
-                        FloaterPalette.panelShadow.opacity(0.92)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay(
-                LinearGradient(
-                    colors: [
-                        FloaterPalette.highlight.opacity(0.10),
-                        .clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .fill(avatarBackgroundFill)
+            .overlay {
+                if !usesMinimalRenderMode {
+                    LinearGradient(
+                        colors: [
+                            FloaterPalette.highlight.opacity(0.10),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            }
             .overlay(
                 Rectangle()
                     .strokeBorder(accentColor.opacity(avatarBackgroundBorderOpacity), lineWidth: 0.8)
@@ -1752,6 +1787,24 @@ struct FloatNotificationView: View {
                     .frame(width: 1)
                     .padding(.vertical, 4)
             }
+    }
+
+    private var avatarBackgroundFill: AnyShapeStyle {
+        if usesMinimalRenderMode {
+            return AnyShapeStyle(accentColor.opacity(0.20))
+        }
+
+        return AnyShapeStyle(
+            LinearGradient(
+                colors: [
+                    accentColor.opacity(avatarBackgroundPrimaryOpacity),
+                    accentColor.opacity(avatarBackgroundSecondaryOpacity),
+                    FloaterPalette.panelShadow.opacity(0.92)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     @ViewBuilder
