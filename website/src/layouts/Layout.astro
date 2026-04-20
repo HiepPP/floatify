@@ -7,7 +7,7 @@ interface Props {
 
 const {
   title,
-  description = "Floatify - A macOS menu bar app with persistent session floaters for Claude Code and Codex, plus temporary CLI notifications and selectable render modes.",
+  description = "Floatify - A macOS menu bar app with persistent session floaters for Claude Code and Codex. Per-session HUDs with project labels, status colors, sprite avatars, and render modes.",
   image = "/floatify-og-image.png"
 } = Astro.props;
 
@@ -17,7 +17,7 @@ const githubUrl = "https://github.com/hieppp/floatify";
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -52,6 +52,11 @@ const githubUrl = "https://github.com/hieppp/floatify";
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
+    <!-- Google Fonts: Press Start 2P + Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
       {
@@ -84,12 +89,12 @@ const githubUrl = "https://github.com/hieppp/floatify";
       }
     </script>
 
-    <!-- Additional SEO -->
-    <meta name="theme-color" content="#2e3440" />
+    <!-- Theme -->
+    <meta name="theme-color" content="#1a1a2e" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
-  <body class="bg-terminal-bg text-terminal-text font-mono antialiased selection:bg-[#88c0d0]/20">
+  <body>
     <slot />
   </body>
 </html>
