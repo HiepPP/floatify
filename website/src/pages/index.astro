@@ -327,7 +327,7 @@ import Layout from '../layouts/Layout.astro';
           <div class="flex-1 min-w-0">
             <p class="font-body text-game-cloud-white mb-2">Claude Code hooks <span class="text-xs text-game-cloud-white/40 font-mono">~/.claude/settings.json</span></p>
             <div class="relative scanlines rounded" style="background: #161625;">
-              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{
+              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{`{
   "hooks": {
     "Stop": [{
       "hooks": [{
@@ -342,7 +342,7 @@ import Layout from '../layouts/Layout.astro';
       }]
     }]
   }
-}</code></pre>
+}`}</code></pre>
               <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}],&quot;SessionEnd&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
             </div>
           </div>
@@ -352,7 +352,7 @@ import Layout from '../layouts/Layout.astro';
           <div class="flex-1 min-w-0">
             <p class="font-body text-game-cloud-white mb-2">Codex hooks <span class="text-xs text-game-cloud-white/40 font-mono">~/.codex/hooks.json</span></p>
             <div class="relative scanlines rounded" style="background: #161625;">
-              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{
+              <pre class="p-3 font-mono text-xs text-game-cloud-white overflow-x-auto"><code>{`{
   "hooks": {
     "UserPromptSubmit": [{
       "hooks": [{
@@ -367,7 +367,7 @@ import Layout from '../layouts/Layout.astro';
       }]
     }]
   }
-}</code></pre>
+}`}</code></pre>
               <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;UserPromptSubmit&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status running&quot;}]}],&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
             </div>
           </div>
