@@ -1145,7 +1145,6 @@ private struct SlayRunningSheenFramesView: View {
     let effectTuning: FloaterEffectTuning
 
     @State private var frameIndex = 0
-    @State private var isBurstVisible = false
 
     private var frames: [NSImage] {
         SlaySnapshotCache.sheenFrames(
@@ -1157,16 +1156,12 @@ private struct SlayRunningSheenFramesView: View {
     }
 
     private var frameDuration: UInt64 {
-        UInt64(max(0.05, 0.07 * effectTuning.sheenDurationMultiplier) * 1_000_000_000)
-    }
-
-    private var cooldownDuration: UInt64 {
-        UInt64(max(4.0, 7.4 * effectTuning.sheenDurationMultiplier) * 1_000_000_000)
+        UInt64(max(0.12, 0.18 * effectTuning.sheenDurationMultiplier) * 1_000_000_000)
     }
 
     var body: some View {
         Group {
-            if isBurstVisible, !frames.isEmpty {
+            if !frames.isEmpty {
                 Image(nsImage: frames[min(frameIndex, frames.count - 1)])
                     .resizable()
                     .interpolation(.high)
@@ -1182,14 +1177,8 @@ private struct SlayRunningSheenFramesView: View {
         )) {
             guard !frames.isEmpty else { return }
             frameIndex = 0
-            isBurstVisible = false
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
 
             while !Task.isCancelled {
-                await MainActor.run {
-                    isBurstVisible = true
-                }
-
                 for index in frames.indices {
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
@@ -1197,12 +1186,6 @@ private struct SlayRunningSheenFramesView: View {
                     }
                     try? await Task.sleep(nanoseconds: frameDuration)
                 }
-
-                await MainActor.run {
-                    isBurstVisible = false
-                }
-
-                try? await Task.sleep(nanoseconds: cooldownDuration)
             }
         }
     }
