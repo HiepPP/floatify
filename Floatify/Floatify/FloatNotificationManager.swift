@@ -295,6 +295,7 @@ class FloatNotificationManager {
             items: items,
             spacing: floaterPanelSpacing,
             isCollapsed: isFloaterPanelCollapsed,
+            showsCPUInHeader: settings.floaterHeaderCPUDisplay == .on,
             onToggleCollapsed: { [weak self] in
                 self?.toggleFloaterPanelCollapsed()
             },
@@ -346,6 +347,7 @@ class FloatNotificationManager {
             _ = settings.floaterSize
             _ = settings.floaterTheme
             _ = settings.floaterRenderMode
+            _ = settings.floaterHeaderCPUDisplay
             _ = settings.selectedVisualPackID
             _ = settings.selectedAvatarID
             _ = settings.selectedEffectPresetID

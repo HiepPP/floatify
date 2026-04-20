@@ -396,10 +396,21 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.inline)
+
+                LabeledContent("Header CPU") {
+                    Picker("Header CPU", selection: $settings.floaterHeaderCPUDisplay) {
+                        ForEach(FloaterHeaderCPUDisplay.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(width: 220, alignment: .trailing)
+                }
             } header: {
                 Text("Floater Appearance")
             } footer: {
-                Text("Slay keeps full effects. Super Slay pushes extra effects for high-end machines. Lame removes heavy repeat effects for the lowest CPU.")
+                Text("Slay keeps full effects. Super Slay pushes extra effects for high-end machines. Lame removes heavy repeat effects for the lowest CPU. Header CPU updates the floater bar with this app's current CPU usage.")
                     .foregroundStyle(.secondary)
             }
 

@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import QuartzCore
 import SwiftUI
 
@@ -328,6 +329,83 @@ private final class FloaterLowFrequencyTicker: ObservableObject {
 
     deinit {
         timer?.invalidate()
+    }
+}
+
+@MainActor
+private final class FloatifyCPUUsageMonitor: ObservableObject {
+    static let shared = FloatifyCPUUsageMonitor()
+
+    @Published private(set) var cpuPercent: Double = 0
+
+    private struct Sample {
+        let cpuTime: TimeInterval
+        let timestamp: CFTimeInterval
+    }
+
+    private var timer: Timer?
+    private var lastSample: Sample?
+    private var subscriberCount = 0
+
+    private init() {}
+
+    func activate() {
+        subscriberCount += 1
+        guard timer == nil else { return }
+
+        lastSample = makeSample()
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
+        }
+
+        if let timer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    func deactivate() {
+        subscriberCount = max(subscriberCount - 1, 0)
+        guard subscriberCount == 0 else { return }
+        timer?.invalidate()
+        timer = nil
+        lastSample = nil
+        cpuPercent = 0
+    }
+
+    private func refresh() {
+        guard let currentSample = makeSample() else { return }
+        defer { lastSample = currentSample }
+        guard let lastSample else { return }
+
+        let cpuDelta = currentSample.cpuTime - lastSample.cpuTime
+        let timeDelta = currentSample.timestamp - lastSample.timestamp
+        guard timeDelta > 0 else { return }
+
+        cpuPercent = max(0, (cpuDelta / timeDelta) * 100)
+    }
+
+    private func makeSample() -> Sample? {
+        var info = task_thread_times_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_thread_times_info_data_t>.stride / MemoryLayout<natural_t>.stride)
+
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { reboundPointer in
+                task_info(
+                    mach_task_self_,
+                    task_flavor_t(TASK_THREAD_TIMES_INFO),
+                    reboundPointer,
+                    &count
+                )
+            }
+        }
+
+        guard result == KERN_SUCCESS else { return nil }
+
+        let userTime = TimeInterval(info.user_time.seconds) + TimeInterval(info.user_time.microseconds) / 1_000_000
+        let systemTime = TimeInterval(info.system_time.seconds) + TimeInterval(info.system_time.microseconds) / 1_000_000
+        return Sample(cpuTime: userTime + systemTime, timestamp: CACurrentMediaTime())
     }
 }
 
@@ -2388,13 +2466,20 @@ private struct WindowDragRegion: NSViewRepresentable {
 private struct FloaterPanelHeaderView: View {
     let itemCount: Int
     let isCollapsed: Bool
+    let showsCPUInHeader: Bool
     let onToggleCollapsed: () -> Void
 
+    @ObservedObject private var cpuMonitor = FloatifyCPUUsageMonitor.shared
     @State private var isHoveringCollapse = false
+    @State private var isCPUMonitorActive = false
 
     private let animation = Animation.interpolatingSpring(
         mass: 1.0, stiffness: 160, damping: 18, initialVelocity: 0.0
     )
+
+    private var cpuText: String {
+        String(format: "%.1f%%CPU", cpuMonitor.cpuPercent)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -2423,6 +2508,16 @@ private struct FloaterPanelHeaderView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
                         .background(Capsule().fill(FloaterPalette.chipFill.opacity(0.85)))
+
+                    if showsCPUInHeader {
+                        Text(cpuText)
+                            .font(.system(size: 10, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(FloaterPalette.secondaryText)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(FloaterPalette.chipFill.opacity(0.85)))
+                    }
 
                     Spacer(minLength: 0)
                 }
@@ -2462,6 +2557,32 @@ private struct FloaterPanelHeaderView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 9))
         .shadow(color: FloaterPalette.panelShadow.opacity(0.18), radius: 6, x: 0, y: 2)
+        .onAppear {
+            syncCPUMonitorState()
+        }
+        .onDisappear {
+            deactivateCPUMonitorIfNeeded()
+        }
+        .onChange(of: showsCPUInHeader) { _, _ in
+            syncCPUMonitorState()
+        }
+    }
+
+    private func syncCPUMonitorState() {
+        if showsCPUInHeader {
+            guard !isCPUMonitorActive else { return }
+            FloatifyCPUUsageMonitor.shared.activate()
+            isCPUMonitorActive = true
+            return
+        }
+
+        deactivateCPUMonitorIfNeeded()
+    }
+
+    private func deactivateCPUMonitorIfNeeded() {
+        guard isCPUMonitorActive else { return }
+        FloatifyCPUUsageMonitor.shared.deactivate()
+        isCPUMonitorActive = false
     }
 }
 
@@ -2471,6 +2592,7 @@ struct FloaterPanelView: View {
     let items: [FloaterPanelItem]
     let spacing: CGFloat
     let isCollapsed: Bool
+    let showsCPUInHeader: Bool
     let onToggleCollapsed: () -> Void
     let onItemTap: (PersistentStatusItem) -> Void
     let onItemClose: (PersistentStatusItem) -> Void
@@ -2484,6 +2606,7 @@ struct FloaterPanelView: View {
             FloaterPanelHeaderView(
                 itemCount: items.count,
                 isCollapsed: isCollapsed,
+                showsCPUInHeader: showsCPUInHeader,
                 onToggleCollapsed: {
                     withAnimation(animation) { onToggleCollapsed() }
                 }

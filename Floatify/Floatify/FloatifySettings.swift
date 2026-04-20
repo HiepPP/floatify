@@ -243,6 +243,20 @@ enum FloaterRenderMode: String, CaseIterable, Equatable {
     }
 }
 
+enum FloaterHeaderCPUDisplay: String, CaseIterable, Equatable {
+    case off
+    case on
+
+    var displayName: String {
+        switch self {
+        case .off:
+            return "Off"
+        case .on:
+            return "On"
+        }
+    }
+}
+
 @Observable
 final class FloatifySettings {
     static let shared = FloatifySettings()
@@ -252,6 +266,7 @@ final class FloatifySettings {
         static let floaterSize = "FloaterSize"
         static let floaterTheme = "FloaterTheme"
         static let floaterRenderMode = "FloaterRenderMode"
+        static let floaterHeaderCPUDisplay = "FloaterHeaderCPUDisplay"
         static let selectedVisualPackID = "SelectedVisualPackID"
         static let selectedAvatarID = "SelectedAvatarID"
         static let selectedEffectPresetID = "SelectedEffectPresetID"
@@ -276,6 +291,12 @@ final class FloatifySettings {
     var floaterRenderMode: FloaterRenderMode {
         didSet {
             defaults.set(floaterRenderMode.rawValue, forKey: Key.floaterRenderMode)
+        }
+    }
+
+    var floaterHeaderCPUDisplay: FloaterHeaderCPUDisplay {
+        didSet {
+            defaults.set(floaterHeaderCPUDisplay.rawValue, forKey: Key.floaterHeaderCPUDisplay)
         }
     }
 
@@ -318,6 +339,7 @@ final class FloatifySettings {
         self.floaterTheme = FloaterTheme(rawValue: defaults.string(forKey: Key.floaterTheme) ?? FloaterTheme.dark.rawValue) ?? .dark
         self.floaterSize = FloaterSize(rawValue: defaults.string(forKey: Key.floaterSize) ?? FloaterSize.regular.rawValue) ?? .regular
         self.floaterRenderMode = FloaterRenderMode(rawValue: defaults.string(forKey: Key.floaterRenderMode) ?? FloaterRenderMode.slay.rawValue) ?? .slay
+        self.floaterHeaderCPUDisplay = FloaterHeaderCPUDisplay(rawValue: defaults.string(forKey: Key.floaterHeaderCPUDisplay) ?? FloaterHeaderCPUDisplay.off.rawValue) ?? .off
         self.selectedVisualPackID = defaults.string(forKey: Key.selectedVisualPackID) ?? FloaterVisualConstants.builtInPackID
         self.selectedAvatarID = defaults.string(forKey: Key.selectedAvatarID) ?? FloaterVisualConstants.autoAvatarID
         self.selectedEffectPresetID = defaults.string(forKey: Key.selectedEffectPresetID) ?? FloaterVisualConstants.defaultEffectPresetID
