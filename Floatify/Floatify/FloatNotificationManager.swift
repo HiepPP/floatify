@@ -352,7 +352,7 @@ class FloatNotificationManager {
     private var sheetAssignments: [String: String] = [:]
 
     private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
-        guard settings.floaterRenderMode == .slay else {
+        guard settings.floaterRenderMode != .lame else {
             return PersistentStatusStyle(effect: "fade", sheetName: nil)
         }
 

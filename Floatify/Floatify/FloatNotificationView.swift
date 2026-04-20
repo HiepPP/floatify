@@ -433,10 +433,14 @@ private struct SparkleParticleAnimation: ViewModifier {
 private struct RunningSheenSweep: View {
     let color: Color
     let cornerRadius: CGFloat
+    let renderMode: FloaterRenderMode
 
     @State private var sweepProgress: CGFloat = 0
-    @State private var intensity: Double = 0.64
     @State private var didStartAnimating = false
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -451,9 +455,9 @@ private struct RunningSheenSweep: View {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0.00),
-                                .init(color: color.opacity(0.06 * intensity), location: 0.22),
-                                .init(color: .white.opacity(0.20 * intensity), location: 0.50),
-                                .init(color: color.opacity(0.10 * intensity), location: 0.78),
+                                .init(color: color.opacity(isSuperSlay ? 0.10 : 0.05), location: 0.22),
+                                .init(color: .white.opacity(isSuperSlay ? 0.30 : 0.17), location: 0.50),
+                                .init(color: color.opacity(isSuperSlay ? 0.16 : 0.08), location: 0.78),
                                 .init(color: .clear, location: 1.00)
                             ],
                             startPoint: .leading,
@@ -461,13 +465,35 @@ private struct RunningSheenSweep: View {
                         )
                     )
                     .frame(width: sweepWidth, height: size.height * 1.92)
-                    .blur(radius: 5)
+                    .blur(radius: isSuperSlay ? 5 : 4)
                     .offset(x: offset)
                     .rotationEffect(.degrees(-16))
                     .blendMode(.screen)
 
+                if isSuperSlay {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0.00),
+                                    .init(color: .white.opacity(0.10), location: 0.36),
+                                    .init(color: .white.opacity(0.44), location: 0.52),
+                                    .init(color: color.opacity(0.18), location: 0.72),
+                                    .init(color: .clear, location: 1.00)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: sweepWidth * 0.55, height: size.height * 1.70)
+                        .blur(radius: 2.8)
+                        .offset(x: offset - sweepWidth * 0.18)
+                        .rotationEffect(.degrees(-12))
+                        .blendMode(.screen)
+                }
+
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(color.opacity(0.04 + intensity * 0.03), lineWidth: 0.7)
+                    .strokeBorder(color.opacity(isSuperSlay ? 0.09 : 0.055), lineWidth: isSuperSlay ? 0.9 : 0.7)
             }
             .mask(
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -479,20 +505,14 @@ private struct RunningSheenSweep: View {
             guard !didStartAnimating else { return }
             didStartAnimating = true
             sweepProgress = 0
-            intensity = 0.64
 
-            withAnimation(.linear(duration: 3.6).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: isSuperSlay ? 3.1 : 11.8).repeatForever(autoreverses: false)) {
                 sweepProgress = 1
-            }
-
-            withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) {
-                intensity = 0.92
             }
         }
         .onDisappear {
             didStartAnimating = false
             sweepProgress = 0
-            intensity = 0.64
         }
     }
 }
@@ -588,6 +608,7 @@ private struct SpriteStageView: View {
     let statusColor: Color
     let stageSize: CGFloat
     let spriteSize: CGFloat
+    let renderMode: FloaterRenderMode
     let isAnimating: Bool
     let isRunning: Bool
     let isIdle: Bool
@@ -622,6 +643,10 @@ private struct SpriteStageView: View {
     @State private var idleSparkleTrigger: UUID?
     @State private var doneSparkleTrigger: UUID?
 
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
+
     var body: some View {
         ZStack {
             Circle()
@@ -654,28 +679,30 @@ private struct SpriteStageView: View {
                     )
                 )
                 .frame(width: stageSize * 1.35 * glowPulse, height: stageSize * 1.35 * glowPulse)
-                .blur(radius: 5)
+                .blur(radius: isSuperSlay ? 5 : 3)
 
             if isRunning {
                 Circle()
                     .trim(from: 0.08, to: 0.40)
-                    .stroke(statusColor.opacity(0.82 * runningArcOpacity), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                    .stroke(statusColor.opacity((isSuperSlay ? 0.92 : 0.76) * runningArcOpacity), style: StrokeStyle(lineWidth: isSuperSlay ? 2.4 : 2.0, lineCap: .round))
                     .frame(width: stageSize * 1.16, height: stageSize * 1.16)
                     .rotationEffect(.degrees(runningArcRotation))
-                    .shadow(color: .white.opacity(0.08 * runningArcOpacity), radius: 1.0, x: 0, y: 0)
-                    .shadow(color: statusColor.opacity(0.26 * runningArcOpacity), radius: 2.2, x: 0, y: 0)
+                    .shadow(color: .white.opacity(isSuperSlay ? 0.10 * runningArcOpacity : 0), radius: isSuperSlay ? 1.2 : 0, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity((isSuperSlay ? 0.30 : 0.18) * runningArcOpacity), radius: isSuperSlay ? 2.6 : 1.6, x: 0, y: 0)
 
-                Circle()
-                    .trim(from: 0.56, to: 0.82)
-                    .stroke(statusColor.opacity(0.46 * runningArcOpacity), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
-                    .frame(width: stageSize * 0.96, height: stageSize * 0.96)
-                    .rotationEffect(.degrees(runningCounterArcRotation))
-                    .shadow(color: statusColor.opacity(0.16 * runningArcOpacity), radius: 1.4, x: 0, y: 0)
+                if isSuperSlay {
+                    Circle()
+                        .trim(from: 0.56, to: 0.82)
+                        .stroke(statusColor.opacity(0.52 * runningArcOpacity), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                        .frame(width: stageSize * 0.96, height: stageSize * 0.96)
+                        .rotationEffect(.degrees(runningCounterArcRotation))
+                        .shadow(color: statusColor.opacity(0.20 * runningArcOpacity), radius: 1.8, x: 0, y: 0)
 
-                Circle()
-                    .strokeBorder(statusColor.opacity(runningRingOpacity), lineWidth: 1.2)
-                    .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
-                    .blur(radius: 0.5)
+                    Circle()
+                        .strokeBorder(statusColor.opacity(runningRingOpacity), lineWidth: 1.2)
+                        .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
+                        .blur(radius: 0.5)
+                }
 
                 ZStack {
                     Circle()
@@ -685,21 +712,23 @@ private struct SpriteStageView: View {
                         .frame(width: stageSize * 0.08, height: stageSize * 0.08)
                 }
                     .frame(width: stageSize * 0.20, height: stageSize * 0.20)
-                    .shadow(color: statusColor.opacity(0.54), radius: 4, x: 0, y: 0)
+                    .shadow(color: statusColor.opacity(isSuperSlay ? 0.54 : 0.38), radius: isSuperSlay ? 4 : 3, x: 0, y: 0)
                     .offset(y: -stageSize * 0.43)
                     .rotationEffect(.degrees(runningOrbitAngle))
 
-                ZStack {
-                    Circle()
-                        .fill(statusColor.opacity(0.62))
-                    Circle()
-                        .fill(.white.opacity(0.66))
-                        .frame(width: stageSize * 0.05, height: stageSize * 0.05)
-                }
+                if isSuperSlay {
+                    ZStack {
+                        Circle()
+                            .fill(statusColor.opacity(0.62))
+                        Circle()
+                            .fill(.white.opacity(0.66))
+                            .frame(width: stageSize * 0.05, height: stageSize * 0.05)
+                    }
                     .frame(width: stageSize * 0.14, height: stageSize * 0.14)
                     .shadow(color: statusColor.opacity(0.28), radius: 3, x: 0, y: 0)
                     .offset(y: -stageSize * 0.34)
                     .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
+                }
             }
 
             if isIdle {
@@ -739,7 +768,7 @@ private struct SpriteStageView: View {
                     .frame(width: stageSize * doneCoreScale, height: stageSize * doneCoreScale)
                     .blur(radius: 2.5)
 
-                ForEach(0..<10, id: \.self) { index in
+                ForEach(0..<(isSuperSlay ? 10 : 6), id: \.self) { index in
                     Capsule()
                         .fill(
                             LinearGradient(
@@ -753,17 +782,17 @@ private struct SpriteStageView: View {
                             )
                         )
                         .frame(
-                            width: index.isMultiple(of: 3) ? 4.0 : 2.6,
-                            height: stageSize * (0.18 + doneRayExpansion * (index.isMultiple(of: 2) ? 0.50 : 0.40))
+                            width: index.isMultiple(of: 3) ? (isSuperSlay ? 4.0 : 3.2) : (isSuperSlay ? 2.6 : 2.4),
+                            height: stageSize * ((isSuperSlay ? 0.18 : 0.16) + doneRayExpansion * (index.isMultiple(of: 2) ? (isSuperSlay ? 0.50 : 0.42) : (isSuperSlay ? 0.40 : 0.34)))
                         )
-                        .offset(y: -stageSize * (0.18 + doneRayExpansion * 0.30))
-                        .rotationEffect(.degrees(Double(index) * 36 + doneRayRotation))
+                        .offset(y: -stageSize * ((isSuperSlay ? 0.18 : 0.17) + doneRayExpansion * (isSuperSlay ? 0.30 : 0.28)))
+                        .rotationEffect(.degrees(Double(index) * (isSuperSlay ? 36 : 60) + doneRayRotation))
                         .opacity(doneRayOpacity)
-                        .blur(radius: index.isMultiple(of: 4) ? 0.8 : 0.2)
+                        .blur(radius: index.isMultiple(of: 4) ? (isSuperSlay ? 0.8 : 0.5) : (isSuperSlay ? 0.2 : 0.1))
                         .blendMode(.screen)
                 }
 
-                ForEach(0..<6, id: \.self) { index in
+                ForEach(0..<(isSuperSlay ? 6 : 3), id: \.self) { index in
                     Circle()
                         .fill(
                             RadialGradient(
@@ -778,13 +807,13 @@ private struct SpriteStageView: View {
                             )
                         )
                         .frame(
-                            width: stageSize * (index.isMultiple(of: 2) ? 0.14 : 0.11),
-                            height: stageSize * (index.isMultiple(of: 2) ? 0.14 : 0.11)
+                            width: stageSize * (index.isMultiple(of: 2) ? (isSuperSlay ? 0.14 : 0.13) : (isSuperSlay ? 0.11 : 0.10)),
+                            height: stageSize * (index.isMultiple(of: 2) ? (isSuperSlay ? 0.14 : 0.13) : (isSuperSlay ? 0.11 : 0.10))
                         )
-                        .offset(y: -stageSize * 0.48 * doneOrbitScale)
-                        .rotationEffect(.degrees(Double(index) * 60 + doneOrbitRotation))
+                        .offset(y: -stageSize * (isSuperSlay ? 0.48 : 0.44) * doneOrbitScale)
+                        .rotationEffect(.degrees(Double(index) * (isSuperSlay ? 60 : 120) + doneOrbitRotation))
                         .opacity(doneOrbitOpacity)
-                        .shadow(color: statusColor.opacity(doneOrbitOpacity * 0.52), radius: 5, x: 0, y: 0)
+                        .shadow(color: statusColor.opacity(doneOrbitOpacity * (isSuperSlay ? 0.52 : 0.36)), radius: isSuperSlay ? 5 : 3, x: 0, y: 0)
                         .blendMode(.screen)
                 }
 
@@ -825,7 +854,6 @@ private struct SpriteStageView: View {
 
         }
         .frame(width: stageSize, height: stageSize)
-        .drawingGroup(opaque: false, colorMode: .linear)
         .task(id: isRunning) {
             guard isRunning && isAnimating else {
                 await MainActor.run {
@@ -838,34 +866,36 @@ private struct SpriteStageView: View {
                 glowPulse = 1.0
                 runningAuraOpacity = 0.72
                 runningRingScale = 0.84
-                runningRingOpacity = 0.08
+                runningRingOpacity = isSuperSlay ? 0.08 : 0
                 runningOrbitAngle = -90
-                runningSpriteScale = 0.97
+                runningSpriteScale = isSuperSlay ? 0.97 : 0.98
                 runningArcRotation = -24
                 runningCounterArcRotation = 132
-                runningArcOpacity = 0.48
-                runningSpriteTilt = -1.4
+                runningArcOpacity = isSuperSlay ? 0.48 : 0.54
+                runningSpriteTilt = isSuperSlay ? -1.4 : -0.8
 
-                withAnimation(.easeInOut(duration: 1.55).repeatForever(autoreverses: true)) {
-                    glowPulse = 1.18
-                    runningAuraOpacity = 1.0
-                    runningRingScale = 1.20
-                    runningRingOpacity = 0.42
-                    runningSpriteScale = 1.055
-                    runningArcOpacity = 0.94
-                    runningSpriteTilt = 2.2
+                withAnimation(.easeInOut(duration: isSuperSlay ? 1.55 : 3.0).repeatForever(autoreverses: true)) {
+                    glowPulse = isSuperSlay ? 1.18 : 1.12
+                    runningAuraOpacity = isSuperSlay ? 1.0 : 0.90
+                    runningRingScale = isSuperSlay ? 1.20 : 0.84
+                    runningRingOpacity = isSuperSlay ? 0.42 : 0
+                    runningSpriteScale = isSuperSlay ? 1.055 : 1.03
+                    runningArcOpacity = isSuperSlay ? 0.94 : 0.78
+                    runningSpriteTilt = isSuperSlay ? 2.2 : 1.0
                 }
 
-                withAnimation(.linear(duration: 3.6).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: isSuperSlay ? 3.6 : 6.8).repeatForever(autoreverses: false)) {
                     runningOrbitAngle = 270
                 }
 
-                withAnimation(.linear(duration: 2.15).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: isSuperSlay ? 2.15 : 5.8).repeatForever(autoreverses: false)) {
                     runningArcRotation = 336
                 }
 
-                withAnimation(.linear(duration: 3.25).repeatForever(autoreverses: false)) {
-                    runningCounterArcRotation = -228
+                if isSuperSlay {
+                    withAnimation(.linear(duration: 3.25).repeatForever(autoreverses: false)) {
+                        runningCounterArcRotation = -228
+                    }
                 }
             }
         }
@@ -877,7 +907,7 @@ private struct SpriteStageView: View {
             guard isIdle else { return }
             triggerIdleSparkle()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 700_000_000)
+                try? await Task.sleep(nanoseconds: isSuperSlay ? 700_000_000 : 1_800_000_000)
                 guard !Task.isCancelled else { break }
                 await MainActor.run {
                     triggerIdleSparkle()
@@ -887,7 +917,7 @@ private struct SpriteStageView: View {
         .task(id: isComplete) {
             guard isComplete else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                try? await Task.sleep(nanoseconds: isSuperSlay ? 10_000_000_000 : 18_000_000_000)
                 guard !Task.isCancelled, isComplete else { break }
                 await MainActor.run {
                     triggerDonePulse()
@@ -905,7 +935,7 @@ private struct SpriteStageView: View {
         runningSpriteScale = 1.0
         runningArcRotation = -24
         runningCounterArcRotation = 132
-        runningArcOpacity = 0.46
+        runningArcOpacity = 0.54
         runningSpriteTilt = 0
     }
 
@@ -946,8 +976,8 @@ private struct SpriteStageView: View {
         celebrateRingScale = 0.76
         celebrateRingOpacity = 0.84
 
-        withAnimation(.easeOut(duration: 0.58)) {
-            celebrateRingScale = 1.38
+        withAnimation(.easeOut(duration: isSuperSlay ? 0.58 : 0.92)) {
+            celebrateRingScale = isSuperSlay ? 1.38 : 1.24
             celebrateRingOpacity = 0
         }
     }
@@ -1003,11 +1033,16 @@ private struct StatusPill: View {
     let label: String
     let dotSize: CGFloat
     let fontSize: CGFloat
+    let renderMode: FloaterRenderMode
     let isPulsing: Bool
     let showsTypingDots: Bool
 
     @State private var pulseScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.55
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -1048,8 +1083,8 @@ private struct StatusPill: View {
         )
         .onAppear {
             guard isPulsing else { return }
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
-                pulseScale = 1.4
+            withAnimation(.easeInOut(duration: isSuperSlay ? 1.1 : 2.1).repeatForever(autoreverses: true)) {
+                pulseScale = isSuperSlay ? 1.46 : 1.22
                 pulseOpacity = 0
             }
         }
@@ -1408,12 +1443,16 @@ struct FloatNotificationView: View {
         isPersistent && renderMode == .lame
     }
 
+    private var isSuperSlayRenderMode: Bool {
+        renderMode == .superSlay
+    }
+
     private var showsFancyFloaterEffects: Bool {
-        isPersistent && renderMode == .slay
+        isPersistent && renderMode != .lame
     }
 
     private var animatesPersistentStatus: Bool {
-        renderMode == .slay && animatesStatus
+        renderMode != .lame && animatesStatus
     }
 
     private var avatarBackgroundPrimaryOpacity: Double {
@@ -1496,7 +1535,7 @@ struct FloatNotificationView: View {
 
     var body: some View {
         ZStack {
-            if corner == .cursorFollow, renderMode == .slay {
+            if corner == .cursorFollow, renderMode != .lame {
                 ParticleTrailView(system: particleSystem, color: FloaterPalette.idle)
                     .frame(width: 300, height: 100)
             }
@@ -1524,7 +1563,8 @@ struct FloatNotificationView: View {
                     if isRunning {
                         RunningSheenSweep(
                             color: accentColor,
-                            cornerRadius: floaterSize.cornerRadius
+                            cornerRadius: floaterSize.cornerRadius,
+                            renderMode: renderMode
                         )
                     }
 
@@ -1601,7 +1641,7 @@ struct FloatNotificationView: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    accentColor.opacity(isRunning ? 0.14 : 0.08),
+                                    accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.20 : 0.14) : (isSuperSlayRenderMode ? 0.12 : 0.08)),
                                     .clear
                                 ],
                                 startPoint: .leading,
@@ -1621,6 +1661,11 @@ struct FloatNotificationView: View {
                             endPoint: .center
                         )
                     )
+
+                if isSuperSlayRenderMode {
+                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                        .strokeBorder(.white.opacity(isRunning ? 0.12 : 0.08), lineWidth: 0.8)
+                }
             }
         }
     }
@@ -1677,6 +1722,7 @@ struct FloatNotificationView: View {
                     label: stateLabel,
                     dotSize: floaterSize.dotSize,
                     fontSize: floaterSize.metaFontSize,
+                    renderMode: renderMode,
                     isPulsing: isRunning && animatesPersistentStatus,
                     showsTypingDots: isRunning && animatesPersistentStatus
                 )
@@ -1752,6 +1798,7 @@ struct FloatNotificationView: View {
                 statusColor: accentColor,
                 stageSize: floaterSize.persistentStageSize,
                 spriteSize: floaterSize.persistentSpriteSize,
+                renderMode: renderMode,
                 isAnimating: animatesStatus,
                 isRunning: isRunning,
                 isIdle: statusState == .idle,
@@ -1769,7 +1816,7 @@ struct FloatNotificationView: View {
                 if !usesMinimalRenderMode {
                     LinearGradient(
                         colors: [
-                            FloaterPalette.highlight.opacity(0.10),
+                            FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.18 : 0.10),
                             .clear
                         ],
                         startPoint: .top,
@@ -1896,19 +1943,19 @@ struct FloatNotificationView: View {
     private func triggerPanelVictoryFlash() {
         panelVictoryFlashOffset = -1.2
         panelVictoryFlashOpacity = 0
-        panelVictoryFlashScale = 0.92
+        panelVictoryFlashScale = isSuperSlayRenderMode ? 0.84 : 0.92
 
-        withAnimation(.easeOut(duration: 0.12)) {
-            panelVictoryFlashOpacity = 0.96
-            panelVictoryFlashScale = 1.03
+        withAnimation(.easeOut(duration: isSuperSlayRenderMode ? 0.10 : 0.12)) {
+            panelVictoryFlashOpacity = isSuperSlayRenderMode ? 1.0 : 0.96
+            panelVictoryFlashScale = isSuperSlayRenderMode ? 1.08 : 1.03
         }
 
-        withAnimation(.linear(duration: 0.64)) {
+        withAnimation(.linear(duration: isSuperSlayRenderMode ? 0.54 : 0.64)) {
             panelVictoryFlashOffset = 1.18
         }
 
-        withAnimation(.spring(response: 0.26, dampingFraction: 0.58)) {
-            panelScale = 1.035
+        withAnimation(.spring(response: isSuperSlayRenderMode ? 0.20 : 0.26, dampingFraction: isSuperSlayRenderMode ? 0.50 : 0.58)) {
+            panelScale = isSuperSlayRenderMode ? 1.055 : 1.035
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
@@ -1918,9 +1965,9 @@ struct FloatNotificationView: View {
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            withAnimation(.easeIn(duration: 0.36)) {
+            withAnimation(.easeIn(duration: isSuperSlayRenderMode ? 0.42 : 0.36)) {
                 panelVictoryFlashOpacity = 0
-                panelVictoryFlashScale = 1.12
+                panelVictoryFlashScale = isSuperSlayRenderMode ? 1.18 : 1.12
             }
         }
     }

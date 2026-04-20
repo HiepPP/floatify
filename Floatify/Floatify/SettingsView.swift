@@ -374,7 +374,7 @@ struct SettingsView: View {
             } header: {
                 Text("Floater Appearance")
             } footer: {
-                Text("Slay keeps full effects. Lame removes heavy repeat effects for the lowest CPU.")
+                Text("Slay keeps full effects. Super Slay pushes extra effects for high-end machines. Lame removes heavy repeat effects for the lowest CPU.")
                     .foregroundStyle(.secondary)
             }
 

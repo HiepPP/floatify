@@ -227,11 +227,14 @@ enum FloaterSize: String, CaseIterable, Equatable {
 }
 
 enum FloaterRenderMode: String, CaseIterable, Equatable {
+    case superSlay
     case slay
     case lame
 
     var displayName: String {
         switch self {
+        case .superSlay:
+            return "Super Slay"
         case .slay:
             return "Slay"
         case .lame:
