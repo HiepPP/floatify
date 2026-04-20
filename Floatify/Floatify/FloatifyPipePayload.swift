@@ -35,7 +35,14 @@ struct FloatifyPipePayload: Decodable {
     }
 
     var notificationCorner: Corner {
-        corner.flatMap(Corner.init(rawValue:)) ?? .bottomRight
+        switch corner.flatMap(Corner.init(rawValue:)) {
+        case .cursorFollow:
+            return .bottomRight
+        case let resolved?:
+            return resolved
+        case nil:
+            return .bottomRight
+        }
     }
 
     var notificationDuration: TimeInterval {

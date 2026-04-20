@@ -129,7 +129,8 @@ class FloatNotificationManager {
     func show(message: String, corner: Corner, duration: TimeInterval = 6, project: String?) {
         NSLog("Floatify: show() called - message: %@, corner: %@, duration: %.1f, project: %@", message, corner.rawValue, duration, project ?? "nil")
         DispatchQueue.main.async {
-            self.createPanel(message: message, corner: corner, duration: duration, project: project)
+            let effectiveCorner: Corner = corner == .cursorFollow ? .bottomRight : corner
+            self.createPanel(message: message, corner: effectiveCorner, duration: duration, project: project)
         }
     }
 
@@ -625,13 +626,18 @@ class FloatNotificationManager {
     }
 
     private func startCursorTracking(for panel: FloatPanel) {
+        var lastOrigin = panel.frame.origin
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak panel] timer in
             guard let panel = panel, panel.isVisible else {
                 timer.invalidate()
                 return
             }
             let newOrigin = CursorTracker.shared.screenCornerPosition(for: .cursorFollow, panelSize: panel.frame.size)
+            guard abs(newOrigin.x - lastOrigin.x) >= 0.5 || abs(newOrigin.y - lastOrigin.y) >= 0.5 else {
+                return
+            }
             panel.setFrameOrigin(newOrigin)
+            lastOrigin = newOrigin
         }
         cursorFollowTimers[panel] = timer
     }

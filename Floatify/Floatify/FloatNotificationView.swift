@@ -160,7 +160,6 @@ private struct SpriteAnimationView: View {
     var size: CGFloat = 34
 
     @State private var frameIndex = 0
-    private let timer = Timer.publish(every: 0.16, on: .main, in: .common).autoconnect()
 
     private var effectiveSheetName: String {
         sheetName ?? SpriteSheetMetadata.defaultSheetName
@@ -184,9 +183,17 @@ private struct SpriteAnimationView: View {
             }
         }
         .frame(width: size, height: size)
-        .onReceive(timer) { _ in
+        .task(id: "\(effectiveSheetName)-\(isAnimating)") {
+            frameIndex = 0
             guard isAnimating else { return }
-            frameIndex = (frameIndex + 1) % frameRects.count
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 160_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    frameIndex = (frameIndex + 1) % frameRects.count
+                }
+            }
         }
     }
 }
@@ -198,7 +205,6 @@ private struct TypingDots: View {
     let fontSize: CGFloat
 
     @State private var phase = 0
-    private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
     var body: some View {
         HStack(spacing: 1.5) {
@@ -210,8 +216,14 @@ private struct TypingDots: View {
                     .animation(.easeInOut(duration: 0.25), value: phase)
             }
         }
-        .onReceive(timer) { _ in
-            phase = (phase + 1) % 3
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    phase = (phase + 1) % 3
+                }
+            }
         }
     }
 }
@@ -422,81 +434,97 @@ private struct RunningSheenSweep: View {
     let color: Color
     let cornerRadius: CGFloat
 
+    @State private var sweepProgress: CGFloat = 0
+    @State private var intensity: Double = 0.58
+    @State private var didStartAnimating = false
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 120.0, paused: false)) { context in
-            GeometryReader { geometry in
-                let size = geometry.size
-                let cycle = 2.9
-                let phase = (context.date.timeIntervalSinceReferenceDate / cycle)
-                    .truncatingRemainder(dividingBy: 1)
-                let intensityPhase = 0.5 - 0.5 * cos(phase * .pi * 2)
-                let sweepWidth = max(size.width * 0.34, 76)
-                let travel = size.width + sweepWidth + size.height * 0.95
-                let offset = travel * CGFloat(phase) - sweepWidth - size.height * 0.46
-                let intensity = 0.58 + intensityPhase * 0.42
+        GeometryReader { geometry in
+            let size = geometry.size
+            let sweepWidth = max(size.width * 0.34, 76)
+            let travel = size.width + sweepWidth + size.height * 0.95
+            let offset = travel * sweepProgress - sweepWidth - size.height * 0.46
 
-                ZStack {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .clear, location: 0.00),
-                                    .init(color: color.opacity(0.08 * intensity), location: 0.18),
-                                    .init(color: .white.opacity(0.28 * intensity), location: 0.50),
-                                    .init(color: color.opacity(0.16 * intensity), location: 0.78),
-                                    .init(color: .clear, location: 1.00)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+            ZStack {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.00),
+                                .init(color: color.opacity(0.08 * intensity), location: 0.18),
+                                .init(color: .white.opacity(0.28 * intensity), location: 0.50),
+                                .init(color: color.opacity(0.16 * intensity), location: 0.78),
+                                .init(color: .clear, location: 1.00)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-                        .frame(width: sweepWidth, height: size.height * 2.35)
-                        .blur(radius: 13)
-                        .offset(x: offset)
-                        .rotationEffect(.degrees(-16))
+                    )
+                    .frame(width: sweepWidth, height: size.height * 2.35)
+                    .blur(radius: 13)
+                    .offset(x: offset)
+                    .rotationEffect(.degrees(-16))
 
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .clear, location: 0.00),
-                                    .init(color: .white.opacity(0.00), location: 0.30),
-                                    .init(color: .white.opacity(0.54 * intensity), location: 0.50),
-                                    .init(color: color.opacity(0.22 * intensity), location: 0.66),
-                                    .init(color: .clear, location: 1.00)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.00),
+                                .init(color: .white.opacity(0.00), location: 0.30),
+                                .init(color: .white.opacity(0.54 * intensity), location: 0.50),
+                                .init(color: color.opacity(0.22 * intensity), location: 0.66),
+                                .init(color: .clear, location: 1.00)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-                        .frame(width: sweepWidth * 0.24, height: size.height * 2.05)
-                        .blur(radius: 1.4)
-                        .offset(x: offset + sweepWidth * 0.07)
-                        .rotationEffect(.degrees(-16))
+                    )
+                    .frame(width: sweepWidth * 0.24, height: size.height * 2.05)
+                    .blur(radius: 1.4)
+                    .offset(x: offset + sweepWidth * 0.07)
+                    .rotationEffect(.degrees(-16))
 
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.02),
-                                    color.opacity(0.08 * intensity),
-                                    .white.opacity(0.02)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            lineWidth: 0.8
-                        )
-                        .opacity(0.82)
-                }
-                .mask(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                )
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.02),
+                                color.opacity(0.08 * intensity),
+                                .white.opacity(0.02)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        lineWidth: 0.8
+                    )
+                    .opacity(0.82)
             }
+            .mask(
+                RoundedRectangle(cornerRadius: cornerRadius)
+            )
         }
-        .compositingGroup()
+        .drawingGroup(opaque: false, colorMode: .linear)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .allowsHitTesting(false)
+        .onAppear {
+            guard !didStartAnimating else { return }
+            didStartAnimating = true
+            sweepProgress = 0
+            intensity = 0.58
+
+            withAnimation(.linear(duration: 2.9).repeatForever(autoreverses: false)) {
+                sweepProgress = 1
+            }
+
+            withAnimation(.easeInOut(duration: 1.45).repeatForever(autoreverses: true)) {
+                intensity = 1.0
+            }
+        }
+        .onDisappear {
+            didStartAnimating = false
+            sweepProgress = 0
+            intensity = 0.58
+        }
     }
 }
 

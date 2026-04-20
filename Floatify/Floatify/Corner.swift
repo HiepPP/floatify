@@ -10,6 +10,18 @@ enum Corner: String, CaseIterable {
     case horizontal
     case cursorFollow
 
+    static var allCases: [Corner] {
+        [
+            .bottomLeft,
+            .bottomRight,
+            .topLeft,
+            .topRight,
+            .center,
+            .menubar,
+            .horizontal
+        ]
+    }
+
     var defaultEffect: String {
         switch self {
         case .bottomLeft, .bottomRight, .topLeft, .topRight:

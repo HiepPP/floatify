@@ -45,7 +45,11 @@ while index < args.count {
 }
 
 // Validate corner
-let validCorners = ["bottomLeft", "bottomRight", "topLeft", "topRight", "center", "menubar", "horizontal", "cursorFollow"]
+if corner == "cursorFollow" {
+    corner = "bottomRight"
+}
+
+let validCorners = ["bottomLeft", "bottomRight", "topLeft", "topRight", "center", "menubar", "horizontal"]
 guard validCorners.contains(corner) else {
     fputs("Invalid corner '\(corner)'. Use: \(validCorners.joined(separator: ", ")).\n", stderr)
     exit(1)

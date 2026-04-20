@@ -16,6 +16,16 @@ private struct ProjectContext: Equatable {
 }
 
 private enum ProcessInspection {
+    private struct ModifiedFilesCacheEntry {
+        let count: Int
+        let timestamp: Date
+    }
+
+    private static let modifiedFilesCacheTTL: TimeInterval = 4
+    private static let modifiedFilesCacheMaxEntries = 32
+    private static var modifiedFilesCache: [String: ModifiedFilesCacheEntry] = [:]
+    private static let modifiedFilesCacheLock = NSLock()
+
     static func commandOutput(executablePath: String, arguments: [String]) -> String? {
         let process = Process()
         let outputPipe = Pipe()
@@ -56,10 +66,32 @@ private enum ProcessInspection {
 
     static func modifiedFilesCount(for projectPath: String?) -> Int {
         guard let path = projectPath else { return 0 }
-        guard let output = commandOutput(executablePath: "/usr/bin/git", arguments: ["-C", path, "status", "--porcelain"]) else {
-            return 0
+        let now = Date()
+
+        modifiedFilesCacheLock.lock()
+        let cachedEntry = modifiedFilesCache[path]
+        if let cachedEntry,
+           now.timeIntervalSince(cachedEntry.timestamp) < modifiedFilesCacheTTL {
+            modifiedFilesCacheLock.unlock()
+            return cachedEntry.count
         }
-        return output.split(separator: "\n").count
+        modifiedFilesCacheLock.unlock()
+
+        guard let output = commandOutput(executablePath: "/usr/bin/git", arguments: ["-C", path, "status", "--porcelain"]) else {
+            return cachedEntry?.count ?? 0
+        }
+
+        let count = output.split(separator: "\n").count
+
+        modifiedFilesCacheLock.lock()
+        modifiedFilesCache[path] = ModifiedFilesCacheEntry(count: count, timestamp: now)
+        if modifiedFilesCache.count > modifiedFilesCacheMaxEntries {
+            let cutoff = now.addingTimeInterval(-(modifiedFilesCacheTTL * 6))
+            modifiedFilesCache = modifiedFilesCache.filter { $0.value.timestamp > cutoff }
+        }
+        modifiedFilesCacheLock.unlock()
+
+        return count
     }
 
     static func codexSessionLogPath(for pid: Int) -> String? {
