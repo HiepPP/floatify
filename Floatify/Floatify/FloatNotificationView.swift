@@ -333,6 +333,32 @@ private struct TypingDots: View {
     }
 }
 
+private struct LiteTypingDots: View {
+    let color: Color
+    let fontSize: CGFloat
+
+    @State private var phase = 0
+
+    var body: some View {
+        HStack(spacing: 1.5) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(color.opacity(phase == i ? 0.92 : 0.28))
+                    .frame(width: fontSize * 0.28, height: fontSize * 0.28)
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    phase = (phase + 1) % 3
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Sparkle Burst
 
 private struct SparkleBurst: View {
@@ -623,6 +649,725 @@ private struct RunningSheenSweep: View {
         .onDisappear {
             didStartAnimating = false
             sweepProgress = 0
+        }
+    }
+}
+
+private enum SlayStageState: Hashable {
+    case running
+    case idle
+    case complete
+}
+
+private struct SlayStageCacheKey: Hashable {
+    let size: Int
+    let state: SlayStageState
+    let colorKey: String
+    let glowBucket: Int
+    let showsCounterArc: Bool
+    let showsSecondaryOrbit: Bool
+    let flashBucket: Int
+    let extraCompletionRays: Int
+    let extraCompletionOrbs: Int
+}
+
+private struct SlaySheenCacheKey: Hashable {
+    let width: Int
+    let height: Int
+    let cornerRadius: Int
+    let colorKey: String
+    let glowBucket: Int
+}
+
+private extension NSColor {
+    var floaterCacheKey: String {
+        let converted = usingColorSpace(.deviceRGB) ?? self
+        return String(
+            format: "%03d-%03d-%03d-%03d",
+            Int(converted.redComponent * 255),
+            Int(converted.greenComponent * 255),
+            Int(converted.blueComponent * 255),
+            Int(converted.alphaComponent * 255)
+        )
+    }
+}
+
+@MainActor
+private enum SlaySnapshotCache {
+    private static var stageFrameCache: [SlayStageCacheKey: [NSImage]] = [:]
+    private static var sheenFrameCache: [SlaySheenCacheKey: [NSImage]] = [:]
+
+    static func stageFrames(
+        state: SlayStageState,
+        statusColor: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> [NSImage] {
+        let cacheKey = SlayStageCacheKey(
+            size: Int(stageSize.rounded(.toNearestOrAwayFromZero)),
+            state: state,
+            colorKey: NSColor(statusColor).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()),
+            showsCounterArc: effectTuning.showsCounterArc ?? false,
+            showsSecondaryOrbit: effectTuning.showsSecondaryOrbit ?? false,
+            flashBucket: Int((effectTuning.flashIntensityMultiplier * 100).rounded()),
+            extraCompletionRays: effectTuning.extraCompletionRays,
+            extraCompletionOrbs: effectTuning.extraCompletionOrbs
+        )
+
+        if let cached = stageFrameCache[cacheKey] {
+            return cached
+        }
+
+        let frameCount = state == .running ? 18 : 1
+        let frames = (0..<frameCount).map { index in
+            let progress = frameCount == 1 ? 0.26 : CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: CGSize(width: stageSize, height: stageSize)) {
+                SlayStageSnapshotContent(
+                    color: statusColor,
+                    stageSize: stageSize,
+                    effectTuning: effectTuning,
+                    state: state,
+                    progress: progress
+                )
+            }
+        }
+
+        stageFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    static func sheenFrames(
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> [NSImage] {
+        let cacheKey = SlaySheenCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded())
+        )
+
+        if let cached = sheenFrameCache[cacheKey] {
+            return cached
+        }
+
+        let frameCount = 10
+        let frames = (0..<frameCount).map { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: size) {
+                SlaySheenSnapshotContent(
+                    color: color,
+                    cornerRadius: cornerRadius,
+                    size: size,
+                    effectTuning: effectTuning,
+                    progress: progress
+                )
+            }
+        }
+
+        sheenFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    private static func renderImage<Content: View>(size: CGSize, @ViewBuilder content: () -> Content) -> NSImage {
+        let renderer = ImageRenderer(content: content().frame(width: size.width, height: size.height))
+        renderer.proposedSize = ProposedViewSize(size)
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        renderer.isOpaque = false
+        return renderer.nsImage ?? NSImage(size: size)
+    }
+}
+
+private struct SlayStageSnapshotContent: View {
+    let color: Color
+    let stageSize: CGFloat
+    let effectTuning: FloaterEffectTuning
+    let state: SlayStageState
+    let progress: CGFloat
+
+    private var glowMultiplier: Double {
+        max(effectTuning.glowMultiplier, 0.2)
+    }
+
+    private var showsCounterArc: Bool {
+        effectTuning.showsCounterArc ?? false
+    }
+
+    private var showsSecondaryOrbit: Bool {
+        effectTuning.showsSecondaryOrbit ?? false
+    }
+
+    private var completionRayCount: Int {
+        max(6 + effectTuning.extraCompletionRays, 1)
+    }
+
+    private var completionOrbitCount: Int {
+        max(3 + effectTuning.extraCompletionOrbs, 1)
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * glowMultiplier, 1.0)
+    }
+
+    private func scaledRadius(_ value: CGFloat) -> CGFloat {
+        value * CGFloat(glowMultiplier)
+    }
+
+    private var pulse: CGFloat {
+        0.5 - 0.5 * cos(progress * .pi * 2)
+    }
+
+    private var runningGlowScale: CGFloat {
+        1.0 + 0.12 * pulse
+    }
+
+    private var runningAuraOpacity: Double {
+        0.70 + 0.18 * pulse
+    }
+
+    private var runningRingScale: CGFloat {
+        0.86 + (showsCounterArc ? 0.20 * pulse : 0)
+    }
+
+    private var runningRingOpacity: Double {
+        showsCounterArc ? 0.22 + 0.18 * Double(pulse) : 0
+    }
+
+    private var runningOrbitAngle: Double {
+        -90 + Double(progress) * 360
+    }
+
+    private var runningArcRotation: Double {
+        -24 + Double(progress) * 360
+    }
+
+    private var runningCounterArcRotation: Double {
+        132 - Double(progress) * 324
+    }
+
+    private var runningArcOpacity: Double {
+        0.52 + 0.20 * Double(pulse)
+    }
+
+    private var completionFlashOpacity: Double {
+        scaledOpacity(0.26)
+    }
+
+    private var completionCoreOpacity: Double {
+        scaledOpacity(0.18)
+    }
+
+    private var completionRayOpacity: Double {
+        scaledOpacity(0.42)
+    }
+
+    private var completionOrbitOpacity: Double {
+        scaledOpacity(0.32)
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.black.opacity(state == .running ? 0.42 : 0.34),
+                            FloaterPalette.panelShadow.opacity(scaledOpacity(state == .running ? 0.66 : 0.54)),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.52
+                    )
+                )
+                .frame(width: stageSize * 0.96, height: stageSize * 0.96)
+
+            switch state {
+            case .running:
+                runningContent
+            case .idle:
+                idleContent
+            case .complete:
+                completeContent
+            }
+        }
+        .frame(width: stageSize, height: stageSize)
+    }
+
+    private var runningContent: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            color.opacity(scaledOpacity(0.34 * runningAuraOpacity)),
+                            color.opacity(scaledOpacity(0.14 * runningAuraOpacity)),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize / 2 + 2
+                    )
+                )
+                .frame(width: stageSize * 1.34 * runningGlowScale, height: stageSize * 1.34 * runningGlowScale)
+                .blur(radius: scaledRadius(3.0))
+
+            Circle()
+                .trim(from: 0.08, to: 0.40)
+                .stroke(color.opacity(scaledOpacity(0.76 * runningArcOpacity)), style: StrokeStyle(lineWidth: 2.0, lineCap: .round))
+                .frame(width: stageSize * 1.16, height: stageSize * 1.16)
+                .rotationEffect(.degrees(runningArcRotation))
+                .shadow(color: color.opacity(scaledOpacity(0.18 * runningArcOpacity)), radius: scaledRadius(1.6), x: 0, y: 0)
+
+            if showsCounterArc {
+                Circle()
+                    .trim(from: 0.56, to: 0.82)
+                    .stroke(color.opacity(scaledOpacity(0.46 * runningArcOpacity)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: stageSize * 0.96, height: stageSize * 0.96)
+                    .rotationEffect(.degrees(runningCounterArcRotation))
+                    .shadow(color: color.opacity(scaledOpacity(0.16 * runningArcOpacity)), radius: scaledRadius(1.6), x: 0, y: 0)
+
+                Circle()
+                    .strokeBorder(color.opacity(scaledOpacity(runningRingOpacity)), lineWidth: 1.1)
+                    .frame(width: stageSize * runningRingScale, height: stageSize * runningRingScale)
+                    .blur(radius: 0.4)
+            }
+
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.86))
+                Circle()
+                    .fill(.white.opacity(0.86))
+                    .frame(width: stageSize * 0.08, height: stageSize * 0.08)
+            }
+            .frame(width: stageSize * 0.20, height: stageSize * 0.20)
+            .shadow(color: color.opacity(scaledOpacity(0.34)), radius: scaledRadius(3), x: 0, y: 0)
+            .offset(y: -stageSize * 0.43)
+            .rotationEffect(.degrees(runningOrbitAngle))
+
+            if showsSecondaryOrbit {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.62))
+                    Circle()
+                        .fill(.white.opacity(0.64))
+                        .frame(width: stageSize * 0.05, height: stageSize * 0.05)
+                }
+                .frame(width: stageSize * 0.14, height: stageSize * 0.14)
+                .shadow(color: color.opacity(scaledOpacity(0.22)), radius: scaledRadius(2.6), x: 0, y: 0)
+                .offset(y: -stageSize * 0.34)
+                .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
+            }
+        }
+    }
+
+    private var idleContent: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            color.opacity(scaledOpacity(0.22)),
+                            color.opacity(scaledOpacity(0.08)),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.54
+                    )
+                )
+                .frame(width: stageSize * 1.08, height: stageSize * 1.08)
+                .blur(radius: scaledRadius(2.2))
+
+            Circle()
+                .trim(from: 0.12, to: 0.34)
+                .stroke(color.opacity(scaledOpacity(0.42)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .frame(width: stageSize * 1.02, height: stageSize * 1.02)
+                .rotationEffect(.degrees(-28))
+
+            Circle()
+                .fill(color.opacity(0.82))
+                .frame(width: stageSize * 0.13, height: stageSize * 0.13)
+                .shadow(color: color.opacity(scaledOpacity(0.20)), radius: scaledRadius(2.2), x: 0, y: 0)
+                .offset(x: stageSize * 0.22, y: -stageSize * 0.18)
+        }
+    }
+
+    private var completeContent: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(completionFlashOpacity * 0.92),
+                            color.opacity(completionFlashOpacity * 0.78),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.52
+                    )
+                )
+                .frame(width: stageSize * 1.08, height: stageSize * 1.08)
+                .blur(radius: 6)
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(completionCoreOpacity * 0.98),
+                            color.opacity(completionCoreOpacity * 0.82),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.34
+                    )
+                )
+                .frame(width: stageSize * 0.94, height: stageSize * 0.94)
+                .blur(radius: 2)
+
+            ForEach(0..<completionRayCount, id: \.self) { index in
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(completionRayOpacity * 0.98),
+                                color.opacity(completionRayOpacity * 0.84),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(
+                        width: index.isMultiple(of: 3) ? 3.2 : 2.4,
+                        height: stageSize * (0.16 + (index.isMultiple(of: 2) ? 0.24 : 0.18))
+                    )
+                    .offset(y: -stageSize * 0.32)
+                    .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionRayCount)) + 34))
+                    .opacity(completionRayOpacity)
+                    .blur(radius: index.isMultiple(of: 4) ? 0.4 : 0.1)
+                    .blendMode(.screen)
+            }
+
+            ForEach(0..<completionOrbitCount, id: \.self) { index in
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(completionOrbitOpacity),
+                                color.opacity(completionOrbitOpacity * 0.82),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * 0.10
+                        )
+                    )
+                    .frame(
+                        width: stageSize * (index.isMultiple(of: 2) ? 0.13 : 0.10),
+                        height: stageSize * (index.isMultiple(of: 2) ? 0.13 : 0.10)
+                    )
+                    .offset(y: -stageSize * 0.40)
+                    .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionOrbitCount)) + 112))
+                    .opacity(completionOrbitOpacity)
+                    .shadow(color: color.opacity(scaledOpacity(completionOrbitOpacity * 0.34)), radius: scaledRadius(3), x: 0, y: 0)
+                    .blendMode(.screen)
+            }
+
+            Circle()
+                .strokeBorder(color.opacity(0.76), lineWidth: 1.4)
+                .frame(width: stageSize * 0.94, height: stageSize * 0.94)
+                .opacity(0.22)
+                .blur(radius: 0.4)
+        }
+    }
+}
+
+private struct SlaySheenSnapshotContent: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let size: CGSize
+    let effectTuning: FloaterEffectTuning
+    let progress: CGFloat
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * effectTuning.glowMultiplier, 1.0)
+    }
+
+    var body: some View {
+        let sweepWidth = max(size.width * 0.20, 54)
+        let travel = size.width + sweepWidth + size.height * 0.95
+        let offset = travel * progress - sweepWidth - size.height * 0.46
+
+        ZStack {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: color.opacity(scaledOpacity(0.05)), location: 0.22),
+                            .init(color: .white.opacity(scaledOpacity(0.17)), location: 0.50),
+                            .init(color: color.opacity(scaledOpacity(0.08)), location: 0.78),
+                            .init(color: .clear, location: 1.00)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: sweepWidth, height: size.height * 1.92)
+                .blur(radius: 3.2 * effectTuning.glowMultiplier)
+                .offset(x: offset)
+                .rotationEffect(.degrees(-16))
+                .blendMode(.screen)
+
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(color.opacity(scaledOpacity(0.05)), lineWidth: 0.7)
+        }
+        .frame(width: size.width, height: size.height)
+        .mask(
+            RoundedRectangle(cornerRadius: cornerRadius)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SlayRunningSheenFramesView: View {
+    let size: CGSize
+    let color: Color
+    let cornerRadius: CGFloat
+    let effectTuning: FloaterEffectTuning
+
+    @State private var frameIndex = 0
+    @State private var isBurstVisible = false
+
+    private var frames: [NSImage] {
+        SlaySnapshotCache.sheenFrames(
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )
+    }
+
+    private var frameDuration: UInt64 {
+        UInt64(max(0.05, 0.07 * effectTuning.sheenDurationMultiplier) * 1_000_000_000)
+    }
+
+    private var cooldownDuration: UInt64 {
+        UInt64(max(4.0, 7.4 * effectTuning.sheenDurationMultiplier) * 1_000_000_000)
+    }
+
+    var body: some View {
+        Group {
+            if isBurstVisible, !frames.isEmpty {
+                Image(nsImage: frames[min(frameIndex, frames.count - 1)])
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: size.width, height: size.height)
+            }
+        }
+        .task(id: SlaySheenCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded())
+        )) {
+            guard !frames.isEmpty else { return }
+            frameIndex = 0
+            isBurstVisible = false
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+
+            while !Task.isCancelled {
+                await MainActor.run {
+                    isBurstVisible = true
+                }
+
+                for index in frames.indices {
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        frameIndex = index
+                    }
+                    try? await Task.sleep(nanoseconds: frameDuration)
+                }
+
+                await MainActor.run {
+                    isBurstVisible = false
+                }
+
+                try? await Task.sleep(nanoseconds: cooldownDuration)
+            }
+        }
+    }
+}
+
+private struct SlayRunningSheenView: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let effectTuning: FloaterEffectTuning
+
+    var body: some View {
+        GeometryReader { geometry in
+            SlayRunningSheenFramesView(
+                size: geometry.size,
+                color: color,
+                cornerRadius: cornerRadius,
+                effectTuning: effectTuning
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SlaySpriteStageView: View {
+    let avatar: FloaterAvatarDefinition?
+    let statusColor: Color
+    let stageSize: CGFloat
+    let spriteSize: CGFloat
+    let effectTuning: FloaterEffectTuning
+    let isAnimating: Bool
+    let isRunning: Bool
+    let isIdle: Bool
+    let isComplete: Bool
+    let completeTrigger: UUID?
+
+    @State private var frameIndex = 0
+    @State private var idleSparkleTrigger: UUID?
+    @State private var doneSparkleTrigger: UUID?
+
+    private var runningTaskID: String {
+        [
+            "\(isRunning)",
+            "\(isAnimating)",
+            "\(Int(stageSize.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(statusColor).floaterCacheKey,
+            "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))",
+            "\(effectTuning.showsCounterArc ?? false)",
+            "\(effectTuning.showsSecondaryOrbit ?? false)",
+            "\(effectTuning.extraCompletionRays)",
+            "\(effectTuning.extraCompletionOrbs)"
+        ].joined(separator: ":")
+    }
+
+    private var runningFrames: [NSImage] {
+        SlaySnapshotCache.stageFrames(
+            state: .running,
+            statusColor: statusColor,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+    }
+
+    private var idleFrame: NSImage? {
+        SlaySnapshotCache.stageFrames(
+            state: .idle,
+            statusColor: statusColor,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        ).first
+    }
+
+    private var completeFrame: NSImage? {
+        SlaySnapshotCache.stageFrames(
+            state: .complete,
+            statusColor: statusColor,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        ).first
+    }
+
+    private var currentFrame: NSImage? {
+        if isRunning, !runningFrames.isEmpty {
+            return runningFrames[min(frameIndex, runningFrames.count - 1)]
+        }
+        if isComplete {
+            return completeFrame
+        }
+        if isIdle {
+            return idleFrame
+        }
+        return idleFrame ?? runningFrames.first
+    }
+
+    private var frameDuration: UInt64 {
+        let cycleDuration = max(3.8, 4.8 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
+        let frameCount = max(runningFrames.count, 1)
+        return UInt64((cycleDuration / Double(frameCount)) * 1_000_000_000)
+    }
+
+    var body: some View {
+        ZStack {
+            if let currentFrame {
+                Image(nsImage: currentFrame)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            }
+
+            Group {
+                if let avatar {
+                    AvatarArtView(
+                        avatar: avatar,
+                        isAnimating: isRunning && isAnimating,
+                        size: spriteSize
+                    )
+                } else {
+                    Text("\u{1F986}")
+                        .font(.system(size: spriteSize - 4))
+                }
+            }
+
+            if isIdle {
+                IdleSparkleBurst(trigger: idleSparkleTrigger)
+            }
+
+            if isComplete {
+                DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
+                SparkleBurst(trigger: doneSparkleTrigger)
+            }
+        }
+        .frame(width: stageSize, height: stageSize)
+        .task(id: runningTaskID) {
+            frameIndex = 0
+            guard isRunning && isAnimating && runningFrames.count > 1 else { return }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: frameDuration)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    frameIndex = (frameIndex + 1) % runningFrames.count
+                }
+            }
+        }
+        .task(id: isIdle) {
+            guard isIdle else { return }
+            await MainActor.run {
+                idleSparkleTrigger = UUID()
+            }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 6_200_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    idleSparkleTrigger = UUID()
+                }
+            }
+        }
+        .onAppear {
+            if isComplete {
+                doneSparkleTrigger = UUID()
+            }
+        }
+        .onChange(of: completeTrigger) { _, newValue in
+            guard newValue != nil, isComplete else { return }
+            doneSparkleTrigger = UUID()
         }
     }
 }
@@ -1179,6 +1924,7 @@ private struct StatusPill: View {
 
     @State private var pulseScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.55
+    @State private var slayPulseActive = false
 
     private var isSuperSlay: Bool {
         renderMode == .superSlay
@@ -1188,10 +1934,20 @@ private struct StatusPill: View {
         HStack(spacing: 4) {
             ZStack {
                 if isPulsing {
-                    Circle()
-                        .fill(color.opacity(0.45))
-                        .frame(width: dotSize * pulseScale * 2.0, height: dotSize * pulseScale * 2.0)
-                        .opacity(pulseOpacity)
+                    if isSuperSlay {
+                        Circle()
+                            .fill(color.opacity(0.45))
+                            .frame(width: dotSize * pulseScale * 2.0, height: dotSize * pulseScale * 2.0)
+                            .opacity(pulseOpacity)
+                    } else {
+                        Circle()
+                            .fill(color.opacity(slayPulseActive ? 0.24 : 0.12))
+                            .frame(
+                                width: dotSize * (slayPulseActive ? 2.0 : 1.5),
+                                height: dotSize * (slayPulseActive ? 2.0 : 1.5)
+                            )
+                            .opacity(slayPulseActive ? 0.24 : 0.12)
+                    }
                 }
                 Circle()
                     .fill(color)
@@ -1208,8 +1964,14 @@ private struct StatusPill: View {
                 .fixedSize()
 
             if showsTypingDots {
-                TypingDots(color: color, fontSize: fontSize)
-                    .padding(.leading, 2)
+                Group {
+                    if isSuperSlay {
+                        TypingDots(color: color, fontSize: fontSize)
+                    } else {
+                        LiteTypingDots(color: color, fontSize: fontSize)
+                    }
+                }
+                .padding(.leading, 2)
             }
         }
         .padding(.leading, 5)
@@ -1222,10 +1984,26 @@ private struct StatusPill: View {
             Capsule().strokeBorder(color.opacity(0.24), lineWidth: 0.5)
         )
         .onAppear {
-            guard isPulsing else { return }
+            guard isPulsing, isSuperSlay else { return }
             withAnimation(.easeInOut(duration: (isSuperSlay ? 1.1 : 2.1) * effectTuning.statusPulseDurationMultiplier).repeatForever(autoreverses: true)) {
                 pulseScale = (isSuperSlay ? 1.46 : 1.22) * CGFloat(effectTuning.glowMultiplier)
                 pulseOpacity = 0
+            }
+        }
+        .task(id: "\(renderMode.rawValue)-\(isPulsing)") {
+            guard isPulsing, renderMode == .slay else {
+                await MainActor.run {
+                    slayPulseActive = false
+                }
+                return
+            }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 950_000_000)
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    slayPulseActive.toggle()
+                }
             }
         }
     }
@@ -1721,12 +2499,20 @@ struct FloatNotificationView: View {
             if showsFancyFloaterEffects {
                 ZStack {
                     if isRunning, effectTuning.showsSheen ?? true {
-                        RunningSheenSweep(
-                            color: accentColor,
-                            cornerRadius: floaterSize.cornerRadius,
-                            renderMode: renderMode,
-                            effectTuning: effectTuning
-                        )
+                        if renderMode == .slay {
+                            SlayRunningSheenView(
+                                color: accentColor,
+                                cornerRadius: floaterSize.cornerRadius,
+                                effectTuning: effectTuning
+                            )
+                        } else {
+                            RunningSheenSweep(
+                                color: accentColor,
+                                cornerRadius: floaterSize.cornerRadius,
+                                renderMode: renderMode,
+                                effectTuning: effectTuning
+                            )
+                        }
                     }
 
                     DonePanelVictoryFlash(
@@ -1953,6 +2739,20 @@ struct FloatNotificationView: View {
                         height: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22)
                     )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if renderMode == .slay {
+            SlaySpriteStageView(
+                avatar: avatar,
+                statusColor: accentColor,
+                stageSize: floaterSize.persistentStageSize,
+                spriteSize: floaterSize.persistentSpriteSize,
+                effectTuning: effectTuning,
+                isAnimating: animatesStatus,
+                isRunning: isRunning,
+                isIdle: statusState == .idle,
+                isComplete: statusState == .complete,
+                completeTrigger: completeTrigger
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             SpriteStageView(
