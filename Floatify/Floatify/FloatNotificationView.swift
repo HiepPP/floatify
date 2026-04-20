@@ -381,14 +381,14 @@ private struct DoneSparkleSweep: View {
         sweepOffset = -1.25
         sweepOpacity = 0
 
-        withAnimation(.easeOut(duration: 0.18)) {
-            sweepOpacity = 1
+        withAnimation(.easeOut(duration: 0.14)) {
+            sweepOpacity = 0.96
         }
-        withAnimation(.easeInOut(duration: 1.05)) {
+        withAnimation(.linear(duration: 0.94)) {
             sweepOffset = 1.25
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) {
-            withAnimation(.easeOut(duration: 0.56)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
+            withAnimation(.easeIn(duration: 0.42)) {
                 sweepOpacity = 0
             }
         }
@@ -423,16 +423,17 @@ private struct RunningSheenSweep: View {
     let cornerRadius: CGFloat
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 120.0, paused: false)) { context in
             GeometryReader { geometry in
                 let size = geometry.size
                 let cycle = 2.9
                 let phase = (context.date.timeIntervalSinceReferenceDate / cycle)
                     .truncatingRemainder(dividingBy: 1)
+                let intensityPhase = 0.5 - 0.5 * cos(phase * .pi * 2)
                 let sweepWidth = max(size.width * 0.34, 76)
                 let travel = size.width + sweepWidth + size.height * 0.95
                 let offset = travel * CGFloat(phase) - sweepWidth - size.height * 0.46
-                let intensity = 0.56 + max(0.0, 1.0 - abs(phase - 0.5) * 2.0) * 0.44
+                let intensity = 0.58 + intensityPhase * 0.42
 
                 ZStack {
                     Rectangle()
@@ -493,6 +494,8 @@ private struct RunningSheenSweep: View {
                 )
             }
         }
+        .compositingGroup()
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .allowsHitTesting(false)
     }
 }
@@ -548,6 +551,7 @@ private struct DonePanelVictoryFlash: View {
                     .blendMode(.screen)
             }
             .frame(width: size.width, height: size.height)
+            .compositingGroup()
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         }
         .allowsHitTesting(false)
@@ -1553,6 +1557,9 @@ struct FloatNotificationView: View {
                     )
                     .opacity(panelVictoryFlashOpacity)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .compositingGroup()
+                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -1874,12 +1881,12 @@ struct FloatNotificationView: View {
         panelVictoryFlashOpacity = 0
         panelVictoryFlashScale = 0.92
 
-        withAnimation(.easeOut(duration: 0.14)) {
-            panelVictoryFlashOpacity = 1
-            panelVictoryFlashScale = 1.04
+        withAnimation(.easeOut(duration: 0.12)) {
+            panelVictoryFlashOpacity = 0.96
+            panelVictoryFlashScale = 1.03
         }
 
-        withAnimation(.easeInOut(duration: 0.72)) {
+        withAnimation(.linear(duration: 0.64)) {
             panelVictoryFlashOffset = 1.18
         }
 
@@ -1893,8 +1900,8 @@ struct FloatNotificationView: View {
             }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) {
-            withAnimation(.easeOut(duration: 0.42)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            withAnimation(.easeIn(duration: 0.36)) {
                 panelVictoryFlashOpacity = 0
                 panelVictoryFlashScale = 1.12
             }
