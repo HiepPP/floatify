@@ -377,12 +377,11 @@ class FloatNotificationManager {
     private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
         let seed = stableSeed(for: item.id)
         let effect = statusEffects[seed % statusEffects.count]
-        let avatarSeed = item.project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? item.id : item.project
         let resolvedStyle = visualCatalog.resolveStyle(
             packID: settings.selectedVisualPackID,
             avatarID: settings.selectedAvatarID,
             effectPresetID: settings.selectedEffectPresetID,
-            seedText: avatarSeed
+            seedText: item.id
         )
 
         return PersistentStatusStyle(

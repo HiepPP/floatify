@@ -368,6 +368,7 @@ struct SettingsView: View {
         )
         let manageableAvatars = manageableAvatars(in: resolvedManagedPack)
         let selectedManagedAvatar = selectedManagedAvatar(in: resolvedManagedPack)
+        let hasCustomPacks = !customPacks.isEmpty
         let canImportAvatar = !trimmedImportAvatarName.isEmpty
         let canRenameAvatar = selectedManagedAvatar != nil
             && !trimmedManagedAvatarName.isEmpty
@@ -403,164 +404,229 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker(
-                    "Avatar Pack",
-                    selection: Binding(
-                        get: { settings.selectedVisualPackID },
-                        set: { settings.selectVisualPack($0, catalog: visualCatalog) }
-                    )
-                ) {
-                    ForEach(visualCatalog.packs, id: \.id) { pack in
-                        Text(pack.displayName).tag(pack.id)
-                    }
-                }
-                .pickerStyle(.inline)
-
-                Picker("Avatar", selection: $settings.selectedAvatarID) {
-                    ForEach(selectedPack.avatars, id: \.id) { avatar in
-                        Text(avatar.displayName).tag(avatar.id)
-                    }
-                }
-                .pickerStyle(.inline)
-
-                Picker("Effect Style", selection: $settings.selectedEffectPresetID) {
-                    ForEach(selectedPack.effectPresets, id: \.id) { preset in
-                        Text(preset.displayName).tag(preset.id)
-                    }
-                }
-                .pickerStyle(.inline)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Avatar name")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    TextField("Required", text: $importAvatarName)
-                        .textFieldStyle(.roundedBorder)
-
-                    HStack(spacing: 10) {
-                        Button("Import Image...") {
-                            openAvatarImportPanel(for: selectedPack)
-                        }
-                        .disabled(isImportingAvatar || !canImportAvatar)
-
-                        Button("Paste Image") {
-                            importAvatarFromPasteboard(into: selectedPack)
-                        }
-                        .disabled(isImportingAvatar || !canImportAvatar)
-
-                        Spacer(minLength: 0)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Manage uploaded avatars")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    if customPacks.isEmpty {
-                        Text("No custom pack yet. Import an avatar to create Personal pack.")
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Current Floater Visuals")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                    } else if let resolvedManagedPack {
-                        Picker(
-                            "Manage Pack",
-                            selection: Binding(
-                                get: { resolvedManagedPack.id },
-                                set: { newValue in
-                                    managedPackID = newValue
-                                    syncManagedAvatarSelection(
-                                        customPacks: customPacks,
-                                        selectedPackID: settings.selectedVisualPackID
-                                    )
-                                }
-                            )
-                        ) {
-                            ForEach(customPacks) { pack in
-                                Text(pack.displayName).tag(pack.id)
-                            }
-                        }
-                        .pickerStyle(.inline)
 
-                        if manageableAvatars.isEmpty {
-                            Text("This pack has no uploaded avatars yet.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else if let selectedManagedAvatar {
+                        LabeledContent("Avatar Pack") {
                             Picker(
-                                "Uploaded Avatar",
+                                "Avatar Pack",
                                 selection: Binding(
-                                    get: { selectedManagedAvatar.id },
-                                    set: { newValue in
-                                        managedAvatarID = newValue
-                                        managedAvatarName = manageableAvatars.first(where: { $0.id == newValue })?.displayName ?? ""
-                                    }
+                                    get: { settings.selectedVisualPackID },
+                                    set: { settings.selectVisualPack($0, catalog: visualCatalog) }
                                 )
                             ) {
-                                ForEach(manageableAvatars) { avatar in
+                                ForEach(visualCatalog.packs, id: \.id) { pack in
+                                    Text(pack.displayName).tag(pack.id)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 220, alignment: .trailing)
+                        }
+
+                        LabeledContent("Avatar") {
+                            Picker("Avatar", selection: $settings.selectedAvatarID) {
+                                ForEach(selectedPack.avatars, id: \.id) { avatar in
                                     Text(avatar.displayName).tag(avatar.id)
                                 }
                             }
-                            .pickerStyle(.inline)
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 220, alignment: .trailing)
+                        }
 
-                            TextField("Display name", text: $managedAvatarName)
-                                .textFieldStyle(.roundedBorder)
-
-                            HStack(spacing: 10) {
-                                Button("Save Name") {
-                                    renameManagedAvatar(
-                                        avatarID: selectedManagedAvatar.id,
-                                        pack: resolvedManagedPack
-                                    )
+                        LabeledContent("Effect Style") {
+                            Picker("Effect Style", selection: $settings.selectedEffectPresetID) {
+                                ForEach(selectedPack.effectPresets, id: \.id) { preset in
+                                    Text(preset.displayName).tag(preset.id)
                                 }
-                                .disabled(isManagingAvatar || !canRenameAvatar)
-
-                                Button("Delete Avatar", role: .destructive) {
-                                    pendingDeleteAvatarID = selectedManagedAvatar.id
-                                    pendingDeleteAvatarName = selectedManagedAvatar.displayName
-                                }
-                                .disabled(isManagingAvatar)
-
-                                Spacer(minLength: 0)
                             }
-                        } else {
-                            Text("Pick an uploaded avatar to rename or delete it.")
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 220, alignment: .trailing)
+                        }
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Import Avatar")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        LabeledContent("Avatar name") {
+                            TextField("Required", text: $importAvatarName)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 220)
+                        }
+
+                        LabeledContent("Source") {
+                            Menu {
+                                Button("Import Image...") {
+                                    openAvatarImportPanel(for: selectedPack)
+                                }
+
+                                Button("Paste Image") {
+                                    importAvatarFromPasteboard(into: selectedPack)
+                                }
+                            } label: {
+                                Text(isImportingAvatar ? "Importing..." : "Choose Source")
+                                    .frame(width: 220, alignment: .leading)
+                            }
+                            .disabled(isImportingAvatar || !canImportAvatar)
+                        }
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Manage Uploaded Avatar")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if !hasCustomPacks {
+                            Text("No custom pack yet. Import an avatar to create Personal pack.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if let resolvedManagedPack {
+                            LabeledContent("Manage Pack") {
+                                Picker(
+                                    "Manage Pack",
+                                    selection: Binding(
+                                        get: { resolvedManagedPack.id },
+                                        set: { newValue in
+                                            managedPackID = newValue
+                                            syncManagedAvatarSelection(
+                                                customPacks: customPacks,
+                                                selectedPackID: settings.selectedVisualPackID
+                                            )
+                                        }
+                                    )
+                                ) {
+                                    ForEach(customPacks) { pack in
+                                        Text(pack.displayName).tag(pack.id)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                                .frame(width: 220, alignment: .trailing)
+                            }
+
+                            if manageableAvatars.isEmpty {
+                                Text("This pack has no uploaded avatars yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else if let selectedManagedAvatar {
+                                LabeledContent("Uploaded Avatar") {
+                                    Picker(
+                                        "Uploaded Avatar",
+                                        selection: Binding(
+                                            get: { selectedManagedAvatar.id },
+                                            set: { newValue in
+                                                managedAvatarID = newValue
+                                                managedAvatarName = manageableAvatars.first(where: { $0.id == newValue })?.displayName ?? ""
+                                            }
+                                        )
+                                    ) {
+                                        ForEach(manageableAvatars) { avatar in
+                                            Text(avatar.displayName).tag(avatar.id)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 220, alignment: .trailing)
+                                }
+
+                                LabeledContent("Display name") {
+                                    TextField("Display name", text: $managedAvatarName)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 220)
+                                }
+
+                                LabeledContent("Actions") {
+                                    Menu {
+                                        Button("Save Name") {
+                                            renameManagedAvatar(
+                                                avatarID: selectedManagedAvatar.id,
+                                                pack: resolvedManagedPack
+                                            )
+                                        }
+                                        .disabled(isManagingAvatar || !canRenameAvatar)
+
+                                        Divider()
+
+                                        Button("Delete Avatar", role: .destructive) {
+                                            pendingDeleteAvatarID = selectedManagedAvatar.id
+                                            pendingDeleteAvatarName = selectedManagedAvatar.displayName
+                                        }
+                                        .disabled(isManagingAvatar)
+                                    } label: {
+                                        Text(isManagingAvatar ? "Working..." : "Choose Action")
+                                            .frame(width: 220, alignment: .leading)
+                                    }
+                                    .disabled(isManagingAvatar)
+                                }
+                            } else {
+                                Text("Pick an uploaded avatar to rename or delete it.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Pack Folder")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        LabeledContent("Actions") {
+                            Menu {
+                                Button("Reveal Packs Folder") {
+                                    visualCatalog.revealPacksDirectory()
+                                    setVisualCatalogMessage("Opened \(visualCatalog.packsDirectoryPath).", level: .good)
+                                }
+
+                                Button("Reload Packs") {
+                                    visualCatalog.reload()
+                                    settings.normalizeVisualSelection(catalog: visualCatalog)
+                                    setVisualCatalogMessage(visualCatalog.lastReloadMessage ?? "Reloaded visual packs.", level: .good)
+                                }
+                            } label: {
+                                Text("Choose Action")
+                                    .frame(width: 220, alignment: .leading)
+                            }
+                        }
+
+                        if let sourceURL = selectedPack.sourceURL {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Selected pack path")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                Text(sourceURL.path)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+
+                    if !visualCatalogMessage.isEmpty {
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(visualCatalogLevel.tint)
+                                .frame(width: 8, height: 8)
+                                .padding(.top, 5)
+
+                            Text(visualCatalogMessage)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                    }
-                }
-
-                HStack {
-                    Button("Reveal Packs Folder") {
-                        visualCatalog.revealPacksDirectory()
-                        setVisualCatalogMessage("Opened \(visualCatalog.packsDirectoryPath).", level: .good)
-                    }
-
-                    Button("Reload Packs") {
-                        visualCatalog.reload()
-                        settings.normalizeVisualSelection(catalog: visualCatalog)
-                        setVisualCatalogMessage(visualCatalog.lastReloadMessage ?? "Reloaded visual packs.", level: .good)
-                    }
-                }
-
-                if let sourceURL = selectedPack.sourceURL {
-                    Text(sourceURL.path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-
-                if !visualCatalogMessage.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(visualCatalogLevel.tint)
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 5)
-
-                        Text(visualCatalogMessage)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
             } header: {
