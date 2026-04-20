@@ -673,6 +673,40 @@ private struct DoneSparkleSweep: View {
     }
 }
 
+private struct CelebrateRingBurst: View {
+    let color: Color
+    let stageSize: CGFloat
+    let trigger: UUID?
+
+    @State private var ringScale: CGFloat = 0.76
+    @State private var ringOpacity: Double = 0
+
+    var body: some View {
+        Circle()
+            .strokeBorder(color.opacity(ringOpacity), lineWidth: 1.6)
+            .frame(width: stageSize * ringScale, height: stageSize * ringScale)
+            .blur(radius: 0.4)
+            .allowsHitTesting(false)
+            .onAppear {
+                if trigger != nil { animateRing() }
+            }
+            .onChange(of: trigger) { _, newValue in
+                guard newValue != nil else { return }
+                animateRing()
+            }
+    }
+
+    private func animateRing() {
+        ringScale = 0.76
+        ringOpacity = 0.84
+
+        withAnimation(.easeOut(duration: 0.58)) {
+            ringScale = 1.38
+            ringOpacity = 0
+        }
+    }
+}
+
 private struct SparkleParticleAnimation: ViewModifier {
     let angle: Double
     let distance: CGFloat
@@ -864,12 +898,22 @@ private enum SlaySnapshotCache {
         switch (renderMode, state) {
         case (.superSlay, .running):
             frameCount = 96
+        case (.superSlay, .idle):
+            frameCount = 12
+        case (.superSlay, .complete):
+            frameCount = 24
         case (.slay, .running):
             frameCount = 18
+        case (.slay, .idle):
+            frameCount = 8
+        case (.slay, .complete):
+            frameCount = 16
         case (_, .running):
             frameCount = 12
-        default:
-            frameCount = 1
+        case (_, .idle):
+            frameCount = 6
+        case (_, .complete):
+            frameCount = 12
         }
         let frames = (0..<frameCount).map { index in
             let progress = frameCount == 1 ? 0.26 : CGFloat(index) / CGFloat(max(frameCount - 1, 1))
@@ -981,6 +1025,18 @@ private struct SlayStageSnapshotContent: View {
         0.5 - 0.5 * cos(progress * .pi * 2)
     }
 
+    private var idlePulse: CGFloat {
+        0.5 - 0.5 * cos(progress * .pi * 2)
+    }
+
+    private var completeBurstProgress: CGFloat {
+        min(max(progress, 0), 1)
+    }
+
+    private var completeBurstEnvelope: CGFloat {
+        sin(completeBurstProgress * .pi)
+    }
+
     private var runningGlowScale: CGFloat {
         1.0 + (isSuperSlay ? 0.18 : 0.12) * pulse
     }
@@ -1014,19 +1070,39 @@ private struct SlayStageSnapshotContent: View {
     }
 
     private var completionFlashOpacity: Double {
-        scaledOpacity(0.26)
+        scaledOpacity((isSuperSlay ? 0.20 : 0.16) * Double(completeBurstEnvelope))
     }
 
     private var completionCoreOpacity: Double {
-        scaledOpacity(0.18)
+        scaledOpacity((isSuperSlay ? 0.26 : 0.20) * Double(completeBurstEnvelope))
     }
 
     private var completionRayOpacity: Double {
-        scaledOpacity(0.42)
+        scaledOpacity((isSuperSlay ? 0.94 : 0.68) * Double(completeBurstEnvelope))
     }
 
     private var completionOrbitOpacity: Double {
-        scaledOpacity(0.32)
+        scaledOpacity((isSuperSlay ? 0.88 : 0.56) * Double(completeBurstEnvelope))
+    }
+
+    private var completionShockwaveScale: CGFloat {
+        0.88 + (isSuperSlay ? 1.10 : 0.76) * completeBurstEnvelope
+    }
+
+    private var completionShockwaveOpacity: Double {
+        scaledOpacity((isSuperSlay ? 0.62 : 0.44) * Double(completeBurstEnvelope))
+    }
+
+    private var completionNovaScale: CGFloat {
+        0.90 + (isSuperSlay ? 0.36 : 0.24) * completeBurstEnvelope
+    }
+
+    private var completionOuterShockwaveScale: CGFloat {
+        0.94 + (isSuperSlay ? 1.62 : 1.12) * completeBurstEnvelope
+    }
+
+    private var completionOuterShockwaveOpacity: Double {
+        scaledOpacity((isSuperSlay ? 0.38 : 0.28) * Double(completeBurstEnvelope))
     }
 
     var body: some View {
@@ -1122,6 +1198,31 @@ private struct SlayStageSnapshotContent: View {
                 .offset(y: -stageSize * 0.34)
                 .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
             }
+
+            ForEach(0..<(isSuperSlay ? 3 : 2), id: \.self) { index in
+                let orbitScale = isSuperSlay ? CGFloat(0.09 + Double(index) * 0.016) : CGFloat(0.08 + Double(index) * 0.014)
+                let orbitOpacity = isSuperSlay ? 0.46 - Double(index) * 0.08 : 0.34 - Double(index) * 0.07
+                let orbitRadius = stageSize * (isSuperSlay ? 0.25 + Double(index) * 0.06 : 0.22 + Double(index) * 0.05)
+                let orbitAngle = Double(index) * (isSuperSlay ? 120 : 180) + runningOrbitAngle * (0.54 + Double(index) * 0.17)
+
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .white.opacity(0.94),
+                                color.opacity(scaledOpacity(orbitOpacity)),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: stageSize * orbitScale
+                        )
+                    )
+                    .frame(width: stageSize * orbitScale * 2.1, height: stageSize * orbitScale * 2.1)
+                    .shadow(color: color.opacity(scaledOpacity(orbitOpacity * 0.58)), radius: scaledRadius(isSuperSlay ? 3.6 : 2.4), x: 0, y: 0)
+                    .offset(y: -orbitRadius)
+                    .rotationEffect(.degrees(orbitAngle))
+            }
         }
     }
 
@@ -1144,9 +1245,25 @@ private struct SlayStageSnapshotContent: View {
                 .blur(radius: scaledRadius(2.2))
 
             Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.18 + Double(idlePulse) * 0.30),
+                            color.opacity(scaledOpacity(0.20 + 0.26 * Double(idlePulse))),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.34
+                    )
+                )
+                .frame(width: stageSize * (0.76 + idlePulse * 0.28), height: stageSize * (0.76 + idlePulse * 0.28))
+                .blur(radius: scaledRadius(2.4 + idlePulse * 2.2))
+
+            Circle()
                 .trim(from: 0.12, to: 0.34)
-                .stroke(color.opacity(scaledOpacity(0.42)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
-                .frame(width: stageSize * 1.02, height: stageSize * 1.02)
+                .stroke(color.opacity(scaledOpacity(0.52 + 0.22 * Double(idlePulse))), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                .frame(width: stageSize * 1.06, height: stageSize * 1.06)
                 .rotationEffect(.degrees(-28))
 
             Circle()
@@ -1154,6 +1271,16 @@ private struct SlayStageSnapshotContent: View {
                 .frame(width: stageSize * 0.13, height: stageSize * 0.13)
                 .shadow(color: color.opacity(scaledOpacity(0.20)), radius: scaledRadius(2.2), x: 0, y: 0)
                 .offset(x: stageSize * 0.22, y: -stageSize * 0.18)
+
+            Circle()
+                .strokeBorder(.white.opacity(0.18 + Double(idlePulse) * 0.28), lineWidth: 1.4)
+                .frame(width: stageSize * (0.52 + idlePulse * 0.24), height: stageSize * (0.52 + idlePulse * 0.24))
+                .blur(radius: 0.4)
+
+            Circle()
+                .strokeBorder(color.opacity(scaledOpacity(0.16 + 0.18 * Double(idlePulse))), lineWidth: 2.0)
+                .frame(width: stageSize * (0.70 + idlePulse * 0.24), height: stageSize * (0.70 + idlePulse * 0.24))
+                .blur(radius: scaledRadius(0.8 + idlePulse * 0.9))
         }
     }
 
@@ -1172,8 +1299,8 @@ private struct SlayStageSnapshotContent: View {
                         endRadius: stageSize * 0.52
                     )
                 )
-                .frame(width: stageSize * 1.08, height: stageSize * 1.08)
-                .blur(radius: 6)
+                .frame(width: stageSize * (0.52 + completeBurstEnvelope * (isSuperSlay ? 1.20 : 0.66)), height: stageSize * (0.52 + completeBurstEnvelope * (isSuperSlay ? 1.20 : 0.66)))
+                .blur(radius: isSuperSlay ? 10 : 7)
 
             Circle()
                 .fill(
@@ -1186,10 +1313,20 @@ private struct SlayStageSnapshotContent: View {
                         center: .center,
                         startRadius: 0,
                         endRadius: stageSize * 0.34
-                    )
+                        )
                 )
-                .frame(width: stageSize * 0.94, height: stageSize * 0.94)
-                .blur(radius: 2)
+                .frame(width: stageSize * completionNovaScale, height: stageSize * completionNovaScale)
+                .blur(radius: isSuperSlay ? 4.0 : 2.8)
+
+            Circle()
+                .strokeBorder(.white.opacity(completionShockwaveOpacity), lineWidth: isSuperSlay ? 2.2 : 1.5)
+                .frame(width: stageSize * completionShockwaveScale, height: stageSize * completionShockwaveScale)
+                .blur(radius: 0.8)
+
+            Circle()
+                .strokeBorder(color.opacity(completionOuterShockwaveOpacity), lineWidth: isSuperSlay ? 2.8 : 2.0)
+                .frame(width: stageSize * completionOuterShockwaveScale, height: stageSize * completionOuterShockwaveScale)
+                .blur(radius: 1.2)
 
             ForEach(0..<completionRayCount, id: \.self) { index in
                 Capsule()
@@ -1205,13 +1342,13 @@ private struct SlayStageSnapshotContent: View {
                         )
                     )
                     .frame(
-                        width: index.isMultiple(of: 3) ? 3.2 : 2.4,
-                        height: stageSize * (0.16 + (index.isMultiple(of: 2) ? 0.24 : 0.18))
+                        width: index.isMultiple(of: 3) ? 4.0 : 2.6,
+                        height: stageSize * (0.18 + completeBurstEnvelope * (index.isMultiple(of: 2) ? 0.50 : 0.40))
                     )
-                    .offset(y: -stageSize * 0.32)
+                    .offset(y: -(stageSize * (0.18 + completeBurstEnvelope * 0.30)))
                     .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionRayCount)) + 34))
                     .opacity(completionRayOpacity)
-                    .blur(radius: index.isMultiple(of: 4) ? 0.4 : 0.1)
+                    .blur(radius: index.isMultiple(of: 4) ? 0.8 : 0.2)
                     .blendMode(.screen)
             }
 
@@ -1233,17 +1370,17 @@ private struct SlayStageSnapshotContent: View {
                         width: stageSize * (index.isMultiple(of: 2) ? 0.13 : 0.10),
                         height: stageSize * (index.isMultiple(of: 2) ? 0.13 : 0.10)
                     )
-                    .offset(y: -stageSize * 0.40)
-                    .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionOrbitCount)) + 112))
+                    .offset(y: -(stageSize * (0.22 + completeBurstEnvelope * 0.30)))
+                    .rotationEffect(.degrees(Double(index) * (360.0 / Double(completionOrbitCount)) + 112 + completeBurstEnvelope * (isSuperSlay ? 152 : 96)))
                     .opacity(completionOrbitOpacity)
-                    .shadow(color: color.opacity(scaledOpacity(completionOrbitOpacity * 0.34)), radius: scaledRadius(3), x: 0, y: 0)
+                    .shadow(color: color.opacity(scaledOpacity(completionOrbitOpacity * 0.52)), radius: scaledRadius(5), x: 0, y: 0)
                     .blendMode(.screen)
             }
 
             Circle()
                 .strokeBorder(color.opacity(0.76), lineWidth: 1.4)
-                .frame(width: stageSize * 0.94, height: stageSize * 0.94)
-                .opacity(0.22)
+                .frame(width: stageSize * (isSuperSlay ? 0.72 : 0.68), height: stageSize * (isSuperSlay ? 0.72 : 0.68))
+                .opacity(0.18)
                 .blur(radius: 0.4)
         }
     }
@@ -1426,6 +1563,7 @@ private final class SlayStageRendererView: NSView {
     private let avatarLayer = CALayer()
     private var currentStageSignature = ""
     private var currentAvatarSignature = ""
+    private var currentAvatarEffectSignature = ""
     private var currentAvatarSize: CGFloat = 0
 
     override init(frame frameRect: NSRect) {
@@ -1465,22 +1603,27 @@ private final class SlayStageRendererView: NSView {
     func update(
         stageFrames: [NSImage],
         stageFrameDuration: CFTimeInterval,
+        stageRepeats: Bool,
         stageSignature: String,
         avatarFrames: [NSImage],
         avatarFrameDuration: CFTimeInterval,
         avatarSignature: String,
+        avatarState: SlayStageState,
+        avatarEffectSignature: String,
         avatarSize: CGFloat
     ) {
         currentAvatarSize = avatarSize
         needsLayout = true
 
-        updateStageSequence(frames: stageFrames, frameDuration: stageFrameDuration, signature: stageSignature)
+        updateStageSequence(frames: stageFrames, frameDuration: stageFrameDuration, repeats: stageRepeats, signature: stageSignature)
         updateAvatarSequence(frames: avatarFrames, frameDuration: avatarFrameDuration, signature: avatarSignature)
+        updateAvatarEffects(state: avatarState, signature: avatarEffectSignature)
     }
 
     private func updateStageSequence(
         frames: [NSImage],
         frameDuration: CFTimeInterval,
+        repeats: Bool,
         signature: String
     ) {
         guard !frames.isEmpty else {
@@ -1503,7 +1646,7 @@ private final class SlayStageRendererView: NSView {
         animation.values = cgFrames
         animation.keyTimes = (0..<cgFrames.count).map { NSNumber(value: Double($0) / Double(max(cgFrames.count - 1, 1))) }
         animation.duration = frameDuration * Double(cgFrames.count)
-        animation.repeatCount = .infinity
+        animation.repeatCount = repeats ? .infinity : 0
         animation.calculationMode = .discrete
         animation.isRemovedOnCompletion = false
         animation.fillMode = .forwards
@@ -1540,6 +1683,74 @@ private final class SlayStageRendererView: NSView {
         animation.isRemovedOnCompletion = false
         animation.fillMode = .forwards
         avatarLayer.add(animation, forKey: "sequence")
+    }
+
+    private func updateAvatarEffects(
+        state: SlayStageState,
+        signature: String
+    ) {
+        guard currentAvatarEffectSignature != signature else { return }
+        currentAvatarEffectSignature = signature
+
+        avatarLayer.removeAnimation(forKey: "idleFlashOpacity")
+        avatarLayer.removeAnimation(forKey: "idleFlashScale")
+        avatarLayer.removeAnimation(forKey: "completeFlashOpacity")
+        avatarLayer.removeAnimation(forKey: "completeKickScale")
+        avatarLayer.removeAnimation(forKey: "completeKickRotation")
+        avatarLayer.removeAnimation(forKey: "completeKickLift")
+        avatarLayer.opacity = 1
+        avatarLayer.transform = CATransform3DIdentity
+
+        if state == .idle {
+            let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
+            opacityAnimation.values = [1.0, 0.52, 1.0]
+            opacityAnimation.keyTimes = [0.0, 0.42, 1.0]
+            opacityAnimation.duration = 0.5
+            opacityAnimation.repeatCount = .infinity
+            opacityAnimation.isRemovedOnCompletion = false
+            opacityAnimation.fillMode = .forwards
+            avatarLayer.add(opacityAnimation, forKey: "idleFlashOpacity")
+
+            let scaleAnimation = CAKeyframeAnimation(keyPath: "transform.scale")
+            scaleAnimation.values = [1.0, 1.14, 1.0]
+            scaleAnimation.keyTimes = [0.0, 0.38, 1.0]
+            scaleAnimation.duration = 0.5
+            scaleAnimation.repeatCount = .infinity
+            scaleAnimation.isRemovedOnCompletion = false
+            scaleAnimation.fillMode = .forwards
+            avatarLayer.add(scaleAnimation, forKey: "idleFlashScale")
+            return
+        }
+
+        guard state == .complete else { return }
+
+        let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
+        opacityAnimation.values = [1.0, 0.58, 1.0]
+        opacityAnimation.keyTimes = [0.0, 0.35, 1.0]
+        opacityAnimation.duration = 0.34
+        opacityAnimation.isRemovedOnCompletion = true
+        avatarLayer.add(opacityAnimation, forKey: "completeFlashOpacity")
+
+        let scaleAnimation = CAKeyframeAnimation(keyPath: "transform.scale")
+        scaleAnimation.values = [1.0, 1.20, 0.98, 1.0]
+        scaleAnimation.keyTimes = [0.0, 0.28, 0.72, 1.0]
+        scaleAnimation.duration = 0.34
+        scaleAnimation.isRemovedOnCompletion = true
+        avatarLayer.add(scaleAnimation, forKey: "completeKickScale")
+
+        let rotationAnimation = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rotationAnimation.values = [0.0, -0.14, 0.10, 0.0]
+        rotationAnimation.keyTimes = [0.0, 0.30, 0.62, 1.0]
+        rotationAnimation.duration = 0.32
+        rotationAnimation.isRemovedOnCompletion = true
+        avatarLayer.add(rotationAnimation, forKey: "completeKickRotation")
+
+        let liftAnimation = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        liftAnimation.values = [0.0, -4.0, -1.0, 0.0]
+        liftAnimation.keyTimes = [0.0, 0.28, 0.70, 1.0]
+        liftAnimation.duration = 0.30
+        liftAnimation.isRemovedOnCompletion = true
+        avatarLayer.add(liftAnimation, forKey: "completeKickLift")
     }
 }
 
@@ -1593,6 +1804,8 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
     let isRunning: Bool
     let isIdle: Bool
     let isComplete: Bool
+    let completeTrigger: UUID?
+    let avatarPulseTrigger: UUID?
 
     func makeNSView(context: Context) -> SlayStageRendererView {
         SlayStageRendererView(frame: CGRect(x: 0, y: 0, width: stageSize, height: stageSize))
@@ -1617,9 +1830,21 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
         )
         let avatarFrames = avatarSequenceImages(for: avatar)
         let shouldAnimateAvatar = isRunning && isAnimating
-        let stageFrameDuration = renderMode == .superSlay
-            ? min(max(0.020, 0.020 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier)), 0.025)
-            : max(0.10, 0.22 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
+        let stageFrameDuration: CFTimeInterval
+        let stageRepeats: Bool
+        switch state {
+        case .running:
+            stageFrameDuration = renderMode == .superSlay
+                ? min(max(0.020, 0.020 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier)), 0.025)
+                : max(0.10, 0.22 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
+            stageRepeats = true
+        case .idle:
+            stageFrameDuration = renderMode == .superSlay ? 0.042 : 0.0625
+            stageRepeats = true
+        case .complete:
+            stageFrameDuration = renderMode == .superSlay ? 0.036 : 0.044
+            stageRepeats = false
+        }
         let showsCounterArc = effectTuning.showsCounterArc ?? (renderMode == .superSlay)
         let showsSecondaryOrbit = effectTuning.showsSecondaryOrbit ?? (renderMode == .superSlay)
         let stageSignature = [
@@ -1631,22 +1856,31 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
             "\(showsCounterArc)",
             "\(showsSecondaryOrbit)",
             "\(effectTuning.extraCompletionRays)",
-            "\(effectTuning.extraCompletionOrbs)"
+            "\(effectTuning.extraCompletionOrbs)",
+            state == .complete ? (completeTrigger?.uuidString ?? "done") : "steady"
         ].joined(separator: ":")
         let avatarSignature = [
             avatar?.id ?? "none",
             shouldAnimateAvatar ? "animated" : "static",
             "\(Int(spriteSize.rounded(.toNearestOrAwayFromZero)))"
         ].joined(separator: ":")
+        let avatarEffectSignature = [
+            state == .running ? "running" : (state == .complete ? "complete" : "idle"),
+            renderMode.rawValue,
+            state == .complete ? (avatarPulseTrigger?.uuidString ?? completeTrigger?.uuidString ?? "done") : "steady"
+        ].joined(separator: ":")
         let avatarPayload = shouldAnimateAvatar ? avatarFrames : Array(avatarFrames.prefix(1))
 
         nsView.update(
             stageFrames: stageFrames,
             stageFrameDuration: stageFrameDuration,
+            stageRepeats: stageRepeats,
             stageSignature: stageSignature,
             avatarFrames: avatarPayload,
             avatarFrameDuration: avatarFrameDuration(for: avatar),
             avatarSignature: avatarSignature,
+            avatarState: state,
+            avatarEffectSignature: avatarEffectSignature,
             avatarSize: spriteSize
         )
     }
@@ -1688,12 +1922,13 @@ private struct SlaySpriteStageView: View {
     @ObservedObject private var ticker = FloaterLowFrequencyTicker.shared
     @State private var idleSparkleTrigger: UUID?
     @State private var doneSparkleTrigger: UUID?
+    @State private var doneAvatarTrigger: UUID?
 
     private var idleSparkleInterval: Int {
         renderMode == .superSlay ? 3 : 8
     }
 
-    private var completeSparkleInterval: Int {
+    private var completeAvatarInterval: Int {
         renderMode == .superSlay ? 6 : 20
     }
 
@@ -1709,7 +1944,9 @@ private struct SlaySpriteStageView: View {
                 isAnimating: isAnimating,
                 isRunning: isRunning,
                 isIdle: isIdle,
-                isComplete: isComplete
+                isComplete: isComplete,
+                completeTrigger: completeTrigger,
+                avatarPulseTrigger: doneAvatarTrigger
             )
 
             if isIdle {
@@ -1717,6 +1954,7 @@ private struct SlaySpriteStageView: View {
             }
 
             if isComplete {
+                CelebrateRingBurst(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
                 DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
                 SparkleBurst(trigger: doneSparkleTrigger)
             }
@@ -1728,19 +1966,21 @@ private struct SlaySpriteStageView: View {
             }
             if isComplete {
                 doneSparkleTrigger = UUID()
+                doneAvatarTrigger = UUID()
             }
         }
         .onChange(of: ticker.tick) { _, tick in
             if isIdle, tick.isMultiple(of: idleSparkleInterval) {
                 idleSparkleTrigger = UUID()
             }
-            if isComplete, tick.isMultiple(of: completeSparkleInterval) {
-                doneSparkleTrigger = UUID()
+            if isComplete, tick.isMultiple(of: completeAvatarInterval) {
+                doneAvatarTrigger = UUID()
             }
         }
         .onChange(of: completeTrigger) { _, newValue in
             guard newValue != nil, isComplete else { return }
             doneSparkleTrigger = UUID()
+            doneAvatarTrigger = UUID()
         }
     }
 }
