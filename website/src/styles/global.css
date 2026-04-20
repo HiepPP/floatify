@@ -145,10 +145,11 @@ body {
 }
 
 @keyframes dropBounce {
-  0% { transform: translateY(-60px); opacity: 0; }
-  60% { transform: translateY(8px); opacity: 1; }
-  80% { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
+  0% { transform: translateY(-80px) rotate(-2deg); opacity: 0; }
+  50% { transform: translateY(10px) rotate(1deg); opacity: 1; }
+  70% { transform: translateY(-6px) rotate(-0.5deg); }
+  85% { transform: translateY(2px) rotate(0); }
+  100% { transform: translateY(0) rotate(0); }
 }
 
 @keyframes fadeUp {
@@ -168,7 +169,7 @@ body {
 
 @keyframes gentleBounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  50% { transform: translateY(-5px); }
 }
 
 /* --- Coin spin --- */
@@ -207,8 +208,9 @@ body {
 
 @keyframes blockHit {
   0% { transform: translateY(0); }
-  30% { transform: translateY(-8px); }
-  60% { transform: translateY(2px); }
+  25% { transform: translateY(-12px); }
+  50% { transform: translateY(3px); }
+  75% { transform: translateY(-2px); }
   100% { transform: translateY(0); }
 }
 
@@ -216,6 +218,13 @@ body {
 .q-block {
   position: relative;
   overflow: hidden;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+.q-block:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 20px rgba(245, 197, 24, 0.12);
+  border-color: #D4A55A;
 }
 
 .q-block::before {
@@ -247,8 +256,8 @@ body {
 /* --- Warp pipe --- */
 .warp-pipe {
   position: relative;
-  width: 60px;
-  height: 80px;
+  width: 80px;
+  height: 100px;
   background: #049C2F;
   border-radius: 0;
 }
@@ -257,9 +266,9 @@ body {
   content: '';
   position: absolute;
   top: 0;
-  left: -6px;
-  width: 72px;
-  height: 20px;
+  left: -8px;
+  width: 96px;
+  height: 24px;
   background: #05B636;
   border-radius: 4px 4px 0 0;
   border: 2px solid #037A22;
@@ -372,6 +381,58 @@ body {
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* --- Ground divider conveyor animation --- */
+.ground-divider {
+  animation: conveyorScroll 8s linear infinite;
+}
+
+@keyframes conveyorScroll {
+  from { background-position: 0 0; }
+  to { background-position: 16px 0; }
+}
+
+/* --- Hero subtitle shimmer --- */
+.hero-shimmer {
+  animation: fadeUp 0.6s ease-out 0.2s both, textShimmer 3s ease-in-out 1.5s infinite;
+}
+
+@keyframes textShimmer {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 12px rgba(245, 197, 24, 0.3); }
+}
+
+/* --- Navbar brand glow on scroll --- */
+.nav-brand-glow {
+  text-shadow: 0 0 8px rgba(245, 197, 24, 0.4);
+}
+
+/* --- Card hover glow (game options, etc.) --- */
+.game-card-hover {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+.game-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(245, 197, 24, 0.1);
+  border-color: #D4A55A;
+}
+
+/* --- Button hover effects --- */
+.btn-hover-glow {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.btn-hover-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Active status button ring --- */
+.status-btn-active {
+  outline: 2px solid #F0F0F0;
+  outline-offset: 2px;
 }
 
 /* --- Selection color --- */

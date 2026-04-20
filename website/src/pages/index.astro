@@ -23,14 +23,14 @@ import Layout from '../layouts/Layout.astro';
   <header>
     <nav id="navbar" aria-label="Main navigation" class="fixed top-0 left-0 right-0 z-40 transition-all duration-300">
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/" class="font-pixel text-sm text-game-cloud-white" aria-label="Floatify home">
+        <a href="/" id="nav-brand" class="font-pixel text-sm text-game-cloud-white hover:text-game-coin-gold transition-colors" aria-label="Floatify home">
           FLOATIFY
         </a>
         <a
           href="https://github.com/hieppp/floatify"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-game-sky-blue text-game-sky-blue hover:bg-game-sky-blue hover:text-game-sky-dark transition-colors text-sm font-body"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-game-sky-blue text-game-sky-blue hover:bg-game-sky-blue hover:text-game-sky-dark transition-all text-sm font-body btn-hover-glow"
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -50,15 +50,15 @@ import Layout from '../layouts/Layout.astro';
     ></div>
 
   <!-- Section 1: Hero - Game Start Screen -->
-  <section aria-labelledby="hero-heading" class="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
+  <section aria-labelledby="hero-heading" class="min-h-[85vh] flex flex-col items-center justify-center px-6 pt-20">
     <div class="text-center max-w-3xl mx-auto mb-12">
       <h1 id="hero-heading" class="hero-title font-pixel text-game-cloud-white mb-6 leading-relaxed" style="font-size: clamp(1.8rem, 5vw, 3.2rem); text-shadow: 3px 3px 0 rgba(0,0,0,0.5);">
         FLOATIFY
       </h1>
-      <p class="hero-subtitle font-body text-xl text-game-cloud-white mb-4">
+      <p class="hero-shimmer font-body text-xl text-game-cloud-white mb-4">
         Session HUDs for Developers
       </p>
-      <p class="hero-subtitle font-body text-base text-game-cloud-white/60">
+      <p class="hero-subtitle font-body text-base text-game-cloud-white/60 mt-2 leading-relaxed tracking-wide">
         A macOS menu bar app for Claude Code and Codex. Each live session gets a persistent floater with project label, color status, sprite avatar, git file count, and activity time.
       </p>
     </div>
@@ -66,7 +66,7 @@ import Layout from '../layouts/Layout.astro';
     <!-- Terminal / Message Block -->
     <div
       id="terminal"
-      class="w-full max-w-2xl rounded-lg overflow-hidden cursor-pointer relative"
+      class="w-full max-w-2xl rounded-lg overflow-hidden cursor-pointer relative transition-all duration-200 hover:border-game-coin-gold"
       style="background: #0f0f1a; border: 4px solid #C84C09;"
     >
       <div class="flex items-center gap-2 px-4 py-3" style="background: #161625; border-bottom: 2px solid #C84C09;">
@@ -88,7 +88,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="hero-buttons mt-10 flex items-center justify-center gap-4">
       <a
         href="#installation"
-        class="btn-bounce px-8 py-3 rounded-lg bg-game-mario-red text-game-cloud-white font-pixel text-xs transition-colors hover:bg-red-700"
+        class="btn-bounce px-8 py-3 rounded-lg bg-game-mario-red text-game-cloud-white font-pixel text-xs transition-all hover:bg-red-700 hover:scale-105 hover:shadow-[0_0_20px_rgba(229,37,33,0.4)]"
       >
         START
       </a>
@@ -96,14 +96,14 @@ import Layout from '../layouts/Layout.astro';
         href="https://github.com/hieppp/floatify"
         target="_blank"
         rel="noopener noreferrer"
-        class="px-6 py-3 rounded-lg border-2 border-game-sky-blue text-game-sky-blue font-body text-sm transition-colors hover:bg-game-sky-blue hover:text-game-sky-dark"
+        class="px-6 py-3 rounded-lg border-2 border-game-sky-blue text-game-sky-blue font-body text-sm transition-all hover:bg-game-sky-blue hover:text-game-sky-dark btn-hover-glow"
       >
         GitHub
       </a>
     </div>
 
     <!-- Decorative coin counter -->
-    <div class="absolute top-24 right-8 flex items-center gap-2 font-pixel text-xs text-game-coin-gold" aria-hidden="true">
+    <div class="absolute top-24 right-8 flex items-center gap-2 font-pixel text-xs text-game-coin-gold hover:scale-110 transition-transform cursor-default" aria-hidden="true">
       <span class="coin-spin">&#9679;</span>
       <span>x 42</span>
     </div>
@@ -115,7 +115,7 @@ import Layout from '../layouts/Layout.astro';
   <!-- Section 2: Demo - World 1-1 -->
   <section aria-labelledby="demo-heading" class="py-20 px-6">
     <div class="max-w-4xl mx-auto">
-      <h2 id="demo-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-10 tracking-wider">
+      <h2 id="demo-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-14 tracking-wider">
         WORLD 1-1
       </h2>
       <div class="relative pixel-border rounded-lg overflow-hidden">
@@ -150,7 +150,7 @@ import Layout from '../layouts/Layout.astro';
 
   <!-- Section 3: Features - Power-Ups -->
   <section aria-labelledby="features-heading" class="py-20 px-6 max-w-6xl mx-auto">
-    <h2 id="features-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-12 tracking-wider">
+    <h2 id="features-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-14 tracking-wider">
       POWER-UPS
     </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -158,58 +158,58 @@ import Layout from '../layouts/Layout.astro';
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Per-Session Floaters</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Each Claude Code or Codex session gets its own floater instead of one global status box.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Per-Session Floaters</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Each Claude Code or Codex session gets its own floater instead of one global status box.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Zero Focus Stealing</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Non-activating NSPanel windows stay above apps without interrupting typing or mouse focus.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Zero Focus Stealing</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Non-activating NSPanel windows stay above apps without interrupting typing or mouse focus.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Project-Aware Labels</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Each floater shows the current folder name, so multiple sessions stay easy to scan.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Project-Aware Labels</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Each floater shows the current folder name, so multiple sessions stay easy to scan.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Drag, Close, Arrange</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Move floaters anywhere, close the ones you do not need, restack them from the menu bar, or click a floater to open its project in VS Code.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Drag, Close, Arrange</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Move floaters anywhere, close the ones you do not need, restack them from the menu bar, or click a floater to open its project in VS Code.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Color-First Status</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Red means running. Green means complete. Status stays readable without extra words.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Color-First Status</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Red means running. Green means complete. Status stays readable without extra words.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Claude and Codex</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Both tools get live session discovery. Codex can infer task state from session logs. Claude still works best with hooks.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Claude and Codex</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Both tools get live session discovery. Codex can infer task state from session logs. Claude still works best with hooks.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
           <path stroke-linecap="square" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">Render Modes</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">Super Slay turns effects up, Slay keeps the standard animated look, and Lame strips heavy repeat effects for the lowest CPU.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">Render Modes</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">Super Slay turns effects up, Slay keeps the standard animated look, and Lame strips heavy repeat effects for the lowest CPU.</p>
       </div>
       <div class="q-block bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-6 observe-hidden" data-observe>
         <svg class="w-8 h-8 text-game-coin-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="image-rendering: pixelated;">
           <path stroke-linecap="square" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-        <h3 class="font-pixel text-xs text-game-cloud-white mb-3 leading-relaxed">File Changes & Activity</h3>
-        <p class="text-sm font-body text-game-cloud-white/70">See git modified files count and time since last activity. Stay informed about what is happening in each session at a glance.</p>
+        <h3 class="font-pixel text-sm text-game-cloud-white mb-4 leading-relaxed">File Changes & Activity</h3>
+        <p class="text-sm font-body text-game-cloud-white/70 leading-relaxed tracking-wide">See git modified files count and time since last activity. Stay informed about what is happening in each session at a glance.</p>
       </div>
     </div>
   </section>
@@ -220,7 +220,7 @@ import Layout from '../layouts/Layout.astro';
   <!-- Section 4: Interactive Floater Playground - Mini-Game -->
   <section aria-labelledby="playground-heading" class="py-20 px-6">
     <div class="max-w-lg mx-auto">
-      <h2 id="playground-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-10 tracking-wider">
+      <h2 id="playground-heading" class="font-pixel text-sm text-game-coin-gold text-center mb-14 tracking-wider">
         MINI-GAME
       </h2>
       <div class="pixel-border-double rounded-lg p-1">
@@ -246,9 +246,9 @@ import Layout from '../layouts/Layout.astro';
             </div>
           </div>
           <div class="flex items-center justify-center gap-4 p-4 border-t-2 border-game-brick-brown/30">
-            <button data-status="running" class="status-btn px-4 py-2 rounded-full bg-game-mario-red text-white font-pixel text-[10px] active:scale-95 transition-transform border-2 border-red-800">Running</button>
-            <button data-status="idle" class="status-btn px-4 py-2 rounded-full bg-game-coin-gold text-game-sky-dark font-pixel text-[10px] active:scale-95 transition-transform border-2 border-yellow-700">Idle</button>
-            <button data-status="complete" class="status-btn px-4 py-2 rounded-full bg-game-pipe-green text-white font-pixel text-[10px] active:scale-95 transition-transform border-2 border-green-800">Complete</button>
+            <button data-status="running" class="status-btn status-btn-active px-4 py-2 rounded-full bg-game-mario-red text-white font-pixel text-[10px] active:scale-95 transition-all border-2 border-red-800 hover:scale-105">Running</button>
+            <button data-status="idle" class="status-btn px-4 py-2 rounded-full bg-game-coin-gold text-game-sky-dark font-pixel text-[10px] active:scale-95 transition-all border-2 border-yellow-700 hover:scale-105 opacity-70">Idle</button>
+            <button data-status="complete" class="status-btn px-4 py-2 rounded-full bg-game-pipe-green text-white font-pixel text-[10px] active:scale-95 transition-all border-2 border-green-800 hover:scale-105 opacity-70">Complete</button>
           </div>
         </div>
       </div>
@@ -259,27 +259,27 @@ import Layout from '../layouts/Layout.astro';
   <div class="ground-divider" aria-hidden="true"></div>
 
   <!-- Section 5: How It Works - Warp Zone -->
-  <section aria-labelledby="warp-heading" class="py-20 px-6 max-w-4xl mx-auto">
-    <h2 id="warp-heading" class="font-pixel text-sm text-game-pipe-green text-center mb-12 tracking-wider">
+  <section aria-labelledby="warp-heading" class="py-16 px-6 max-w-4xl mx-auto">
+    <h2 id="warp-heading" class="font-pixel text-sm text-game-pipe-green text-center mb-14 tracking-wider">
       WARP ZONE
     </h2>
     <div id="warp-flow" class="relative flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
       <div class="flex-1 flex flex-col items-center text-center">
         <div class="warp-pipe mb-4" aria-hidden="true"></div>
-        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">Hook Trigger</h3>
-        <p class="text-sm font-body text-game-cloud-white/60">Live process scan discovers sessions</p>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-2 leading-relaxed">Hook Trigger</h3>
+        <p class="text-sm font-body text-game-cloud-white/60 leading-relaxed tracking-wide">Live process scan discovers sessions</p>
       </div>
       <div class="hidden md:block text-game-coin-gold font-pixel text-lg" aria-hidden="true">&#9654;</div>
       <div class="flex-1 flex flex-col items-center text-center">
         <div class="warp-pipe mb-4" aria-hidden="true"></div>
-        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">CLI Command</h3>
-        <p class="text-sm font-body text-game-cloud-white/60">CLI sends status via FIFO pipe</p>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-2 leading-relaxed">CLI Command</h3>
+        <p class="text-sm font-body text-game-cloud-white/60 leading-relaxed tracking-wide">CLI sends status via FIFO pipe</p>
       </div>
       <div class="hidden md:block text-game-coin-gold font-pixel text-lg" aria-hidden="true">&#9654;</div>
       <div class="flex-1 flex flex-col items-center text-center">
         <div class="warp-pipe mb-4" aria-hidden="true"></div>
-        <h3 class="font-pixel text-[10px] text-game-cloud-white mb-2 leading-relaxed">Floater Appears</h3>
-        <p class="text-sm font-body text-game-cloud-white/60">Persistent floater appears per session</p>
+        <h3 class="font-pixel text-xs text-game-cloud-white mb-2 leading-relaxed">Floater Appears</h3>
+        <p class="text-sm font-body text-game-cloud-white/60 leading-relaxed tracking-wide">Persistent floater appears per session</p>
       </div>
       <div id="data-packet" class="data-packet hidden md:block" aria-hidden="true"></div>
     </div>
@@ -290,7 +290,7 @@ import Layout from '../layouts/Layout.astro';
 
   <!-- Section 6: Installation - Start Game -->
   <section id="installation" aria-labelledby="install-heading" class="py-20 px-6 max-w-4xl mx-auto">
-    <h2 id="install-heading" class="font-pixel text-sm text-game-mario-red text-center mb-10 tracking-wider">
+    <h2 id="install-heading" class="font-pixel text-sm text-game-mario-red text-center mb-14 tracking-wider">
       START GAME
     </h2>
     <div class="pixel-border rounded-lg overflow-hidden" style="background: #0f0f1a;">
@@ -301,7 +301,7 @@ import Layout from '../layouts/Layout.astro';
             <p class="font-body text-game-cloud-white mb-2">Clone the repository</p>
             <div class="relative scanlines rounded" style="background: #161625;">
               <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> git clone https://github.com/hieppp/floatify.git</code></pre>
-              <button onclick="copyAndCoin(this, 'git clone https://github.com/hieppp/floatify.git')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+              <button onclick="copyAndCoin(this, 'git clone https://github.com/hieppp/floatify.git')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-all hover:scale-110 hover:shadow-[0_0_12px_rgba(245,197,24,0.3)]">INSERT COIN</button>
             </div>
           </div>
         </li>
@@ -311,7 +311,7 @@ import Layout from '../layouts/Layout.astro';
             <p class="font-body text-game-cloud-white mb-2">Build and install</p>
             <div class="relative scanlines rounded" style="background: #161625;">
               <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> cd floatify && ./build.sh</code></pre>
-              <button onclick="copyAndCoin(this, 'cd floatify && ./build.sh')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+              <button onclick="copyAndCoin(this, 'cd floatify && ./build.sh')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-all hover:scale-110 hover:shadow-[0_0_12px_rgba(245,197,24,0.3)]">INSERT COIN</button>
             </div>
           </div>
         </li>
@@ -319,7 +319,7 @@ import Layout from '../layouts/Layout.astro';
           <span class="flex-shrink-0 w-8 h-8 bg-game-coin-gold text-game-sky-dark rounded-full flex items-center justify-center font-pixel text-xs">3</span>
           <div class="flex-1 min-w-0">
             <p class="font-body text-game-cloud-white mb-2">What build.sh does</p>
-            <p class="text-sm font-body text-game-cloud-white/60">Builds the app and CLI, installs Floatify.app to /Applications, updates /usr/local/bin/floatify, and relaunches the app.</p>
+            <p class="text-sm font-body text-game-cloud-white/60 leading-relaxed tracking-wide">Builds the app and CLI, installs Floatify.app to /Applications, updates /usr/local/bin/floatify, and relaunches the app.</p>
           </div>
         </li>
         <li class="flex items-start gap-4 p-5">
@@ -343,7 +343,7 @@ import Layout from '../layouts/Layout.astro';
     }]
   }
 }`}</code></pre>
-              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}],&quot;SessionEnd&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}],&quot;SessionEnd&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-all hover:scale-110 hover:shadow-[0_0_12px_rgba(245,197,24,0.3)]">INSERT COIN</button>
             </div>
           </div>
         </li>
@@ -368,7 +368,7 @@ import Layout from '../layouts/Layout.astro';
     }]
   }
 }`}</code></pre>
-              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;UserPromptSubmit&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status running&quot;}]}],&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+              <button onclick="copyAndCoin(this, '{&quot;hooks&quot;:{&quot;UserPromptSubmit&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status running&quot;}]}],&quot;Stop&quot;:[{&quot;hooks&quot;:[{&quot;type&quot;:&quot;command&quot;,&quot;command&quot;:&quot;floatify --status complete&quot;}]}]}}')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-all hover:scale-110 hover:shadow-[0_0_12px_rgba(245,197,24,0.3)]">INSERT COIN</button>
             </div>
           </div>
         </li>
@@ -379,14 +379,14 @@ import Layout from '../layouts/Layout.astro';
             <div class="relative scanlines rounded" style="background: #161625;">
               <pre class="p-3 font-mono text-sm text-game-cloud-white overflow-x-auto"><code><span class="text-game-coin-gold">$</span> floatify --status running
 <span class="text-game-coin-gold">$</span> floatify --status complete</code></pre>
-              <button onclick="copyAndCoin(this, 'floatify --status running')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">INSERT COIN</button>
+              <button onclick="copyAndCoin(this, 'floatify --status running')" class="absolute top-2 right-2 px-2 py-1 font-pixel text-[8px] text-game-coin-gold border border-game-coin-gold rounded hover:bg-game-coin-gold hover:text-game-sky-dark transition-all hover:scale-110 hover:shadow-[0_0_12px_rgba(245,197,24,0.3)]">INSERT COIN</button>
             </div>
           </div>
         </li>
       </ol>
     </div>
     <div class="mt-10 text-center">
-      <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-game-coin-gold text-game-coin-gold font-pixel text-xs rounded-lg hover:bg-game-coin-gold hover:text-game-sky-dark transition-colors">
+      <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-game-coin-gold text-game-coin-gold font-pixel text-xs rounded-lg hover:bg-game-coin-gold hover:text-game-sky-dark transition-all btn-hover-glow hover:shadow-[0_0_20px_rgba(245,197,24,0.3)]">
         CONTINUE?
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -399,25 +399,25 @@ import Layout from '../layouts/Layout.astro';
   <div class="ground-divider" aria-hidden="true"></div>
 
   <!-- Section 7: Game Options -->
-  <section aria-labelledby="options-heading" class="py-12 px-6 max-w-4xl mx-auto">
-    <h2 id="options-heading" class="font-pixel text-[10px] text-game-coin-gold text-center mb-8 tracking-wider">
+  <section aria-labelledby="options-heading" class="py-16 px-6 max-w-4xl mx-auto">
+    <h2 id="options-heading" class="font-pixel text-xs text-game-coin-gold text-center mb-10 tracking-wider">
       GAME OPTIONS
     </h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
-        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Render</p>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-5 game-card-hover">
+        <p class="font-pixel text-[10px] text-game-coin-gold mb-2">Render</p>
         <p class="text-xs font-body text-game-cloud-white/70">Super Slay, Slay, or Lame</p>
       </div>
-      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
-        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Theme</p>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-5 game-card-hover">
+        <p class="font-pixel text-[10px] text-game-coin-gold mb-2">Theme</p>
         <p class="text-xs font-body text-game-cloud-white/70">Dark or light palette</p>
       </div>
-      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
-        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Display</p>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-5 game-card-hover">
+        <p class="font-pixel text-[10px] text-game-coin-gold mb-2">Display</p>
         <p class="text-xs font-body text-game-cloud-white/70">Compact, regular, or large</p>
       </div>
-      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-4">
-        <p class="font-pixel text-[8px] text-game-coin-gold mb-1">Timeout</p>
+      <div class="bg-game-block-tan/10 border-2 border-game-brick-brown rounded-lg p-5 game-card-hover">
+        <p class="font-pixel text-[10px] text-game-coin-gold mb-2">Timeout</p>
         <p class="text-xs font-body text-game-cloud-white/70">Seconds before idle and complete</p>
       </div>
     </div>
@@ -427,12 +427,12 @@ import Layout from '../layouts/Layout.astro';
   </main>
 
   <!-- Footer -->
-  <footer class="py-8 px-6" style="background: linear-gradient(180deg, #3d2510 0%, #1a1a2e 100%);">
+  <footer class="py-10 px-6" style="background: linear-gradient(180deg, #3d2510 0%, #1a1a2e 100%);">
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-        <p class="font-pixel text-[8px] text-game-cloud-white/40">2026 FLOATIFY</p>
-        <span class="px-3 py-1 rounded border border-game-coin-gold/30 font-pixel text-[8px] text-game-coin-gold/60">MIT LICENSE</span>
-        <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="font-pixel text-[8px] text-game-cloud-white/40 hover:text-game-cloud-white transition-colors">GITHUB &#9654;</a>
+        <p class="font-pixel text-[10px] text-game-cloud-white/40">2026 FLOATIFY</p>
+        <span class="px-3 py-1 rounded border border-game-coin-gold/30 font-pixel text-[10px] text-game-coin-gold/60">MIT LICENSE</span>
+        <a href="https://github.com/hieppp/floatify" target="_blank" rel="noopener noreferrer" class="font-pixel text-[10px] text-game-cloud-white/40 hover:text-game-cloud-white transition-colors">GITHUB &#9654;</a>
       </div>
     </div>
   </footer>
@@ -496,18 +496,21 @@ import Layout from '../layouts/Layout.astro';
     }
   });
 
-  // --- Navbar scroll background ---
+  // --- Navbar scroll background + brand glow ---
   const navbar = document.getElementById("navbar");
+  const navBrand = document.getElementById("nav-brand");
   window.addEventListener("scroll", () => {
     if (!navbar) return;
     if (window.scrollY > 50) {
       navbar.style.background = "rgba(26, 26, 46, 0.95)";
       navbar.style.backdropFilter = "blur(10px)";
       navbar.style.borderBottom = "2px solid #C84C09";
+      navBrand?.classList.add("nav-brand-glow");
     } else {
       navbar.style.background = "transparent";
       navbar.style.backdropFilter = "none";
       navbar.style.borderBottom = "none";
+      navBrand?.classList.remove("nav-brand-glow");
     }
   });
 
@@ -548,6 +551,13 @@ import Layout from '../layouts/Layout.astro';
       const status = (btn as HTMLElement).dataset.status;
       if (!mockup || !dot) return;
       mockup.classList.remove("glow-red", "glow-yellow", "glow-green", "glow-red-pulse");
+      // Update active button styling
+      statusBtns.forEach((b) => {
+        (b as HTMLElement).classList.remove("status-btn-active");
+        (b as HTMLElement).classList.add("opacity-70");
+      });
+      (btn as HTMLElement).classList.add("status-btn-active");
+      (btn as HTMLElement).classList.remove("opacity-70");
       if (status === "running") {
         dot.style.background = "#E52521";
         mockup.classList.add("glow-red-pulse");
