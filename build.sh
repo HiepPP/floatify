@@ -43,12 +43,14 @@ build_target() {
 build_target "$APP_NAME"
 build_target "floatify"
 
+echo "Prebuilding floater effect frames..."
+FLOATIFY_PREBUILD_EFFECTS=1 "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
 echo "Quitting existing $APP_NAME..."
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 sleep 1
 
 echo "Installing $APP_NAME.app to $INSTALL_DIR..."
-rm -rf "$INSTALLED_APP_BUNDLE"
 ditto "$APP_BUNDLE" "$INSTALLED_APP_BUNDLE"
 
 echo "Symlinking floatify CLI..."

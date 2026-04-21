@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = FloatifySettings.shared
@@ -14,10 +15,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var idleTransitionTimers: [String: Timer] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if ProcessInfo.processInfo.environment["FLOATIFY_PREBUILD_EFFECTS"] == "1" {
+            do {
+                let summary = try SlaySnapshotCache.prebuildBundledAssets(settings: settings)
+                NSLog(
+                    "Floatify: prebuilt %d effect sequences (%d frames)",
+                    summary.sequenceCount,
+                    summary.frameCount
+                )
+            } catch {
+                NSLog("Floatify: failed to prebuild effect frames: %@", error.localizedDescription)
+                exit(1)
+            }
+
+            exit(0)
+        }
+
         setupPipeListener()
         installCLIToolIfNeeded()
         SoundManager.shared.loadSounds()
         setupPersistentStatusFloater()
+
+        DispatchQueue.main.async {
+            SlaySnapshotCache.prewarmCurrentConfiguration(settings: self.settings)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
