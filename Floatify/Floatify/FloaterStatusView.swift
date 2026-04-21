@@ -173,24 +173,25 @@ private enum AvatarImageCache {
         return image
     }
 
-    static func staticImage(for source: FloaterAvatarImageSource) -> NSImage? {
-        let key = cacheKey(for: source)
+    static func staticImage(for source: FloaterAvatarImageSource, orientation: FloaterAvatarOrientation = .upright) -> NSImage? {
+        let key = "\(cacheKey(for: source)):static:\(orientation.rawValue)"
         let cacheKey = key as NSString
         if let cached = staticImages.object(forKey: cacheKey) {
             return cached
         }
 
         guard let url = url(for: source),
-              let image = NSImage(contentsOf: url) else {
+              let baseImage = NSImage(contentsOf: url) else {
             return nil
         }
 
+        let image = baseImage.applyingAvatarOrientation(orientation)
         staticImages.setObject(image, forKey: cacheKey)
         return image
     }
 
-    static func frameImage(for rect: CGRect, source: FloaterAvatarImageSource) -> NSImage? {
-        let key = "\(cacheKey(for: source)):\(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.size.width)):\(Int(rect.size.height))"
+    static func frameImage(for rect: CGRect, source: FloaterAvatarImageSource, orientation: FloaterAvatarOrientation = .upright) -> NSImage? {
+        let key = "\(cacheKey(for: source)):\(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.size.width)):\(Int(rect.size.height)):\(orientation.rawValue)"
         let cacheKey = key as NSString
         if let cached = croppedFrames.object(forKey: cacheKey) {
             return cached
@@ -201,7 +202,8 @@ private enum AvatarImageCache {
             return nil
         }
 
-        let image = NSImage(cgImage: cropped, size: rect.size)
+        let baseImage = NSImage(cgImage: cropped, size: rect.size)
+        let image = baseImage.applyingAvatarOrientation(orientation)
         croppedFrames.setObject(image, forKey: cacheKey)
         return image
     }
@@ -269,7 +271,7 @@ private struct SpriteAnimationView: View {
     var body: some View {
         Group {
             if let imageSource,
-               let image = AvatarImageCache.frameImage(for: frameRects[frameIndex], source: imageSource) {
+               let image = AvatarImageCache.frameImage(for: frameRects[frameIndex], source: imageSource, orientation: avatar.orientation) {
                 Image(nsImage: image)
                     .interpolation(.none)
                     .resizable()
@@ -308,7 +310,7 @@ private struct StaticAvatarImageView: View {
     var body: some View {
         Group {
             if let imageSource,
-               let image = AvatarImageCache.staticImage(for: imageSource) {
+               let image = AvatarImageCache.staticImage(for: imageSource, orientation: avatar.orientation) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -2435,6 +2437,35 @@ private extension NSImage {
     func floaterCGImage() -> CGImage? {
         cgImage(forProposedRect: nil, context: nil, hints: nil)
     }
+
+    func applyingAvatarOrientation(_ orientation: FloaterAvatarOrientation) -> NSImage {
+        guard orientation != .upright else { return self }
+
+        let transformed = NSImage(size: size)
+        transformed.lockFocus()
+        defer { transformed.unlockFocus() }
+
+        NSGraphicsContext.current?.imageInterpolation = .none
+
+        let transform = NSAffineTransform()
+        switch orientation {
+        case .upright:
+            break
+        case .flipVertical:
+            transform.translateX(by: 0, yBy: size.height)
+            transform.scaleX(by: 1, yBy: -1)
+        case .flipHorizontal:
+            transform.translateX(by: size.width, yBy: 0)
+            transform.scaleX(by: -1, yBy: 1)
+        case .rotate180:
+            transform.translateX(by: size.width, yBy: size.height)
+            transform.scaleX(by: -1, yBy: -1)
+        }
+        transform.concat()
+
+        draw(in: CGRect(origin: .zero, size: size))
+        return transformed
+    }
 }
 
 private func avatarSequenceImages(for avatar: FloaterAvatarDefinition?) -> [NSImage] {
@@ -2444,9 +2475,9 @@ private func avatarSequenceImages(for avatar: FloaterAvatarDefinition?) -> [NSIm
     case .automatic:
         return []
     case let .spriteSheet(imageSource, metadata, _):
-        return metadata.frameRects.compactMap { AvatarImageCache.frameImage(for: $0, source: imageSource) }
+        return metadata.frameRects.compactMap { AvatarImageCache.frameImage(for: $0, source: imageSource, orientation: avatar.orientation) }
     case let .staticImage(imageSource):
-        guard let image = AvatarImageCache.staticImage(for: imageSource) else { return [] }
+        guard let image = AvatarImageCache.staticImage(for: imageSource, orientation: avatar.orientation) else { return [] }
         return [image]
     }
 }

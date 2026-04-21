@@ -346,6 +346,7 @@ struct SettingsView: View {
     @State private var managedPackID = FloaterVisualConstants.personalPackID
     @State private var managedAvatarID = ""
     @State private var managedAvatarName = ""
+    @State private var managedAvatarOrientation: FloaterAvatarOrientation = .upright
     @State private var isManagingAvatar = false
     @State private var pendingDeleteAvatarID: String?
     @State private var pendingDeleteAvatarName = ""
@@ -370,9 +371,12 @@ struct SettingsView: View {
         let selectedManagedAvatar = selectedManagedAvatar(in: resolvedManagedPack)
         let hasCustomPacks = !customPacks.isEmpty
         let canImportAvatar = !trimmedImportAvatarName.isEmpty
-        let canRenameAvatar = selectedManagedAvatar != nil
+        let canSaveManagedAvatar = selectedManagedAvatar != nil
             && !trimmedManagedAvatarName.isEmpty
-            && trimmedManagedAvatarName != (selectedManagedAvatar?.displayName ?? "")
+            && (
+                trimmedManagedAvatarName != (selectedManagedAvatar?.displayName ?? "")
+                || managedAvatarOrientation != (selectedManagedAvatar?.orientation ?? .upright)
+            )
 
         Form {
             Section {
@@ -539,6 +543,7 @@ struct SettingsView: View {
                                             set: { newValue in
                                                 managedAvatarID = newValue
                                                 managedAvatarName = manageableAvatars.first(where: { $0.id == newValue })?.displayName ?? ""
+                                                managedAvatarOrientation = manageableAvatars.first(where: { $0.id == newValue })?.orientation ?? .upright
                                             }
                                         )
                                     ) {
@@ -557,15 +562,26 @@ struct SettingsView: View {
                                         .frame(width: 220)
                                 }
 
+                                LabeledContent("Direction") {
+                                    Picker("Direction", selection: $managedAvatarOrientation) {
+                                        ForEach(FloaterAvatarOrientation.allCases, id: \.self) { orientation in
+                                            Text(orientation.displayName).tag(orientation)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 220, alignment: .trailing)
+                                }
+
                                 LabeledContent("Actions") {
                                     Menu {
-                                        Button("Save Name") {
-                                            renameManagedAvatar(
+                                        Button("Save Avatar") {
+                                            saveManagedAvatar(
                                                 avatarID: selectedManagedAvatar.id,
                                                 pack: resolvedManagedPack
                                             )
                                         }
-                                        .disabled(isManagingAvatar || !canRenameAvatar)
+                                        .disabled(isManagingAvatar || !canSaveManagedAvatar)
 
                                         Divider()
 
@@ -1052,6 +1068,7 @@ struct SettingsView: View {
             managedPackID = FloaterVisualConstants.personalPackID
             managedAvatarID = ""
             managedAvatarName = ""
+            managedAvatarOrientation = .upright
             return
         }
 
@@ -1061,15 +1078,17 @@ struct SettingsView: View {
         let avatar = avatars.first(where: { $0.id == managedAvatarID }) ?? avatars.first
         managedAvatarID = avatar?.id ?? ""
         managedAvatarName = avatar?.displayName ?? ""
+        managedAvatarOrientation = avatar?.orientation ?? .upright
     }
 
-    private func renameManagedAvatar(avatarID: String, pack: FloaterVisualPack) {
+    private func saveManagedAvatar(avatarID: String, pack: FloaterVisualPack) {
         guard let packDirectoryURL = pack.sourceURL else {
             setVisualCatalogMessage("This pack cannot be edited.", level: .warning)
             return
         }
 
         let nextName = trimmedManagedAvatarName
+        let nextOrientation = managedAvatarOrientation
         guard !nextName.isEmpty else {
             setVisualCatalogMessage("Avatar display name is required.", level: .warning)
             return
@@ -1078,10 +1097,11 @@ struct SettingsView: View {
         isManagingAvatar = true
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let result = try FloaterVisualCatalog.renameAvatarAsset(
+                let result = try FloaterVisualCatalog.updateAvatarAsset(
                     avatarID: avatarID,
                     in: packDirectoryURL,
-                    displayName: nextName
+                    displayName: nextName,
+                    orientation: nextOrientation
                 )
 
                 DispatchQueue.main.async {
@@ -1096,12 +1116,12 @@ struct SettingsView: View {
                         selectedPackID: settings.selectedVisualPackID
                     )
                     isManagingAvatar = false
-                    setVisualCatalogMessage("Renamed avatar to \(result.avatarName ?? nextName).", level: .good)
+                    setVisualCatalogMessage("Saved avatar \(result.avatarName ?? nextName).", level: .good)
                 }
             } catch {
                 DispatchQueue.main.async {
                     isManagingAvatar = false
-                    setVisualCatalogMessage("Rename failed: \(error.localizedDescription)", level: .error)
+                    setVisualCatalogMessage("Save avatar failed: \(error.localizedDescription)", level: .error)
                 }
             }
         }

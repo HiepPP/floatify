@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ImageIO
 import Observation
 
 enum FloaterVisualConstants {
@@ -8,12 +9,33 @@ enum FloaterVisualConstants {
     static let personalPackName = "Personal"
     static let autoAvatarID = "auto"
     static let defaultEffectPresetID = "default"
-    static let avatarExtractorScriptPath = "/Users/hiep/Projects/floatify/animate-source/extract_avatar_sprites.py"
+    static let avatarImportBackgroundTolerance = 12
+    static let avatarImportPadding = 8
 }
 
 enum FloaterAvatarImageSource: Hashable {
     case bundledResource(name: String)
     case file(path: String)
+}
+
+enum FloaterAvatarOrientation: String, Codable, Hashable, CaseIterable {
+    case upright
+    case flipVertical
+    case flipHorizontal
+    case rotate180
+
+    var displayName: String {
+        switch self {
+        case .upright:
+            return "Normal"
+        case .flipVertical:
+            return "Flip Vertical"
+        case .flipHorizontal:
+            return "Flip Horizontal"
+        case .rotate180:
+            return "Rotate 180"
+        }
+    }
 }
 
 enum FloaterAvatarSource: Hashable {
@@ -26,6 +48,7 @@ struct FloaterAvatarDefinition: Identifiable, Hashable {
     let id: String
     let displayName: String
     let source: FloaterAvatarSource
+    let orientation: FloaterAvatarOrientation
 
     var isAutomatic: Bool {
         if case .automatic = source {
@@ -346,7 +369,8 @@ final class FloaterVisualCatalog {
                 type: .spriteSheet,
                 image: "sprites/\(avatarID).png",
                 frames: frameRects,
-                frameDuration: 0.16
+                frameDuration: 0.16,
+                orientation: .upright
             )
         )
 
@@ -368,10 +392,11 @@ final class FloaterVisualCatalog {
         )
     }
 
-    static func renameAvatarAsset(
+    static func updateAvatarAsset(
         avatarID: String,
         in packDirectoryURL: URL,
-        displayName: String
+        displayName: String,
+        orientation: FloaterAvatarOrientation
     ) throws -> FloaterManagedAvatarResult {
         let sanitizedName = sanitizedAvatarName(displayName)
         var manifest = try loadPackManifest(from: packDirectoryURL)
@@ -381,6 +406,7 @@ final class FloaterVisualCatalog {
         }
 
         manifest.avatars[avatarIndex].name = sanitizedName
+        manifest.avatars[avatarIndex].orientation = orientation
         try writePackManifest(manifest, to: packDirectoryURL)
 
         return FloaterManagedAvatarResult(
@@ -460,11 +486,13 @@ final class FloaterVisualCatalog {
             FloaterAvatarDefinition(
                 id: FloaterVisualConstants.autoAvatarID,
                 displayName: "Automatic",
-                source: .automatic
+                source: .automatic,
+                orientation: .upright
             )
         ]
 
         for avatar in manifest.avatars {
+            let orientation = avatar.orientation ?? .upright
             switch avatar.type {
             case .automatic:
                 continue
@@ -486,7 +514,8 @@ final class FloaterVisualCatalog {
                             imageSource: .file(path: fileURL.path),
                             metadata: metadata,
                             frameDuration: avatar.frameDuration ?? 0.16
-                        )
+                        ),
+                        orientation: orientation
                     )
                 )
             case .staticImage:
@@ -498,7 +527,8 @@ final class FloaterVisualCatalog {
                     FloaterAvatarDefinition(
                         id: avatar.id,
                         displayName: avatar.name,
-                        source: .staticImage(imageSource: .file(path: fileURL.path))
+                        source: .staticImage(imageSource: .file(path: fileURL.path)),
+                        orientation: orientation
                     )
                 )
             }
@@ -513,7 +543,8 @@ final class FloaterVisualCatalog {
             FloaterAvatarDefinition(
                 id: FloaterVisualConstants.autoAvatarID,
                 displayName: "Automatic",
-                source: .automatic
+                source: .automatic,
+                orientation: .upright
             )
         ] + bundledSheets.map { sheetName in
             FloaterAvatarDefinition(
@@ -523,7 +554,8 @@ final class FloaterVisualCatalog {
                     imageSource: .bundledResource(name: sheetName),
                     metadata: SpriteSheetMetadata.forSheet(sheetName),
                     frameDuration: 0.16
-                )
+                ),
+                orientation: .upright
             )
         }
 
@@ -625,67 +657,92 @@ final class FloaterVisualCatalog {
     }
 
     private static func runAvatarExtractor(inputURL: URL, outputURL: URL) throws -> SpriteExtractionInfo {
-        let scriptURL = URL(fileURLWithPath: FloaterVisualConstants.avatarExtractorScriptPath)
-        guard FileManager.default.fileExists(atPath: scriptURL.path) else {
-            throw AvatarImportError.extractorMissing(scriptURL.path)
-        }
+        var image = try RGBAImage(contentsOf: inputURL)
+        let background = image.colorAt(x: 0, y: 0)
+        var occupiedColumns = [Bool](repeating: false, count: image.width)
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            scriptURL.path,
-            inputURL.path,
-            "--output",
-            outputURL.path
-        ]
+        for y in 0..<image.height {
+            for x in 0..<image.width {
+                let pixel = image.colorAt(x: x, y: y)
+                if isBackground(
+                    pixel,
+                    background: background,
+                    tolerance: FloaterVisualConstants.avatarImportBackgroundTolerance
+                ) {
+                    image.setColor(pixel.withAlpha(0), atX: x, y: y)
+                }
 
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-        guard process.terminationStatus == 0 else {
-            throw AvatarImportError.extractorFailed((stderr.isEmpty ? stdout : stderr).trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-
-        guard let metadata = parseExtractionInfo(from: stdout) else {
-            throw AvatarImportError.invalidExtractorOutput(stdout.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-
-        return metadata
-    }
-
-    private static func parseExtractionInfo(from output: String) -> SpriteExtractionInfo? {
-        var frameCount: Int?
-        var cellWidth: Int?
-        var cellHeight: Int?
-
-        for rawLine in output.split(whereSeparator: \.isNewline) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            if line.hasPrefix("Frames: ") {
-                frameCount = Int(line.replacingOccurrences(of: "Frames: ", with: ""))
-            } else if line.hasPrefix("Cell size: ") {
-                let value = line.replacingOccurrences(of: "Cell size: ", with: "")
-                let parts = value.split(separator: "x")
-                if parts.count == 2 {
-                    cellWidth = Int(parts[0])
-                    cellHeight = Int(parts[1])
+                if image.alphaAt(x: x, y: y) > 0 {
+                    occupiedColumns[x] = true
                 }
             }
         }
 
-        guard let frameCount, let cellWidth, let cellHeight, frameCount > 0, cellWidth > 0, cellHeight > 0 else {
-            return nil
+        let segments = findSegments(in: occupiedColumns)
+        guard !segments.isEmpty else {
+            throw AvatarImportError.extractorFailed("No visible frames found after background removal.")
         }
 
-        return SpriteExtractionInfo(frameCount: frameCount, cellWidth: cellWidth, cellHeight: cellHeight)
+        let frames = segments.compactMap { left, right -> RGBAImage? in
+            var top: Int?
+            var bottom: Int?
+
+            for y in 0..<image.height where image.hasVisiblePixel(inRow: y, left: left, right: right) {
+                top = y
+                break
+            }
+
+            for y in stride(from: image.height - 1, through: 0, by: -1) where image.hasVisiblePixel(inRow: y, left: left, right: right) {
+                bottom = y
+                break
+            }
+
+            guard let top, let bottom else { return nil }
+            return image.cropped(left: left, right: right, top: top, bottom: bottom)
+        }
+
+        guard !frames.isEmpty else {
+            throw AvatarImportError.extractorFailed("No visible frames found after background removal.")
+        }
+
+        let cellWidth = (frames.map(\.width).max() ?? 0) + FloaterVisualConstants.avatarImportPadding * 2
+        let cellHeight = (frames.map(\.height).max() ?? 0) + FloaterVisualConstants.avatarImportPadding * 2
+        var sheet = RGBAImage(width: cellWidth * frames.count, height: cellHeight)
+
+        for (index, frame) in frames.enumerated() {
+            let originX = index * cellWidth + (cellWidth - frame.width) / 2
+            let originY = (cellHeight - frame.height) / 2
+            sheet.draw(frame, atX: originX, y: originY)
+        }
+
+        try sheet.writePNG(to: outputURL)
+        return SpriteExtractionInfo(frameCount: frames.count, cellWidth: cellWidth, cellHeight: cellHeight)
+    }
+
+    private static func isBackground(_ pixel: RGBAColor, background: RGBAColor, tolerance: Int) -> Bool {
+        abs(Int(pixel.red) - Int(background.red)) <= tolerance
+            && abs(Int(pixel.green) - Int(background.green)) <= tolerance
+            && abs(Int(pixel.blue) - Int(background.blue)) <= tolerance
+    }
+
+    private static func findSegments(in occupiedColumns: [Bool]) -> [(Int, Int)] {
+        var segments: [(Int, Int)] = []
+        var start: Int?
+
+        for (x, isOccupied) in occupiedColumns.enumerated() {
+            if isOccupied, start == nil {
+                start = x
+            } else if !isOccupied, let startX = start {
+                segments.append((startX, x - 1))
+                start = nil
+            }
+        }
+
+        if let start {
+            segments.append((start, occupiedColumns.count - 1))
+        }
+
+        return segments
     }
 
     private static func sanitizedAvatarName(_ value: String) -> String {
@@ -775,6 +832,7 @@ private struct PackAvatarManifest: Codable {
     var image: String?
     var frames: [PackRectManifest]?
     var frameDuration: TimeInterval?
+    var orientation: FloaterAvatarOrientation?
 }
 
 private struct PackRectManifest: Codable {
@@ -841,20 +899,203 @@ private struct SpriteExtractionInfo {
     let cellHeight: Int
 }
 
+private struct RGBAColor {
+    let red: UInt8
+    let green: UInt8
+    let blue: UInt8
+    let alpha: UInt8
+
+    func withAlpha(_ alpha: UInt8) -> Self {
+        Self(red: red, green: green, blue: blue, alpha: alpha)
+    }
+}
+
+private struct RGBAImage {
+    let width: Int
+    let height: Int
+    private(set) var pixels: [UInt8]
+
+    init(contentsOf url: URL) throws {
+        if let image = NSImage(contentsOf: url),
+           let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            try self.init(cgImage: cgImage)
+            return
+        }
+
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw AvatarImportError.invalidSourceImage(url.path)
+        }
+        try self.init(cgImage: cgImage)
+    }
+
+    init(cgImage: CGImage) throws {
+        width = cgImage.width
+        height = cgImage.height
+        pixels = Array(repeating: 0, count: width * height * 4)
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        let bytesPerRow = width * 4
+
+        let rendered = pixels.withUnsafeMutableBytes { bytes in
+            guard let context = CGContext(
+                data: bytes.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo
+            ) else {
+                return false
+            }
+
+            context.interpolationQuality = .none
+            context.translateBy(x: 0, y: CGFloat(height))
+            context.scaleBy(x: 1, y: -1)
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+
+        guard rendered else {
+            throw AvatarImportError.bitmapContextUnavailable
+        }
+    }
+
+    init(width: Int, height: Int, fill: RGBAColor = RGBAColor(red: 0, green: 0, blue: 0, alpha: 0)) {
+        self.width = width
+        self.height = height
+        pixels = Array(repeating: 0, count: width * height * 4)
+
+        guard fill.red != 0 || fill.green != 0 || fill.blue != 0 || fill.alpha != 0 else {
+            return
+        }
+
+        for y in 0..<height {
+            for x in 0..<width {
+                setColor(fill, atX: x, y: y)
+            }
+        }
+    }
+
+    func colorAt(x: Int, y: Int) -> RGBAColor {
+        let index = pixelIndex(x: x, y: y)
+        return RGBAColor(
+            red: pixels[index],
+            green: pixels[index + 1],
+            blue: pixels[index + 2],
+            alpha: pixels[index + 3]
+        )
+    }
+
+    func alphaAt(x: Int, y: Int) -> UInt8 {
+        pixels[pixelIndex(x: x, y: y) + 3]
+    }
+
+    mutating func setColor(_ color: RGBAColor, atX x: Int, y: Int) {
+        let index = pixelIndex(x: x, y: y)
+        pixels[index] = color.red
+        pixels[index + 1] = color.green
+        pixels[index + 2] = color.blue
+        pixels[index + 3] = color.alpha
+    }
+
+    func hasVisiblePixel(inRow y: Int, left: Int, right: Int) -> Bool {
+        for x in left...right where alphaAt(x: x, y: y) > 0 {
+            return true
+        }
+        return false
+    }
+
+    func cropped(left: Int, right: Int, top: Int, bottom: Int) -> Self {
+        var cropped = Self(width: right - left + 1, height: bottom - top + 1)
+        for y in top...bottom {
+            for x in left...right {
+                cropped.setColor(colorAt(x: x, y: y), atX: x - left, y: y - top)
+            }
+        }
+        return cropped
+    }
+
+    mutating func draw(_ image: Self, atX originX: Int, y originY: Int) {
+        for y in 0..<image.height {
+            for x in 0..<image.width {
+                setColor(image.colorAt(x: x, y: y), atX: originX + x, y: originY + y)
+            }
+        }
+    }
+
+    func writePNG(to url: URL) throws {
+        guard let cgImage = makeCGImage() else {
+            throw AvatarImportError.extractorFailed("Failed to encode sprite sheet PNG.")
+        }
+
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else {
+            throw AvatarImportError.extractorFailed("Failed to create PNG writer for \(url.path).")
+        }
+
+        CGImageDestinationAddImage(destination, cgImage, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw AvatarImportError.extractorFailed("Failed to write PNG sprite sheet to \(url.path).")
+        }
+    }
+
+    private func makeCGImage() -> CGImage? {
+        let data = Data(displayPixels())
+        guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+
+        return CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        )
+    }
+
+    private func pixelIndex(x: Int, y: Int) -> Int {
+        ((y * width) + x) * 4
+    }
+
+    private func displayPixels() -> [UInt8] {
+        let bytesPerRow = width * 4
+        guard height > 1 else { return pixels }
+
+        var display = Array(repeating: UInt8(0), count: pixels.count)
+        for row in 0..<height {
+            let sourceStart = row * bytesPerRow
+            let sourceEnd = sourceStart + bytesPerRow
+            let targetStart = (height - row - 1) * bytesPerRow
+            display.replaceSubrange(targetStart..<(targetStart + bytesPerRow), with: pixels[sourceStart..<sourceEnd])
+        }
+        return display
+    }
+}
+
 private enum AvatarImportError: LocalizedError {
-    case extractorMissing(String)
+    case invalidSourceImage(String)
+    case bitmapContextUnavailable
     case extractorFailed(String)
-    case invalidExtractorOutput(String)
     case avatarMissing(String)
 
     var errorDescription: String? {
         switch self {
-        case let .extractorMissing(path):
-            return "Extractor script not found at \(path)"
+        case let .invalidSourceImage(path):
+            return "Failed to read avatar source image at \(path)."
+        case .bitmapContextUnavailable:
+            return "Failed to prepare image buffer for avatar import."
         case let .extractorFailed(message):
             return message.isEmpty ? "Sprite extraction failed." : message
-        case let .invalidExtractorOutput(output):
-            return output.isEmpty ? "Sprite extractor returned invalid output." : output
         case let .avatarMissing(avatarID):
             return "Avatar '\(avatarID)' was not found in this pack."
         }
