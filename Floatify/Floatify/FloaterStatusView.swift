@@ -1135,8 +1135,9 @@ private struct SlayStageSnapshotContent: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.black.opacity(state == .running ? 0.42 : 0.34),
-                            FloaterPalette.panelShadow.opacity(scaledOpacity(state == .running ? 0.66 : 0.54)),
+                            color.opacity(scaledOpacity(stageCoreOpacity)),
+                            color.opacity(scaledOpacity(stageMidOpacity)),
+                            FloaterPalette.panelShadow.opacity(stageShadowOpacity),
                             .clear
                         ],
                         center: .center,
@@ -1156,6 +1157,39 @@ private struct SlayStageSnapshotContent: View {
             }
         }
         .frame(width: stageSize, height: stageSize)
+    }
+
+    private var stageCoreOpacity: Double {
+        switch state {
+        case .running:
+            return isSuperSlay ? 0.56 : 0.48
+        case .idle:
+            return isSuperSlay ? 0.46 : 0.40
+        case .complete:
+            return isSuperSlay ? 0.42 : 0.36
+        }
+    }
+
+    private var stageMidOpacity: Double {
+        switch state {
+        case .running:
+            return isSuperSlay ? 0.34 : 0.28
+        case .idle:
+            return isSuperSlay ? 0.28 : 0.22
+        case .complete:
+            return isSuperSlay ? 0.24 : 0.20
+        }
+    }
+
+    private var stageShadowOpacity: Double {
+        switch state {
+        case .running:
+            return 0.18
+        case .idle:
+            return 0.14
+        case .complete:
+            return 0.12
+        }
     }
 
     private var runningContent: some View {
@@ -3057,27 +3091,27 @@ struct FloaterStatusView: View {
     private var avatarBackgroundPrimaryOpacity: Double {
         guard let statusState else { return 0.18 }
         switch statusState {
-        case .running: return 0.42
-        case .idle: return 0.34
-        case .complete: return 0.30
+        case .running: return 0.66
+        case .idle: return 0.58
+        case .complete: return 0.54
         }
     }
 
     private var avatarBackgroundSecondaryOpacity: Double {
         guard let statusState else { return 0.08 }
         switch statusState {
-        case .running: return 0.24
-        case .idle: return 0.20
-        case .complete: return 0.18
+        case .running: return 0.40
+        case .idle: return 0.34
+        case .complete: return 0.30
         }
     }
 
     private var avatarBackgroundBorderOpacity: Double {
         guard let statusState else { return 0.08 }
         switch statusState {
-        case .running: return 0.18
-        case .idle: return 0.16
-        case .complete: return 0.14
+        case .running: return 0.34
+        case .idle: return 0.30
+        case .complete: return 0.28
         }
     }
 
@@ -3360,14 +3394,14 @@ struct FloaterStatusView: View {
         if usesMinimalRenderMode {
             ZStack {
                 Circle()
-                    .fill(accentColor.opacity(0.18))
+                    .fill(accentColor.opacity(0.34))
                     .frame(
                         width: floaterSize.persistentStageSize * 0.58,
                         height: floaterSize.persistentStageSize * 0.58
                     )
 
                 Circle()
-                    .fill(accentColor.opacity(0.94))
+                    .fill(accentColor)
                     .frame(
                         width: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22),
                         height: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22)
@@ -3396,10 +3430,22 @@ struct FloaterStatusView: View {
         Rectangle()
             .fill(avatarBackgroundFill)
             .overlay {
+                RadialGradient(
+                    colors: [
+                        accentColor.opacity(usesMinimalRenderMode ? 0.28 : 0.34),
+                        accentColor.opacity(0.10),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: floaterSize.persistentStageSize * 0.08,
+                    endRadius: floaterSize.avatarHitSize * 0.58
+                )
+            }
+            .overlay {
                 if !usesMinimalRenderMode {
                     LinearGradient(
                         colors: [
-                            FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.18 : 0.10),
+                            FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.20 : 0.12),
                             .clear
                         ],
                         startPoint: .top,
@@ -3409,19 +3455,19 @@ struct FloaterStatusView: View {
             }
             .overlay(
                 Rectangle()
-                    .strokeBorder(accentColor.opacity(avatarBackgroundBorderOpacity), lineWidth: 0.8)
+                    .strokeBorder(accentColor.opacity(avatarBackgroundBorderOpacity), lineWidth: 1.0)
             )
             .overlay(alignment: .trailing) {
                 Rectangle()
                     .fill(accentColor.opacity(avatarBackgroundBorderOpacity))
-                    .frame(width: 1)
-                    .padding(.vertical, 4)
+                    .frame(width: 2)
+                    .padding(.vertical, 3)
             }
     }
 
     private var avatarBackgroundFill: AnyShapeStyle {
         if usesMinimalRenderMode {
-            return AnyShapeStyle(accentColor.opacity(0.20))
+            return AnyShapeStyle(accentColor.opacity(0.44))
         }
 
         return AnyShapeStyle(
@@ -3429,7 +3475,8 @@ struct FloaterStatusView: View {
                 colors: [
                     accentColor.opacity(scaledGlow(avatarBackgroundPrimaryOpacity)),
                     accentColor.opacity(scaledGlow(avatarBackgroundSecondaryOpacity)),
-                    FloaterPalette.panelShadow.opacity(0.92)
+                    accentColor.opacity(0.24),
+                    FloaterPalette.panelShadow.opacity(0.34)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
