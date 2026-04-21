@@ -208,7 +208,7 @@ private enum AvatarImageCache {
         return image
     }
 
-    private static func cacheKey(for source: FloaterAvatarImageSource) -> String {
+    fileprivate static func cacheKey(for source: FloaterAvatarImageSource) -> String {
         switch source {
         case let .bundledResource(name):
             return "bundle:\(name)"
@@ -223,6 +223,64 @@ private enum AvatarImageCache {
             return Bundle.main.url(forResource: name, withExtension: "png")
         case let .file(path):
             return URL(fileURLWithPath: path)
+        }
+    }
+}
+
+@MainActor
+private enum AvatarRasterSequenceCache {
+    private static var sequences: [String: SlayRasterSequence] = [:]
+
+    static func sequence(for avatar: FloaterAvatarDefinition?, animated: Bool) -> SlayRasterSequence? {
+        guard let avatar else { return nil }
+
+        let key = cacheKey(for: avatar, animated: animated)
+        if let cached = sequences[key] {
+            return cached
+        }
+
+        let images: [NSImage]
+        switch avatar.source {
+        case .automatic:
+            images = []
+        case let .spriteSheet(imageSource, metadata, _):
+            let frameRects = animated ? metadata.frameRects : Array(metadata.frameRects.prefix(1))
+            images = frameRects.compactMap {
+                AvatarImageCache.frameImage(for: $0, source: imageSource, orientation: avatar.orientation)
+            }
+        case let .staticImage(imageSource):
+            guard let image = AvatarImageCache.staticImage(for: imageSource, orientation: avatar.orientation) else {
+                return nil
+            }
+            images = [image]
+        }
+
+        guard let sequence = rasterSequence(from: images) else { return nil }
+        sequences[key] = sequence
+        return sequence
+    }
+
+    private static func cacheKey(for avatar: FloaterAvatarDefinition, animated: Bool) -> String {
+        switch avatar.source {
+        case .automatic:
+            return "automatic:\(avatar.id):\(animated ? "animated" : "static")"
+        case let .spriteSheet(imageSource, metadata, _):
+            let rectKey = metadata.frameRects.map {
+                "\(Int($0.origin.x))-\(Int($0.origin.y))-\(Int($0.size.width))-\(Int($0.size.height))"
+            }.joined(separator: ",")
+            return [
+                "sprite",
+                AvatarImageCache.cacheKey(for: imageSource),
+                avatar.orientation.rawValue,
+                animated ? "animated" : "static",
+                rectKey
+            ].joined(separator: ":")
+        case let .staticImage(imageSource):
+            return [
+                "static",
+                AvatarImageCache.cacheKey(for: imageSource),
+                avatar.orientation.rawValue
+            ].joined(separator: ":")
         }
     }
 }
@@ -995,12 +1053,42 @@ private struct SlayRainbowBorderCacheKey: Hashable {
     let intensityBucket: Int
 }
 
+private struct SlayCompletionFlashCacheKey: Hashable {
+    let width: Int
+    let height: Int
+    let cornerRadius: Int
+    let renderMode: FloaterRenderMode
+    let colorKey: String
+    let glowBucket: Int
+    let flashBucket: Int
+}
+
+private struct SlayCompletionBurstCacheKey: Hashable {
+    let size: Int
+    let renderMode: FloaterRenderMode
+    let colorKey: String
+    let glowBucket: Int
+    let flashBucket: Int
+    let extraCompletionRays: Int
+    let extraCompletionOrbs: Int
+}
+
+private struct SlayIdleSparkleCacheKey: Hashable {
+    let size: Int
+    let renderMode: FloaterRenderMode
+    let colorKey: String
+    let glowBucket: Int
+}
+
 private enum SlayPrebuiltSequenceKind: String {
     case stage = "stage"
     case sheen = "sheen"
     case ledStrip = "led-strip"
     case scanSweep = "scan-sweep"
     case rainbowBorder = "rainbow-border"
+    case completionFlash = "completion-flash"
+    case completionBurst = "completion-burst"
+    case idleSparkle = "idle-sparkle"
 }
 
 struct SlayPrebuildSummary {
@@ -1096,6 +1184,45 @@ private extension SlayRainbowBorderCacheKey {
     }
 }
 
+private extension SlayCompletionFlashCacheKey {
+    var cacheIdentifier: String {
+        [
+            "w\(width)",
+            "h\(height)",
+            "corner\(cornerRadius)",
+            "mode\(renderMode.rawValue)",
+            "color\(colorKey)",
+            "glow\(glowBucket)",
+            "flash\(flashBucket)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlayCompletionBurstCacheKey {
+    var cacheIdentifier: String {
+        [
+            "size\(size)",
+            "mode\(renderMode.rawValue)",
+            "color\(colorKey)",
+            "glow\(glowBucket)",
+            "flash\(flashBucket)",
+            "rays\(extraCompletionRays)",
+            "orbs\(extraCompletionOrbs)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlayIdleSparkleCacheKey {
+    var cacheIdentifier: String {
+        [
+            "size\(size)",
+            "mode\(renderMode.rawValue)",
+            "color\(colorKey)",
+            "glow\(glowBucket)"
+        ].joined(separator: "_")
+    }
+}
+
 private extension NSColor {
     var floaterCacheKey: String {
         let converted = usingColorSpace(.deviceRGB) ?? self
@@ -1117,6 +1244,9 @@ enum SlaySnapshotCache {
     private static var ledStripFrameCache: [SlayLEDStripCacheKey: SlayRasterSequence] = [:]
     private static var scanSweepFrameCache: [SlayScanSweepCacheKey: SlayRasterSequence] = [:]
     private static var rainbowBorderFrameCache: [SlayRainbowBorderCacheKey: SlayRasterSequence] = [:]
+    private static var completionFlashFrameCache: [SlayCompletionFlashCacheKey: SlayRasterSequence] = [:]
+    private static var completionBurstFrameCache: [SlayCompletionBurstCacheKey: SlayRasterSequence] = [:]
+    private static var idleSparkleFrameCache: [SlayIdleSparkleCacheKey: SlayRasterSequence] = [:]
     private static var missingPrebuiltSequences: Set<String> = []
 
     fileprivate static func stageFrames(
@@ -1261,6 +1391,111 @@ enum SlaySnapshotCache {
         return frames
     }
 
+    fileprivate static func completionFlashFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayRasterSequence? {
+        let cacheKey = completionFlashCacheKey(
+            renderMode: renderMode,
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )
+
+        if let cached = completionFlashFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .completionFlash, identifier: cacheKey.cacheIdentifier) {
+            completionFlashFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeCompletionFlashFrames(
+            renderMode: renderMode,
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )) else {
+            return nil
+        }
+        completionFlashFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func completionBurstFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayRasterSequence? {
+        let cacheKey = completionBurstCacheKey(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+
+        if let cached = completionBurstFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .completionBurst, identifier: cacheKey.cacheIdentifier) {
+            completionBurstFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeCompletionBurstFrames(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )) else {
+            return nil
+        }
+        completionBurstFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func idleSparkleFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayRasterSequence? {
+        let cacheKey = idleSparkleCacheKey(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+
+        if let cached = idleSparkleFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .idleSparkle, identifier: cacheKey.cacheIdentifier) {
+            idleSparkleFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeIdleSparkleFrames(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )) else {
+            return nil
+        }
+        idleSparkleFrameCache[cacheKey] = frames
+        return frames
+    }
+
     static func prebuildBundledAssets(
         settings: FloatifySettings = .shared,
         catalog: FloaterVisualCatalog = .shared
@@ -1308,6 +1543,8 @@ enum SlaySnapshotCache {
                         }
 
                         let runningColor = FloaterPalette.statusColor(for: .running, theme: theme)
+                        let idleColor = FloaterPalette.statusColor(for: .idle, theme: theme)
+                        let completeColor = FloaterPalette.statusColor(for: .complete, theme: theme)
                         let sheenKey = sheenCacheKey(
                             renderMode: renderMode,
                             color: runningColor,
@@ -1326,6 +1563,76 @@ enum SlaySnapshotCache {
                         try writePrebuiltSequence(sheenSequence, kind: .sheen, identifier: sheenKey.cacheIdentifier, rootURL: outputRoot)
                         sequenceCount += 1
                         frameCount += sheenSequence.frameCount
+
+                        let idleSparkleKey = idleSparkleCacheKey(
+                            renderMode: renderMode,
+                            color: idleColor,
+                            stageSize: stageSize,
+                            effectTuning: preset.tuning
+                        )
+                        let idleSparkleFrames = makeIdleSparkleFrames(
+                            renderMode: renderMode,
+                            color: idleColor,
+                            stageSize: stageSize,
+                            effectTuning: preset.tuning
+                        )
+                        guard let idleSparkleSequence = makeSequence(from: idleSparkleFrames) else { continue }
+                        try writePrebuiltSequence(
+                            idleSparkleSequence,
+                            kind: .idleSparkle,
+                            identifier: idleSparkleKey.cacheIdentifier,
+                            rootURL: outputRoot
+                        )
+                        sequenceCount += 1
+                        frameCount += idleSparkleSequence.frameCount
+
+                        for effectColor in [runningColor, idleColor, completeColor] {
+                            let completionFlashKey = completionFlashCacheKey(
+                                renderMode: renderMode,
+                                color: effectColor,
+                                cornerRadius: floaterSize.cornerRadius,
+                                size: panelSize,
+                                effectTuning: preset.tuning
+                            )
+                            let completionFlashFrames = makeCompletionFlashFrames(
+                                renderMode: renderMode,
+                                color: effectColor,
+                                cornerRadius: floaterSize.cornerRadius,
+                                size: panelSize,
+                                effectTuning: preset.tuning
+                            )
+                            guard let completionFlashSequence = makeSequence(from: completionFlashFrames) else { continue }
+                            try writePrebuiltSequence(
+                                completionFlashSequence,
+                                kind: .completionFlash,
+                                identifier: completionFlashKey.cacheIdentifier,
+                                rootURL: outputRoot
+                            )
+                            sequenceCount += 1
+                            frameCount += completionFlashSequence.frameCount
+
+                            let completionBurstKey = completionBurstCacheKey(
+                                renderMode: renderMode,
+                                color: effectColor,
+                                stageSize: stageSize,
+                                effectTuning: preset.tuning
+                            )
+                            let completionBurstFrames = makeCompletionBurstFrames(
+                                renderMode: renderMode,
+                                color: effectColor,
+                                stageSize: stageSize,
+                                effectTuning: preset.tuning
+                            )
+                            guard let completionBurstSequence = makeSequence(from: completionBurstFrames) else { continue }
+                            try writePrebuiltSequence(
+                                completionBurstSequence,
+                                kind: .completionBurst,
+                                identifier: completionBurstKey.cacheIdentifier,
+                                rootURL: outputRoot
+                            )
+                            sequenceCount += 1
+                            frameCount += completionBurstSequence.frameCount
+                        }
                     }
                 }
             }
@@ -1393,6 +1700,8 @@ enum SlaySnapshotCache {
         }
 
         let runningColor = FloaterPalette.statusColor(for: .running, theme: theme)
+        let idleColor = FloaterPalette.statusColor(for: .idle, theme: theme)
+        let completeColor = FloaterPalette.statusColor(for: .complete, theme: theme)
         _ = sheenFrames(
             renderMode: renderMode,
             color: runningColor,
@@ -1402,6 +1711,27 @@ enum SlaySnapshotCache {
         )
         _ = ledStripFrames(color: runningColor, cornerRadius: floaterSize.cornerRadius, size: panelSize)
         _ = avatarScanSweepFrames(color: runningColor, size: avatarBackgroundSize)
+        _ = idleSparkleFrames(
+            renderMode: renderMode,
+            color: idleColor,
+            stageSize: floaterSize.persistentStageSize,
+            effectTuning: preset.tuning
+        )
+        for effectColor in [runningColor, idleColor, completeColor] {
+            _ = completionFlashFrames(
+                renderMode: renderMode,
+                color: effectColor,
+                cornerRadius: floaterSize.cornerRadius,
+                size: panelSize,
+                effectTuning: preset.tuning
+            )
+            _ = completionBurstFrames(
+                renderMode: renderMode,
+                color: effectColor,
+                stageSize: floaterSize.persistentStageSize,
+                effectTuning: preset.tuning
+            )
+        }
 
         if renderMode == .superSlay {
             _ = rainbowBorderFrames(cornerRadius: floaterSize.cornerRadius, intensity: 0.55, size: panelSize)
@@ -1482,6 +1812,55 @@ enum SlaySnapshotCache {
             height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
             cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
             intensityBucket: Int((intensity * 100).rounded())
+        )
+    }
+
+    private static func completionFlashCacheKey(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayCompletionFlashCacheKey {
+        SlayCompletionFlashCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            renderMode: renderMode,
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()),
+            flashBucket: Int((effectTuning.flashIntensityMultiplier * 100).rounded())
+        )
+    }
+
+    private static func completionBurstCacheKey(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayCompletionBurstCacheKey {
+        SlayCompletionBurstCacheKey(
+            size: Int(stageSize.rounded(.toNearestOrAwayFromZero)),
+            renderMode: renderMode,
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()),
+            flashBucket: Int((effectTuning.flashIntensityMultiplier * 100).rounded()),
+            extraCompletionRays: effectTuning.extraCompletionRays,
+            extraCompletionOrbs: effectTuning.extraCompletionOrbs
+        )
+    }
+
+    private static func idleSparkleCacheKey(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayIdleSparkleCacheKey {
+        SlayIdleSparkleCacheKey(
+            size: Int(stageSize.rounded(.toNearestOrAwayFromZero)),
+            renderMode: renderMode,
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded())
         )
     }
 
@@ -1601,6 +1980,71 @@ enum SlaySnapshotCache {
                     cornerRadius: cornerRadius,
                     intensity: intensity,
                     size: size,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func makeCompletionFlashFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> [CGImage] {
+        let frameCount = renderMode == .superSlay ? 12 : 10
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: size) {
+                SlayCompletionFlashSnapshotContent(
+                    color: color,
+                    cornerRadius: cornerRadius,
+                    size: size,
+                    renderMode: renderMode,
+                    effectTuning: effectTuning,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func makeCompletionBurstFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> [CGImage] {
+        let frameCount = renderMode == .superSlay ? 12 : 10
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: CGSize(width: stageSize, height: stageSize)) {
+                SlayCompletionBurstSnapshotContent(
+                    color: color,
+                    stageSize: stageSize,
+                    renderMode: renderMode,
+                    effectTuning: effectTuning,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func makeIdleSparkleFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> [CGImage] {
+        let frameCount = renderMode == .superSlay ? 12 : 10
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: CGSize(width: stageSize, height: stageSize)) {
+                SlayIdleSparkleSnapshotContent(
+                    color: color,
+                    stageSize: stageSize,
+                    renderMode: renderMode,
+                    effectTuning: effectTuning,
                     progress: progress
                 )
             }
@@ -2433,6 +2877,324 @@ private struct SlayRainbowBorderSnapshotContent: View {
     }
 }
 
+private struct SlayCompletionFlashSnapshotContent: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let size: CGSize
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let progress: CGFloat
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
+
+    private func clamped(_ value: CGFloat) -> CGFloat {
+        min(max(value, 0), 1)
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * effectTuning.flashIntensityMultiplier * max(effectTuning.glowMultiplier, 0.2), 1.0)
+    }
+
+    private var flashProgress: CGFloat {
+        clamped(progress / 0.18)
+    }
+
+    private var fadeProgress: CGFloat {
+        clamped((progress - 0.16) / 0.60)
+    }
+
+    private var flashOpacity: Double {
+        scaledOpacity(Double(flashProgress) * Double(1 - fadeProgress))
+    }
+
+    private var glowScale: CGFloat {
+        let base: CGFloat = isSuperSlay ? 0.84 : 0.92
+        let lift: CGFloat = isSuperSlay ? 0.34 : 0.20
+        return base + lift * clamped(progress / 0.42)
+    }
+
+    private var sweepOffset: CGFloat {
+        -1.2 + 2.38 * progress
+    }
+
+    var body: some View {
+        let sweepWidth = max(size.width * 0.34, 74)
+        let travel = size.width + sweepWidth + size.height * 0.92
+
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(flashOpacity * 0.26),
+                            color.opacity(flashOpacity * 0.22),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: max(size.width, size.height) * 0.82
+                    )
+                )
+                .scaleEffect(glowScale)
+                .blur(radius: 12)
+
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: color.opacity(flashOpacity * 0.18), location: 0.18),
+                            .init(color: .white.opacity(flashOpacity * 0.95), location: 0.50),
+                            .init(color: color.opacity(flashOpacity * 0.34), location: 0.82),
+                            .init(color: .clear, location: 1.00)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: sweepWidth, height: size.height * 2.1)
+                .blur(radius: 8)
+                .offset(x: travel * sweepOffset - sweepWidth)
+                .rotationEffect(.degrees(-16))
+                .blendMode(.screen)
+
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: color.opacity(flashOpacity * 0.52), location: 0.50),
+                            .init(color: .clear, location: 1.00)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: sweepWidth * 0.45, height: size.height * 2.1)
+                .blur(radius: 14)
+                .offset(x: travel * sweepOffset - sweepWidth * 1.6)
+                .rotationEffect(.degrees(-16))
+                .blendMode(.screen)
+                .opacity(0.85)
+        }
+        .frame(width: size.width, height: size.height)
+        .compositingGroup()
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
+private struct SlayCompletionBurstSnapshotContent: View {
+    let color: Color
+    let stageSize: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let progress: CGFloat
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
+
+    private func clamped(_ value: CGFloat) -> CGFloat {
+        min(max(value, 0), 1)
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * max(effectTuning.glowMultiplier, 0.2) * effectTuning.flashIntensityMultiplier, 1.0)
+    }
+
+    private func phase(start: CGFloat, duration: CGFloat) -> CGFloat {
+        clamped((progress - start) / duration)
+    }
+
+    private var primaryRingPhase: CGFloat { phase(start: 0.0, duration: 0.58) }
+    private var secondaryRingPhase: CGFloat { phase(start: 0.10, duration: 0.58) }
+    private var tertiaryRingPhase: CGFloat { phase(start: 0.22, duration: 0.58) }
+    private var sweepPhase: CGFloat { phase(start: 0.0, duration: 0.94) }
+    private var glowEnvelope: CGFloat { sin(progress * .pi) }
+
+    private var sparkleCount: Int {
+        isSuperSlay ? 7 : 5
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(color.opacity(scaledOpacity(Double(0.22 * glowEnvelope))), lineWidth: 0.9)
+                .blur(radius: 1.4)
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(scaledOpacity(Double(0.52 * glowEnvelope))),
+                            color.opacity(scaledOpacity(Double(0.26 * glowEnvelope))),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: stageSize * 0.38
+                    )
+                )
+                .scaleEffect(0.72 + glowEnvelope * 0.20)
+                .opacity(Double(0.62 * glowEnvelope))
+
+            LinearGradient(
+                colors: [
+                    .clear,
+                    .white.opacity(0.08 * Double(glowEnvelope)),
+                    .white.opacity(0.96 * Double(glowEnvelope)),
+                    color.opacity(0.74 * Double(glowEnvelope)),
+                    .white.opacity(0.84 * Double(glowEnvelope)),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(width: stageSize * 0.34, height: stageSize * 1.15)
+            .blur(radius: 4)
+            .rotationEffect(.degrees(-28))
+            .offset(x: stageSize * 0.62 * (-1.25 + 2.50 * sweepPhase))
+            .opacity(Double(glowEnvelope))
+            .blendMode(.screen)
+
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(scaledOpacity(Double(0.82 * (1 - primaryRingPhase)))),
+                            color.opacity(scaledOpacity(Double(0.92 * (1 - primaryRingPhase))))
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 2.2
+                )
+                .frame(
+                    width: stageSize * (0.76 + 0.66 * primaryRingPhase),
+                    height: stageSize * (0.76 + 0.66 * primaryRingPhase)
+                )
+                .shadow(color: color.opacity(scaledOpacity(Double(0.48 * (1 - primaryRingPhase)))), radius: 4)
+                .blur(radius: 0.3)
+                .opacity(Double(1 - primaryRingPhase))
+
+            Circle()
+                .strokeBorder(color.opacity(scaledOpacity(Double(0.72 * (1 - secondaryRingPhase)))), lineWidth: 1.4)
+                .frame(
+                    width: stageSize * (0.60 + 0.98 * secondaryRingPhase),
+                    height: stageSize * (0.60 + 0.98 * secondaryRingPhase)
+                )
+                .blur(radius: 0.5)
+                .opacity(Double(1 - secondaryRingPhase))
+
+            Circle()
+                .strokeBorder(color.opacity(scaledOpacity(Double(0.54 * (1 - tertiaryRingPhase)))), lineWidth: 1.0)
+                .frame(
+                    width: stageSize * (0.50 + 1.26 * tertiaryRingPhase),
+                    height: stageSize * (0.50 + 1.26 * tertiaryRingPhase)
+                )
+                .blur(radius: 0.6)
+                .opacity(Double(1 - tertiaryRingPhase))
+
+            ForEach(0..<sparkleCount, id: \.self) { index in
+                let delay = CGFloat(index) * 0.06
+                let sparkleProgress = phase(start: delay, duration: 0.56)
+                let sparkleEnvelope = sin(sparkleProgress * .pi)
+                let angle = Double(index) * (360.0 / Double(sparkleCount)) - 18
+                let distance = stageSize * (isSuperSlay ? 0.30 : 0.24) * (0.55 + 0.55 * sparkleProgress)
+                let size = stageSize * (index.isMultiple(of: 2) ? 0.11 : 0.08) * (0.68 + 0.42 * sparkleEnvelope)
+
+                ShineSparkle()
+                    .fill(.white.opacity(scaledOpacity(Double(0.88 * sparkleEnvelope))))
+                    .frame(width: size, height: size)
+                    .shadow(color: color.opacity(scaledOpacity(Double(0.44 * sparkleEnvelope))), radius: 3, x: 0, y: 0)
+                    .offset(y: -distance)
+                    .rotationEffect(.degrees(angle + Double(sparkleProgress) * 48))
+                    .opacity(Double(sparkleEnvelope))
+                    .blendMode(.screen)
+            }
+        }
+        .frame(width: stageSize, height: stageSize)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SlayIdleSparkleSnapshotContent: View {
+    let color: Color
+    let stageSize: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let progress: CGFloat
+
+    private struct SparkleSpec {
+        let angle: Double
+        let distance: CGFloat
+        let start: CGFloat
+        let size: CGFloat
+        let opacity: Double
+    }
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
+
+    private var sparkleSpecs: [SparkleSpec] {
+        if isSuperSlay {
+            return [
+                SparkleSpec(angle: -0.86, distance: stageSize * 0.16, start: 0.00, size: 0.12, opacity: 0.88),
+                SparkleSpec(angle: -0.18, distance: stageSize * 0.22, start: 0.08, size: 0.09, opacity: 0.78),
+                SparkleSpec(angle: 0.74, distance: stageSize * 0.18, start: 0.18, size: 0.10, opacity: 0.82),
+                SparkleSpec(angle: 1.84, distance: stageSize * 0.15, start: 0.28, size: 0.08, opacity: 0.68),
+                SparkleSpec(angle: 2.72, distance: stageSize * 0.21, start: 0.40, size: 0.11, opacity: 0.80)
+            ]
+        }
+
+        return [
+            SparkleSpec(angle: -0.72, distance: stageSize * 0.15, start: 0.00, size: 0.11, opacity: 0.82),
+            SparkleSpec(angle: 0.24, distance: stageSize * 0.18, start: 0.10, size: 0.08, opacity: 0.70),
+            SparkleSpec(angle: 1.26, distance: stageSize * 0.14, start: 0.24, size: 0.09, opacity: 0.74),
+            SparkleSpec(angle: 2.56, distance: stageSize * 0.17, start: 0.38, size: 0.10, opacity: 0.78)
+        ]
+    }
+
+    private func clamped(_ value: CGFloat) -> CGFloat {
+        min(max(value, 0), 1)
+    }
+
+    private func scaledOpacity(_ value: Double) -> Double {
+        min(value * max(effectTuning.glowMultiplier, 0.2), 1.0)
+    }
+
+    private func sparklePhase(start: CGFloat) -> CGFloat {
+        clamped((progress - start) / (isSuperSlay ? 0.34 : 0.40))
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(Array(sparkleSpecs.enumerated()), id: \.offset) { _, sparkle in
+                let localProgress = sparklePhase(start: sparkle.start)
+                let envelope = sin(localProgress * .pi)
+                let size = stageSize * sparkle.size * (0.42 + 0.82 * envelope)
+                let offsetX = cos(sparkle.angle) * sparkle.distance * localProgress
+                let offsetY = sin(sparkle.angle) * sparkle.distance * localProgress - stageSize * (isSuperSlay ? 0.08 : 0.06) * localProgress
+                let opacity = scaledOpacity(sparkle.opacity * Double(envelope))
+
+                ShineSparkle()
+                    .fill(.white.opacity(opacity))
+                    .frame(width: size, height: size)
+                    .shadow(color: color.opacity(opacity * 0.46), radius: isSuperSlay ? 3.2 : 2.2, x: 0, y: 0)
+                    .offset(x: offsetX, y: offsetY)
+                    .rotationEffect(.degrees(Double(localProgress) * 156 + sparkle.angle * 28))
+                    .opacity(Double(envelope))
+                    .blendMode(.screen)
+            }
+        }
+        .frame(width: stageSize, height: stageSize)
+        .allowsHitTesting(false)
+    }
+}
+
 private extension NSImage {
     func floaterCGImage() -> CGImage? {
         cgImage(forProposedRect: nil, context: nil, hints: nil)
@@ -2581,7 +3343,9 @@ private final class SlayImageSequenceRendererView: NSView {
         sequence: SlayRasterSequence?,
         frameDuration: CFTimeInterval,
         signature: String,
-        cornerRadius: CGFloat
+        cornerRadius: CGFloat,
+        animates: Bool = true,
+        repeats: Bool = true
     ) {
         layer?.cornerRadius = cornerRadius
         layer?.masksToBounds = true
@@ -2604,13 +3368,13 @@ private final class SlayImageSequenceRendererView: NSView {
         let frameRects = rasterSequenceRects(for: sequence)
         sequenceLayer.contentsRect = frameRects.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        guard sequence.frameCount > 1 else { return }
+        guard sequence.frameCount > 1, animates else { return }
 
         let animation = CAKeyframeAnimation(keyPath: "contentsRect")
         animation.values = frameRects.map { NSValue(rect: $0) }
         animation.keyTimes = (0..<sequence.frameCount).map { NSNumber(value: Double($0) / Double(max(sequence.frameCount - 1, 1))) }
         animation.duration = frameDuration * Double(sequence.frameCount)
-        animation.repeatCount = .infinity
+        animation.repeatCount = repeats ? .infinity : 0
         animation.calculationMode = .discrete
         animation.isRemovedOnCompletion = false
         animation.fillMode = .forwards
@@ -2664,26 +3428,35 @@ private final class SlayStageRendererView: NSView {
     func update(
         stageSequence: SlayRasterSequence?,
         stageFrameDuration: CFTimeInterval,
+        stageAnimates: Bool,
         stageRepeats: Bool,
         stageSignature: String,
-        avatarFrames: [NSImage],
+        avatarSequence: SlayRasterSequence?,
         avatarFrameDuration: CFTimeInterval,
         avatarSignature: String,
         avatarState: SlayStageState,
+        idlePulseEnabled: Bool,
         avatarEffectSignature: String,
         avatarSize: CGFloat
     ) {
         currentAvatarSize = avatarSize
         needsLayout = true
 
-        updateStageSequence(sequence: stageSequence, frameDuration: stageFrameDuration, repeats: stageRepeats, signature: stageSignature)
-        updateAvatarSequence(frames: avatarFrames, frameDuration: avatarFrameDuration, signature: avatarSignature)
-        updateAvatarEffects(state: avatarState, signature: avatarEffectSignature)
+        updateStageSequence(
+            sequence: stageSequence,
+            frameDuration: stageFrameDuration,
+            animates: stageAnimates,
+            repeats: stageRepeats,
+            signature: stageSignature
+        )
+        updateAvatarSequence(sequence: avatarSequence, frameDuration: avatarFrameDuration, signature: avatarSignature)
+        updateAvatarEffects(state: avatarState, idlePulseEnabled: idlePulseEnabled, signature: avatarEffectSignature)
     }
 
     private func updateStageSequence(
         sequence: SlayRasterSequence?,
         frameDuration: CFTimeInterval,
+        animates: Bool,
         repeats: Bool,
         signature: String
     ) {
@@ -2703,7 +3476,7 @@ private final class SlayStageRendererView: NSView {
         let frameRects = rasterSequenceRects(for: sequence)
         stageLayer.contentsRect = frameRects.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        guard sequence.frameCount > 1 else { return }
+        guard sequence.frameCount > 1, animates else { return }
 
         let animation = CAKeyframeAnimation(keyPath: "contentsRect")
         animation.values = frameRects.map { NSValue(rect: $0) }
@@ -2717,26 +3490,20 @@ private final class SlayStageRendererView: NSView {
     }
 
     private func updateAvatarSequence(
-        frames: [NSImage],
+        sequence: SlayRasterSequence?,
         frameDuration: CFTimeInterval,
         signature: String
     ) {
-        guard !frames.isEmpty else {
+        guard let sequence else {
             avatarLayer.removeAnimation(forKey: "sequence")
             avatarLayer.contents = nil
+            avatarLayer.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
             currentAvatarSignature = signature
             return
         }
 
         guard currentAvatarSignature != signature else { return }
         currentAvatarSignature = signature
-
-        guard let sequence = rasterSequence(from: frames) else {
-            avatarLayer.removeAnimation(forKey: "sequence")
-            avatarLayer.contents = nil
-            avatarLayer.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
-            return
-        }
 
         avatarLayer.removeAnimation(forKey: "sequence")
         avatarLayer.contents = sequence.atlas
@@ -2758,6 +3525,7 @@ private final class SlayStageRendererView: NSView {
 
     private func updateAvatarEffects(
         state: SlayStageState,
+        idlePulseEnabled: Bool,
         signature: String
     ) {
         guard currentAvatarEffectSignature != signature else { return }
@@ -2773,6 +3541,8 @@ private final class SlayStageRendererView: NSView {
         avatarLayer.transform = CATransform3DIdentity
 
         if state == .idle {
+            guard idlePulseEnabled else { return }
+
             let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
             opacityAnimation.values = [1.0, 0.52, 1.0]
             opacityAnimation.keyTimes = [0.0, 0.42, 1.0]
@@ -2899,9 +3669,10 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
             stageSize: stageSize,
             effectTuning: effectTuning
         )
-        let avatarFrames = avatarSequenceImages(for: avatar)
         let shouldAnimateAvatar = isRunning && isAnimating
+        let shouldAnimateIdleEffects = isIdle && isAnimating
         let stageFrameDuration: CFTimeInterval
+        let stageAnimates: Bool
         let stageRepeats: Bool
         switch state {
         case .running:
@@ -2909,21 +3680,26 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
                 ? min(max(1.2, 1.92 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier)), 2.2)
                 : max(1.4, 3.96 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
             stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
+            stageAnimates = true
             stageRepeats = true
         case .idle:
             let cycleDuration = renderMode == .superSlay ? 0.50 : 0.50
             stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
-            stageRepeats = true
+            stageAnimates = shouldAnimateIdleEffects
+            stageRepeats = shouldAnimateIdleEffects
         case .complete:
             let cycleDuration = renderMode == .superSlay ? 0.86 : 0.70
             stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
+            stageAnimates = true
             stageRepeats = false
         }
+        let avatarSequence = AvatarRasterSequenceCache.sequence(for: avatar, animated: shouldAnimateAvatar)
         let showsCounterArc = effectTuning.showsCounterArc ?? (renderMode == .superSlay)
         let showsSecondaryOrbit = effectTuning.showsSecondaryOrbit ?? (renderMode == .superSlay)
         let stageSignature = [
             renderMode.rawValue,
             state == .running ? "running" : (state == .complete ? "complete" : "idle"),
+            stageAnimates ? (stageRepeats ? "loop" : "once") : "static",
             "\(Int(stageSize.rounded(.toNearestOrAwayFromZero)))",
             NSColor(statusColor).floaterCacheKey,
             "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))",
@@ -2941,19 +3717,21 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
         let avatarEffectSignature = [
             state == .running ? "running" : (state == .complete ? "complete" : "idle"),
             renderMode.rawValue,
+            shouldAnimateIdleEffects ? "idle-pulse" : "idle-static",
             state == .complete ? (avatarPulseTrigger?.uuidString ?? completeTrigger?.uuidString ?? "complete") : "steady"
         ].joined(separator: ":")
-        let avatarPayload = shouldAnimateAvatar ? avatarFrames : Array(avatarFrames.prefix(1))
 
         nsView.update(
             stageSequence: stageFrames,
             stageFrameDuration: stageFrameDuration,
+            stageAnimates: stageAnimates,
             stageRepeats: stageRepeats,
             stageSignature: stageSignature,
-            avatarFrames: avatarPayload,
+            avatarSequence: avatarSequence,
             avatarFrameDuration: avatarFrameDuration(for: avatar),
             avatarSignature: avatarSignature,
             avatarState: state,
+            idlePulseEnabled: shouldAnimateIdleEffects,
             avatarEffectSignature: avatarEffectSignature,
             avatarSize: spriteSize
         )
@@ -3070,6 +3848,209 @@ private struct SlayRainbowBorderRepresentable: NSViewRepresentable {
     }
 }
 
+private struct SlayCompletionFlashRepresentable: NSViewRepresentable {
+    let size: CGSize
+    let color: Color
+    let cornerRadius: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(origin: .zero, size: size))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        guard let trigger else {
+            nsView.update(sequence: nil, frameDuration: 0, signature: "completion-flash:idle", cornerRadius: cornerRadius, animates: false)
+            return
+        }
+
+        let frames = SlaySnapshotCache.completionFlashFrames(
+            renderMode: renderMode,
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )
+        let signature = [
+            "completion-flash",
+            renderMode.rawValue,
+            "\(Int(size.width.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(size.height.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(cornerRadius.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(color).floaterCacheKey,
+            "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))",
+            "\(Int((effectTuning.flashIntensityMultiplier * 100).rounded()))",
+            trigger.uuidString
+        ].joined(separator: ":")
+        let totalDuration = (renderMode == .superSlay ? 0.64 : 0.72) * effectTuning.completionDurationMultiplier
+        nsView.update(
+            sequence: frames,
+            frameDuration: totalDuration / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: cornerRadius,
+            animates: true,
+            repeats: false
+        )
+    }
+}
+
+private struct SlayCompletionFlashView: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    var body: some View {
+        GeometryReader { geometry in
+            SlayCompletionFlashRepresentable(
+                size: geometry.size,
+                color: color,
+                cornerRadius: cornerRadius,
+                renderMode: renderMode,
+                effectTuning: effectTuning,
+                trigger: trigger
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SlayCompletionBurstRepresentable: NSViewRepresentable {
+    let stageSize: CGFloat
+    let color: Color
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(x: 0, y: 0, width: stageSize, height: stageSize))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        guard let trigger else {
+            nsView.update(sequence: nil, frameDuration: 0, signature: "completion-burst:idle", cornerRadius: 0, animates: false)
+            return
+        }
+
+        let frames = SlaySnapshotCache.completionBurstFrames(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+        let signature = [
+            "completion-burst",
+            renderMode.rawValue,
+            "\(Int(stageSize.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(color).floaterCacheKey,
+            "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))",
+            "\(Int((effectTuning.flashIntensityMultiplier * 100).rounded()))",
+            "\(effectTuning.extraCompletionRays)",
+            "\(effectTuning.extraCompletionOrbs)",
+            trigger.uuidString
+        ].joined(separator: ":")
+        let totalDuration = (renderMode == .superSlay ? 0.92 : 0.80) * effectTuning.completionDurationMultiplier
+        nsView.update(
+            sequence: frames,
+            frameDuration: totalDuration / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: 0,
+            animates: true,
+            repeats: false
+        )
+    }
+}
+
+private struct SlayCompletionBurstView: View {
+    let color: Color
+    let stageSize: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    var body: some View {
+        SlayCompletionBurstRepresentable(
+            stageSize: stageSize,
+            color: color,
+            renderMode: renderMode,
+            effectTuning: effectTuning,
+            trigger: trigger
+        )
+        .frame(width: stageSize, height: stageSize)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SlayIdleSparkleRepresentable: NSViewRepresentable {
+    let stageSize: CGFloat
+    let color: Color
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(x: 0, y: 0, width: stageSize, height: stageSize))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        guard let trigger else {
+            nsView.update(sequence: nil, frameDuration: 0, signature: "idle-sparkle:idle", cornerRadius: 0, animates: false)
+            return
+        }
+
+        let frames = SlaySnapshotCache.idleSparkleFrames(
+            renderMode: renderMode,
+            color: color,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+        let signature = [
+            "idle-sparkle",
+            renderMode.rawValue,
+            "\(Int(stageSize.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(color).floaterCacheKey,
+            "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))",
+            trigger.uuidString
+        ].joined(separator: ":")
+        let totalDuration = isSuperSlay ? 0.92 : 0.95
+        nsView.update(
+            sequence: frames,
+            frameDuration: totalDuration / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: 0,
+            animates: true,
+            repeats: false
+        )
+    }
+
+    private var isSuperSlay: Bool {
+        renderMode == .superSlay
+    }
+}
+
+private struct SlayIdleSparkleView: View {
+    let color: Color
+    let stageSize: CGFloat
+    let renderMode: FloaterRenderMode
+    let effectTuning: FloaterEffectTuning
+    let trigger: UUID?
+
+    var body: some View {
+        SlayIdleSparkleRepresentable(
+            stageSize: stageSize,
+            color: color,
+            renderMode: renderMode,
+            effectTuning: effectTuning,
+            trigger: trigger
+        )
+        .frame(width: stageSize, height: stageSize)
+        .allowsHitTesting(false)
+    }
+}
+
 private struct SlaySpriteStageView: View {
     let avatar: FloaterAvatarDefinition?
     let statusColor: Color
@@ -3082,17 +4063,23 @@ private struct SlaySpriteStageView: View {
     let isIdle: Bool
     let isComplete: Bool
     let completeTrigger: UUID?
+    let lastActivity: Date?
 
     @State private var idleSparkleTrigger: UUID?
     @State private var doneSparkleTrigger: UUID?
     @State private var doneAvatarTrigger: UUID?
+    @State private var idleAmbientEffectsEnabled = false
 
     private var idleSparkleInterval: TimeInterval {
         renderMode == .superSlay ? 2.4 : 6.4
     }
 
-    private var completeAvatarInterval: TimeInterval {
-        renderMode == .superSlay ? 4.8 : 16.0
+    private var idleAmbientAnimationWindow: TimeInterval {
+        renderMode == .superSlay ? 4.0 : 2.5
+    }
+
+    private var animatesIdleEffects: Bool {
+        isIdle && idleAmbientEffectsEnabled
     }
 
     var body: some View {
@@ -3104,7 +4091,7 @@ private struct SlaySpriteStageView: View {
                 spriteSize: spriteSize,
                 renderMode: renderMode,
                 effectTuning: effectTuning,
-                isAnimating: isAnimating,
+                isAnimating: isAnimating || animatesIdleEffects,
                 isRunning: isRunning,
                 isIdle: isIdle,
                 isComplete: isComplete,
@@ -3112,43 +4099,43 @@ private struct SlaySpriteStageView: View {
                 avatarPulseTrigger: doneAvatarTrigger
             )
 
-            if isIdle {
-                IdleSparkleBurst(trigger: idleSparkleTrigger)
+            if animatesIdleEffects {
+                SlayIdleSparkleView(
+                    color: statusColor,
+                    stageSize: stageSize,
+                    renderMode: renderMode,
+                    effectTuning: effectTuning,
+                    trigger: idleSparkleTrigger
+                )
             }
 
             if isComplete {
-                CelebrateRingBurst(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
-                DoneSparkleSweep(color: statusColor, stageSize: stageSize, trigger: doneSparkleTrigger)
-                SparkleBurst(trigger: doneSparkleTrigger)
+                SlayCompletionBurstView(
+                    color: statusColor,
+                    stageSize: stageSize,
+                    renderMode: renderMode,
+                    effectTuning: effectTuning,
+                    trigger: doneSparkleTrigger
+                )
             }
         }
         .frame(width: stageSize, height: stageSize)
         .onAppear {
-            if isIdle {
-                idleSparkleTrigger = UUID()
-            }
             if isComplete {
                 doneSparkleTrigger = UUID()
                 doneAvatarTrigger = UUID()
             }
         }
-        .task(id: "idle-\(isIdle)-\(renderMode.rawValue)") {
-            guard isIdle else { return }
+        .task(id: "idle-window-\(isIdle)-\(renderMode.rawValue)-\(lastActivity?.timeIntervalSinceReferenceDate ?? 0)") {
+            await updateIdleAmbientEffects()
+        }
+        .task(id: "idle-\(animatesIdleEffects)-\(renderMode.rawValue)") {
+            guard animatesIdleEffects else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(idleSparkleInterval * 1_000_000_000))
-                guard !Task.isCancelled, isIdle else { break }
+                guard !Task.isCancelled, animatesIdleEffects else { break }
                 await MainActor.run {
                     idleSparkleTrigger = UUID()
-                }
-            }
-        }
-        .task(id: "complete-\(isComplete)-\(renderMode.rawValue)") {
-            guard isComplete else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(completeAvatarInterval * 1_000_000_000))
-                guard !Task.isCancelled, isComplete else { break }
-                await MainActor.run {
-                    doneAvatarTrigger = UUID()
                 }
             }
         }
@@ -3156,6 +4143,35 @@ private struct SlaySpriteStageView: View {
             guard newValue != nil, isComplete else { return }
             doneSparkleTrigger = UUID()
             doneAvatarTrigger = UUID()
+        }
+    }
+
+    private func updateIdleAmbientEffects() async {
+        guard isIdle, let lastActivity else {
+            await MainActor.run {
+                idleAmbientEffectsEnabled = false
+            }
+            return
+        }
+
+        let remaining = idleAmbientAnimationWindow - Date().timeIntervalSince(lastActivity)
+        guard remaining > 0 else {
+            await MainActor.run {
+                idleAmbientEffectsEnabled = false
+            }
+            return
+        }
+
+        await MainActor.run {
+            idleAmbientEffectsEnabled = true
+            idleSparkleTrigger = UUID()
+        }
+
+        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+        guard !Task.isCancelled else { return }
+
+        await MainActor.run {
+            idleAmbientEffectsEnabled = false
         }
     }
 }
@@ -4367,9 +5383,7 @@ struct FloaterStatusView: View {
     @State private var shakeTrigger: UUID?
     @State private var completionTrigger: UUID?
     @State private var lastObservedStatusState: ClaudeStatusState?
-    @State private var panelVictoryFlashOffset: CGFloat
-    @State private var panelVictoryFlashOpacity: Double
-    @State private var panelVictoryFlashScale: CGFloat
+    @State private var panelVictoryFlashTrigger: UUID?
 
     init(
         message: String,
@@ -4422,9 +5436,7 @@ struct FloaterStatusView: View {
         _shakeTrigger = State(initialValue: shouldShake ? UUID() : nil)
         _completionTrigger = State(initialValue: nil)
         _lastObservedStatusState = State(initialValue: statusState)
-        _panelVictoryFlashOffset = State(initialValue: -1.2)
-        _panelVictoryFlashOpacity = State(initialValue: 0)
-        _panelVictoryFlashScale = State(initialValue: 0.94)
+        _panelVictoryFlashTrigger = State(initialValue: nil)
     }
 
     private enum RunningEffectBudget {
@@ -4665,14 +5677,13 @@ struct FloaterStatusView: View {
                         )
                     }
 
-                    DonePanelVictoryFlash(
+                    SlayCompletionFlashView(
                         color: accentColor,
                         cornerRadius: floaterSize.cornerRadius,
-                        sweepOffset: panelVictoryFlashOffset,
-                        flashOpacity: panelVictoryFlashOpacity,
-                        glowScale: panelVictoryFlashScale
+                        renderMode: effectiveRenderMode,
+                        effectTuning: effectTuning,
+                        trigger: panelVictoryFlashTrigger
                     )
-                    .opacity(panelVictoryFlashOpacity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .compositingGroup()
@@ -4868,7 +5879,8 @@ struct FloaterStatusView: View {
                 isRunning: isRunning,
                 isIdle: statusState == .idle,
                 isComplete: statusState == .complete,
-                completeTrigger: completeTrigger
+                completeTrigger: completeTrigger,
+                lastActivity: lastActivity
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -5124,39 +6136,6 @@ struct FloaterStatusView: View {
         guard shouldAnimate else { return }
         let trigger = UUID()
         completionTrigger = trigger
-        shakeTrigger = trigger
-        triggerPanelVictoryFlash()
-    }
-
-    private func triggerPanelVictoryFlash() {
-        panelVictoryFlashOffset = -1.2
-        panelVictoryFlashOpacity = 0
-        panelVictoryFlashScale = (isSuperSlayRenderMode ? 0.84 : 0.92) * CGFloat(effectTuning.flashIntensityMultiplier)
-
-        withAnimation(.easeOut(duration: (isSuperSlayRenderMode ? 0.10 : 0.12) * effectTuning.completionDurationMultiplier)) {
-            panelVictoryFlashOpacity = scaledGlow(isSuperSlayRenderMode ? 1.0 : 0.96)
-            panelVictoryFlashScale = (isSuperSlayRenderMode ? 1.08 : 1.03) * CGFloat(effectTuning.flashIntensityMultiplier)
-        }
-
-        withAnimation(.linear(duration: (isSuperSlayRenderMode ? 0.54 : 0.64) * effectTuning.completionDurationMultiplier)) {
-            panelVictoryFlashOffset = 1.18
-        }
-
-        withAnimation(.spring(response: (isSuperSlayRenderMode ? 0.20 : 0.26) * effectTuning.completionDurationMultiplier, dampingFraction: isSuperSlayRenderMode ? 0.50 : 0.58)) {
-            panelScale = (isSuperSlayRenderMode ? 1.055 : 1.035) * CGFloat(min(effectTuning.flashIntensityMultiplier, 1.08))
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + (0.20 * effectTuning.completionDurationMultiplier)) {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.74)) {
-                panelScale = 1.0
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + (0.18 * effectTuning.completionDurationMultiplier)) {
-            withAnimation(.easeIn(duration: (isSuperSlayRenderMode ? 0.42 : 0.36) * effectTuning.completionDurationMultiplier)) {
-                panelVictoryFlashOpacity = 0
-                panelVictoryFlashScale = (isSuperSlayRenderMode ? 1.18 : 1.12) * CGFloat(effectTuning.flashIntensityMultiplier)
-            }
-        }
+        panelVictoryFlashTrigger = trigger
     }
 }
