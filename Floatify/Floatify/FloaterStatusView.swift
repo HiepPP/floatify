@@ -546,14 +546,14 @@ private struct SparkleBurst: View {
     }
 
     private func spawnParticles() {
-        let symbols = ["\u{2728}", "\u{2B50}", "\u{1F389}"] // ✨ ⭐ 🎉
-        particles = (0..<5).map { i in
+        let symbols = ["\u{2728}", "\u{2B50}", "\u{1F31F}", "\u{1F4AB}", "\u{26A1}", "\u{1F389}"] // ✨ ⭐ 🌟 💫 ⚡ 🎉
+        particles = (0..<7).map { i in
             SparkleParticle(
-                angle: .pi * 2 * Double(i) / 5 + Double.random(in: -0.4...0.4),
-                distance: CGFloat.random(in: 18...28),
-                delay: Double(i) * 0.04,
+                angle: .pi * 2 * Double(i) / 7 + Double.random(in: -0.4...0.4),
+                distance: CGFloat.random(in: 20...32),
+                delay: Double(i) * 0.035,
                 symbol: symbols.randomElement() ?? "\u{2728}",
-                scale: CGFloat.random(in: 0.8...1.3)
+                scale: CGFloat.random(in: 0.85...1.45)
             )
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
@@ -595,14 +595,14 @@ private struct IdleSparkleBurst: View {
     }
 
     private func spawnParticles() {
-        let symbols = ["\u{2728}", "\u{2736}"]
-        particles = (0..<3).map { i in
+        let symbols = ["\u{2728}", "\u{2736}", "\u{2B50}", "\u{1F4AB}"] // ✨ ✶ ⭐ 💫
+        particles = (0..<4).map { i in
             IdleSparkleParticle(
-                angle: .pi * 2 * Double(i) / 3 + Double.random(in: -0.35...0.35),
-                distance: CGFloat.random(in: 11...16),
+                angle: .pi * 2 * Double(i) / 4 + Double.random(in: -0.35...0.35),
+                distance: CGFloat.random(in: 12...18),
                 delay: Double(i) * 0.03,
                 symbol: symbols.randomElement() ?? "\u{2728}",
-                scale: CGFloat.random(in: 0.75...1.05)
+                scale: CGFloat.random(in: 0.80...1.15)
             )
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
@@ -697,36 +697,85 @@ private struct CelebrateRingBurst: View {
 
     @State private var ringScale: CGFloat = 0.76
     @State private var ringOpacity: Double = 0
+    @State private var ring2Scale: CGFloat = 0.6
+    @State private var ring2Opacity: Double = 0
+    @State private var ring3Scale: CGFloat = 0.5
+    @State private var ring3Opacity: Double = 0
 
     var body: some View {
-        Circle()
-            .strokeBorder(color.opacity(ringOpacity), lineWidth: 1.6)
-            .frame(width: stageSize * ringScale, height: stageSize * ringScale)
-            .blur(radius: 0.4)
-            .allowsHitTesting(false)
-            .onAppear {
-                if trigger != nil { animateRing() }
-            }
-            .onChange(of: trigger) { _, newValue in
-                guard newValue != nil else { return }
-                animateRing()
-            }
+        ZStack {
+            // Primary thick ring (Nintendo power-up)
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(ringOpacity * 0.9), color.opacity(ringOpacity)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 2.2
+                )
+                .frame(width: stageSize * ringScale, height: stageSize * ringScale)
+                .shadow(color: color.opacity(ringOpacity * 0.6), radius: 4)
+                .blur(radius: 0.3)
+
+            // Second shockwave ring (staggered)
+            Circle()
+                .strokeBorder(color.opacity(ring2Opacity * 0.7), lineWidth: 1.4)
+                .frame(width: stageSize * ring2Scale, height: stageSize * ring2Scale)
+                .blur(radius: 0.5)
+
+            // Third faint outer ring
+            Circle()
+                .strokeBorder(color.opacity(ring3Opacity * 0.5), lineWidth: 1.0)
+                .frame(width: stageSize * ring3Scale, height: stageSize * ring3Scale)
+                .blur(radius: 0.6)
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            if trigger != nil { animateRings() }
+        }
+        .onChange(of: trigger) { _, newValue in
+            guard newValue != nil else { return }
+            animateRings()
+        }
     }
 
-    private func animateRing() {
-        let duration: TimeInterval = 0.58
-
+    private func animateRings() {
         ringScale = 0.76
-        ringOpacity = 0.84
+        ringOpacity = 0.92
+        ring2Scale = 0.6
+        ring2Opacity = 0
+        ring3Scale = 0.5
+        ring3Opacity = 0
 
-        withAnimation(.easeOut(duration: duration)) {
-            ringScale = 1.38
+        withAnimation(.easeOut(duration: 0.55)) {
+            ringScale = 1.42
             ringOpacity = 0
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+            ring2Opacity = 0.82
+            withAnimation(.easeOut(duration: 0.62)) {
+                ring2Scale = 1.58
+                ring2Opacity = 0
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+            ring3Opacity = 0.68
+            withAnimation(.easeOut(duration: 0.70)) {
+                ring3Scale = 1.76
+                ring3Opacity = 0
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
             ringScale = 0.76
             ringOpacity = 0
+            ring2Scale = 0.6
+            ring2Opacity = 0
+            ring3Scale = 0.5
+            ring3Opacity = 0
         }
     }
 }
@@ -784,9 +833,9 @@ private struct RunningSheenSweep: View {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0.00),
-                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.10 : 0.05)), location: 0.22),
-                                .init(color: .white.opacity(scaledOpacity(isSuperSlay ? 0.30 : 0.17)), location: 0.50),
-                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.16 : 0.08)), location: 0.78),
+                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.16 : 0.09)), location: 0.22),
+                                .init(color: .white.opacity(scaledOpacity(isSuperSlay ? 0.42 : 0.26)), location: 0.50),
+                                .init(color: color.opacity(scaledOpacity(isSuperSlay ? 0.22 : 0.12)), location: 0.78),
                                 .init(color: .clear, location: 1.00)
                             ],
                             startPoint: .leading,
@@ -2061,8 +2110,8 @@ private struct DonePanelVictoryFlash: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                .white.opacity(flashOpacity * 0.18),
-                                color.opacity(flashOpacity * 0.16),
+                                .white.opacity(flashOpacity * 0.26),
+                                color.opacity(flashOpacity * 0.22),
                                 .clear
                             ],
                             center: .center,
@@ -2073,14 +2122,15 @@ private struct DonePanelVictoryFlash: View {
                     .scaleEffect(glowScale)
                     .blur(radius: 12)
 
+                // Primary chunky white sweep
                 Rectangle()
                     .fill(
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0.00),
-                                .init(color: color.opacity(flashOpacity * 0.12), location: 0.22),
-                                .init(color: .white.opacity(flashOpacity * 0.84), location: 0.50),
-                                .init(color: color.opacity(flashOpacity * 0.24), location: 0.78),
+                                .init(color: color.opacity(flashOpacity * 0.18), location: 0.18),
+                                .init(color: .white.opacity(flashOpacity * 0.95), location: 0.50),
+                                .init(color: color.opacity(flashOpacity * 0.34), location: 0.82),
                                 .init(color: .clear, location: 1.00)
                             ],
                             startPoint: .leading,
@@ -2088,10 +2138,30 @@ private struct DonePanelVictoryFlash: View {
                         )
                     )
                     .frame(width: sweepWidth, height: size.height * 2.1)
-                    .blur(radius: 10)
+                    .blur(radius: 8)
                     .offset(x: travel * sweepOffset - sweepWidth)
                     .rotationEffect(.degrees(-16))
                     .blendMode(.screen)
+
+                // Trailing color echo (chromatic RGB feel)
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.00),
+                                .init(color: color.opacity(flashOpacity * 0.52), location: 0.50),
+                                .init(color: .clear, location: 1.00)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: sweepWidth * 0.45, height: size.height * 2.1)
+                    .blur(radius: 14)
+                    .offset(x: travel * sweepOffset - sweepWidth * 1.6)
+                    .rotationEffect(.degrees(-16))
+                    .blendMode(.screen)
+                    .opacity(0.85)
             }
             .frame(width: size.width, height: size.height)
             .compositingGroup()
@@ -2124,6 +2194,230 @@ private struct WiggleModifier: ViewModifier {
                     }
                 }
             }
+    }
+}
+
+// MARK: - Gaming HUD Shapes
+
+private struct ScanlinePattern: Shape {
+    var spacing: CGFloat = 2.5
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        var y: CGFloat = 0
+        while y < rect.height {
+            path.addRect(CGRect(x: rect.minX, y: rect.minY + y, width: rect.width, height: 1))
+            y += spacing
+        }
+        return path
+    }
+}
+
+private struct PixelGridPattern: Shape {
+    var cell: CGFloat = 4
+    var dotSize: CGFloat = 1
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        var y = rect.minY
+        while y < rect.maxY {
+            var x = rect.minX
+            while x < rect.maxX {
+                path.addRect(CGRect(x: x, y: y, width: dotSize, height: dotSize))
+                x += cell
+            }
+            y += cell
+        }
+        return path
+    }
+}
+
+private struct RainbowStarPowerBorder: View {
+    let cornerRadius: CGFloat
+    let intensity: Double
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let rotation = (t.truncatingRemainder(dividingBy: 4.0)) / 4.0
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(
+                    AngularGradient(
+                        gradient: Gradient(colors: [
+                            Color(hue: 0.00, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 0.13, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 0.30, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 0.50, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 0.70, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 0.85, saturation: 0.95, brightness: 1.0),
+                            Color(hue: 1.00, saturation: 0.95, brightness: 1.0)
+                        ]),
+                        center: .center,
+                        angle: .degrees(rotation * 360.0)
+                    ),
+                    lineWidth: 1.2
+                )
+                .opacity(intensity)
+                .blendMode(.screen)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct ConfettiPiece: Identifiable {
+    let id = UUID()
+    let x: CGFloat
+    let angle: Double
+    let distance: CGFloat
+    let size: CGFloat
+    let fill: Color
+    let delay: Double
+    let rotation: Double
+}
+
+private struct PixelConfettiBurst: View {
+    let color: Color
+    let trigger: UUID?
+
+    @State private var particles: [ConfettiPiece] = []
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(particles) { p in
+                    ConfettiPixel(piece: p, bounds: geo.size)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            if trigger != nil { spawn() }
+        }
+        .onChange(of: trigger) { _, newValue in
+            guard newValue != nil else { return }
+            spawn()
+        }
+    }
+
+    private func spawn() {
+        let palette: [Color] = [
+            color,
+            .white,
+            Color(red: 1.00, green: 0.80, blue: 0.20),
+            Color(red: 0.30, green: 0.80, blue: 1.00),
+            Color(red: 1.00, green: 0.36, blue: 0.54),
+            Color(red: 0.50, green: 1.00, blue: 0.60)
+        ]
+        particles = (0..<18).map { i in
+            ConfettiPiece(
+                x: CGFloat.random(in: 0.05...0.95),
+                angle: Double.random(in: -1.2...1.2),
+                distance: CGFloat.random(in: 28...62),
+                size: CGFloat.random(in: 3...5),
+                fill: palette.randomElement() ?? color,
+                delay: Double(i) * 0.012,
+                rotation: Double.random(in: -180...180)
+            )
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            particles = []
+        }
+    }
+}
+
+private struct ConfettiPixel: View {
+    let piece: ConfettiPiece
+    let bounds: CGSize
+
+    @State private var progress: CGFloat = 0
+
+    private var positionX: CGFloat {
+        let base = bounds.width * piece.x
+        let drift = CGFloat(cos(piece.angle)) * piece.distance * progress
+        return base + drift
+    }
+
+    private var positionY: CGFloat {
+        let base = bounds.height * 0.55
+        let lift = piece.distance * progress
+        let fall = piece.distance * progress * progress * 1.8
+        return base - lift + fall
+    }
+
+    var body: some View {
+        Rectangle()
+            .fill(piece.fill)
+            .frame(width: piece.size, height: piece.size)
+            .shadow(color: piece.fill.opacity(0.8), radius: 2)
+            .rotationEffect(.degrees(piece.rotation * Double(progress) * 2))
+            .position(x: positionX, y: positionY)
+            .opacity(Double(1 - progress))
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + piece.delay) {
+                    withAnimation(.easeOut(duration: 1.2)) {
+                        progress = 1
+                    }
+                }
+            }
+    }
+}
+
+private struct ShineSparkle: Shape {
+    var armRatio: CGFloat = 0.18
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let cx = rect.midX
+        let cy = rect.midY
+        let w = rect.width
+        let h = rect.height
+        let ax = w * armRatio * 0.5
+        let ay = h * armRatio * 0.5
+        // Diamond horizontal arm
+        path.move(to: CGPoint(x: rect.minX, y: cy))
+        path.addLine(to: CGPoint(x: cx, y: cy - ay))
+        path.addLine(to: CGPoint(x: rect.maxX, y: cy))
+        path.addLine(to: CGPoint(x: cx, y: cy + ay))
+        path.closeSubpath()
+        // Diamond vertical arm
+        path.move(to: CGPoint(x: cx, y: rect.minY))
+        path.addLine(to: CGPoint(x: cx + ax, y: cy))
+        path.addLine(to: CGPoint(x: cx, y: rect.maxY))
+        path.addLine(to: CGPoint(x: cx - ax, y: cy))
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct HUDCornerBrackets: Shape {
+    var length: CGFloat = 6
+    var thickness: CGFloat = 1
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let l = min(length, min(rect.width, rect.height) / 3)
+
+        // Top-left
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + l))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + l, y: rect.minY))
+
+        // Top-right
+        path.move(to: CGPoint(x: rect.maxX - l, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + l))
+
+        // Bottom-left
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY - l))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + l, y: rect.maxY))
+
+        // Bottom-right
+        path.move(to: CGPoint(x: rect.maxX - l, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - l))
+
+        return path
     }
 }
 
@@ -2260,27 +2554,30 @@ private struct SpriteStageView: View {
                 }
 
                 ZStack {
-                    Circle()
-                        .fill(statusColor.opacity(0.86))
-                    Circle()
-                        .fill(.white.opacity(0.86))
-                        .frame(width: stageSize * 0.08, height: stageSize * 0.08)
+                    ShineSparkle()
+                        .fill(statusColor.opacity(0.92))
+                        .blur(radius: 0.4)
+                    ShineSparkle()
+                        .fill(.white.opacity(0.95))
+                        .frame(width: stageSize * 0.14, height: stageSize * 0.14)
                 }
-                    .frame(width: stageSize * 0.20, height: stageSize * 0.20)
-                    .shadow(color: statusColor.opacity(scaledOpacity(isSuperSlay ? 0.54 : 0.38)), radius: scaledRadius(isSuperSlay ? 4 : 3), x: 0, y: 0)
+                    .frame(width: stageSize * 0.26, height: stageSize * 0.26)
+                    .shadow(color: statusColor.opacity(scaledOpacity(isSuperSlay ? 0.65 : 0.46)), radius: scaledRadius(isSuperSlay ? 5 : 3.5), x: 0, y: 0)
+                    .rotationEffect(.degrees(runningOrbitAngle * 1.4))
                     .offset(y: -stageSize * 0.43)
                     .rotationEffect(.degrees(runningOrbitAngle))
 
                 if showsSecondaryOrbit {
                     ZStack {
-                        Circle()
-                            .fill(statusColor.opacity(0.62))
-                        Circle()
-                            .fill(.white.opacity(0.66))
-                            .frame(width: stageSize * 0.05, height: stageSize * 0.05)
+                        ShineSparkle()
+                            .fill(statusColor.opacity(0.74))
+                        ShineSparkle()
+                            .fill(.white.opacity(0.78))
+                            .frame(width: stageSize * 0.08, height: stageSize * 0.08)
                     }
-                    .frame(width: stageSize * 0.14, height: stageSize * 0.14)
-                    .shadow(color: statusColor.opacity(scaledOpacity(0.28)), radius: scaledRadius(3), x: 0, y: 0)
+                    .frame(width: stageSize * 0.18, height: stageSize * 0.18)
+                    .shadow(color: statusColor.opacity(scaledOpacity(0.34)), radius: scaledRadius(3), x: 0, y: 0)
+                    .rotationEffect(.degrees(-runningOrbitAngle * 2.1))
                     .offset(y: -stageSize * 0.34)
                     .rotationEffect(.degrees(-runningOrbitAngle * 0.78 + 118))
                 }
@@ -2632,12 +2929,13 @@ private struct StatusPill: View {
             }
             .frame(width: dotSize + 4, height: dotSize + 4)
 
-            Text(label)
-                .font(.system(size: fontSize, weight: .semibold))
-                .tracking(-0.1)
+            Text(label.uppercased())
+                .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                .tracking(0.6)
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .fixedSize()
+                .shadow(color: color.opacity(0.45), radius: 1.5, x: 0, y: 0)
 
             if showsTypingDots {
                 Group {
@@ -2650,15 +2948,56 @@ private struct StatusPill: View {
                 .padding(.leading, 2)
             }
         }
-        .padding(.leading, 5)
-        .padding(.trailing, 7)
-        .padding(.vertical, 2)
+        .padding(.leading, 6)
+        .padding(.trailing, 8)
+        .padding(.vertical, 2.5)
         .background(
-            Capsule().fill(color.opacity(0.12))
+            ZStack {
+                // Chunky Nintendo pixel hard shadow (offset, no blur)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.black.opacity(0.35))
+                    .offset(x: 0, y: 1.2)
+
+                // Switch-button gradient fill
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                color.opacity(0.22),
+                                color.opacity(0.10)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                // Top highlight bar (3D button lift)
+                VStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [.white.opacity(0.30), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(height: 4)
+                        .padding(.horizontal, 2)
+                        .padding(.top, 1)
+                    Spacer(minLength: 0)
+                }
+            }
         )
         .overlay(
-            Capsule().strokeBorder(color.opacity(0.24), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(color.opacity(0.55), lineWidth: 0.8)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .inset(by: 0.8)
+                .stroke(.white.opacity(0.16), lineWidth: 0.4)
+        )
+        .shadow(color: color.opacity(isPulsing ? 0.38 : 0.18), radius: isPulsing ? 3 : 1.5, x: 0, y: 0.5)
         .animation(.easeInOut(duration: 0.35 * effectTuning.statusPulseDurationMultiplier), value: pulsePhaseActive)
     }
 }
@@ -3195,6 +3534,14 @@ struct FloaterStatusView: View {
                         )
                     }
 
+                    // Star-power rainbow border (Mario Kart invincibility vibe)
+                    if isRunning {
+                        RainbowStarPowerBorder(
+                            cornerRadius: floaterSize.cornerRadius,
+                            intensity: isSuperSlayRenderMode ? 0.55 : 0.36
+                        )
+                    }
+
                     DonePanelVictoryFlash(
                         color: accentColor,
                         cornerRadius: floaterSize.cornerRadius,
@@ -3203,6 +3550,9 @@ struct FloaterStatusView: View {
                         glowScale: panelVictoryFlashScale
                     )
                     .opacity(panelVictoryFlashOpacity)
+
+                    // Pixel confetti burst on completion
+                    PixelConfettiBurst(color: accentColor, trigger: completionTrigger)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .compositingGroup()
@@ -3256,19 +3606,39 @@ struct FloaterStatusView: View {
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(accentColor.opacity(isRunning ? 0.10 : 0.06))
             } else {
+                // Deep Switch-bezel base
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
+                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.96 : 0.92))
                     .overlay(
                         RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                            .fill(.thinMaterial.opacity(0.16))
+                            .fill(.thinMaterial.opacity(0.18))
                     )
+
+                // Cartridge body gradient: top lift, bottom shadow
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.06),
+                                .clear,
+                                Color.black.opacity(0.14)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                // Subtle pixel-grid texture
+                PixelGridPattern(cell: 5, dotSize: 1)
+                    .fill(.white.opacity(isSuperSlayRenderMode ? 0.025 : 0.018))
+                    .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
 
                 if isPersistent {
                     RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.20 : 0.14) : (isSuperSlayRenderMode ? 0.12 : 0.08)),
+                                    accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.24 : 0.18) : (isSuperSlayRenderMode ? 0.14 : 0.10)),
                                     .clear
                                 ],
                                 startPoint: .leading,
@@ -3277,11 +3647,13 @@ struct FloaterStatusView: View {
                         )
                 }
 
+                // Glossy top sheen (Switch/CRT screen feel)
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(
                         LinearGradient(
                             colors: [
-                                FloaterPalette.highlight.opacity(0.08),
+                                FloaterPalette.highlight.opacity(0.14),
+                                FloaterPalette.highlight.opacity(0.04),
                                 .clear
                             ],
                             startPoint: .top,
@@ -3289,9 +3661,45 @@ struct FloaterStatusView: View {
                         )
                     )
 
+                // Chunky Nintendo-style inner bevel
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 1)
+                    .inset(by: 1)
+                    .stroke(.white.opacity(isSuperSlayRenderMode ? 0.14 : 0.09), lineWidth: 0.8)
+
+                // Power-LED strip (animated when running)
+                if isRunning {
+                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                        let period = 2.6
+                        let phase = CGFloat((context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period)) / period)
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            Rectangle()
+                                .fill(
+                                    LinearGradient(
+                                        stops: [
+                                            .init(color: accentColor.opacity(0.30), location: 0.0),
+                                            .init(color: accentColor.opacity(0.55), location: max(0, phase - 0.18)),
+                                            .init(color: .white.opacity(0.95), location: phase),
+                                            .init(color: accentColor.opacity(0.55), location: min(1, phase + 0.18)),
+                                            .init(color: accentColor.opacity(0.30), location: 1.0)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(height: 1.5)
+                                .shadow(color: accentColor.opacity(0.85), radius: 3, y: -1)
+                                .padding(.horizontal, 8)
+                                .padding(.bottom, 2)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
+                    .allowsHitTesting(false)
+                }
+
                 if isSuperSlayRenderMode {
                     RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .strokeBorder(.white.opacity(isRunning ? 0.12 : 0.08), lineWidth: 0.8)
+                        .strokeBorder(.white.opacity(isRunning ? 0.14 : 0.08), lineWidth: 0.8)
                 }
             }
         }
@@ -3328,9 +3736,11 @@ struct FloaterStatusView: View {
     private var persistentBody: some View {
         VStack(alignment: .leading, spacing: floaterSize.bodySpacing) {
             Text(projectName)
-                .font(.system(size: floaterSize.projectFontSize, weight: .semibold))
+                .font(.system(size: floaterSize.projectFontSize, weight: .semibold, design: .rounded))
                 .tracking(-0.2)
                 .foregroundStyle(FloaterPalette.primaryText)
+                .shadow(color: accentColor.opacity(isRunning ? 0.35 : 0.18), radius: 2, x: 0, y: 0)
+                .shadow(color: .black.opacity(0.35), radius: 0.5, x: 0, y: 0.5)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .layoutPriority(1)
@@ -3427,56 +3837,147 @@ struct FloaterStatusView: View {
     }
 
     private var persistentAvatarBackground: some View {
-        Rectangle()
-            .fill(avatarBackgroundFill)
-            .overlay {
-                RadialGradient(
-                    colors: [
-                        accentColor.opacity(usesMinimalRenderMode ? 0.28 : 0.34),
-                        accentColor.opacity(0.10),
-                        .clear
-                    ],
-                    center: .center,
-                    startRadius: floaterSize.persistentStageSize * 0.08,
-                    endRadius: floaterSize.avatarHitSize * 0.58
-                )
+        ZStack {
+            // Base: deep void with status-tinted gradient
+            Rectangle()
+                .fill(avatarBackgroundFill)
+
+            // Angular iridescent sweep (gamer holographic feel)
+            if !usesMinimalRenderMode {
+                Rectangle()
+                    .fill(
+                        AngularGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: accentColor.opacity(0.00), location: 0.00),
+                                .init(color: accentColor.opacity(0.38), location: 0.22),
+                                .init(color: .white.opacity(0.22), location: 0.50),
+                                .init(color: accentColor.opacity(0.32), location: 0.78),
+                                .init(color: accentColor.opacity(0.00), location: 1.00)
+                            ]),
+                            center: .center
+                        )
+                    )
+                    .blendMode(.screen)
+                    .opacity(isRunning ? 0.95 : 0.60)
             }
-            .overlay {
-                if !usesMinimalRenderMode {
+
+            // Neon core glow
+            RadialGradient(
+                colors: [
+                    .white.opacity(isRunning ? 0.28 : 0.16),
+                    accentColor.opacity(usesMinimalRenderMode ? 0.36 : 0.46),
+                    accentColor.opacity(0.08),
+                    .clear
+                ],
+                center: .center,
+                startRadius: 1,
+                endRadius: floaterSize.avatarHitSize * 0.58
+            )
+            .blendMode(.plusLighter)
+
+            // CRT scanlines
+            if !usesMinimalRenderMode {
+                ScanlinePattern(spacing: 2.5)
+                    .fill(.white.opacity(isSuperSlayRenderMode ? 0.07 : 0.05))
+                    .blendMode(.overlay)
+            }
+
+            // Animated scan sweep (running only)
+            if !usesMinimalRenderMode, isRunning {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                    let period = 2.2
+                    let t = context.date.timeIntervalSinceReferenceDate
+                    let phase = CGFloat((t.truncatingRemainder(dividingBy: period)) / period)
                     LinearGradient(
-                        colors: [
-                            FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.20 : 0.12),
-                            .clear
+                        stops: [
+                            .init(color: .clear, location: 0.0),
+                            .init(color: .clear, location: max(0.0, phase - 0.20)),
+                            .init(color: accentColor.opacity(0.55), location: max(0.0, phase - 0.01)),
+                            .init(color: .white.opacity(0.70), location: phase),
+                            .init(color: accentColor.opacity(0.45), location: min(1.0, phase + 0.02)),
+                            .init(color: .clear, location: min(1.0, phase + 0.22)),
+                            .init(color: .clear, location: 1.0)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
+                    .blendMode(.screen)
                 }
             }
-            .overlay(
-                Rectangle()
-                    .strokeBorder(accentColor.opacity(avatarBackgroundBorderOpacity), lineWidth: 1.0)
-            )
-            .overlay(alignment: .trailing) {
-                Rectangle()
-                    .fill(accentColor.opacity(avatarBackgroundBorderOpacity))
-                    .frame(width: 2)
-                    .padding(.vertical, 3)
+
+            // Top light wash (HUD highlight)
+            if !usesMinimalRenderMode {
+                LinearGradient(
+                    colors: [
+                        FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.22 : 0.14),
+                        .clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .blendMode(.screen)
             }
+
+            // HUD corner brackets
+            if !usesMinimalRenderMode {
+                HUDCornerBrackets(length: 6, thickness: 1.2)
+                    .stroke(
+                        accentColor.opacity(isRunning ? 0.95 : 0.62),
+                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
+                    )
+                    .shadow(color: accentColor.opacity(isRunning ? 0.7 : 0.35), radius: 2)
+                    .padding(3)
+            }
+
+            // Outer neon border
+            Rectangle()
+                .strokeBorder(accentColor.opacity(min(avatarBackgroundBorderOpacity + 0.18, 1.0)), lineWidth: 1.0)
+                .shadow(color: accentColor.opacity(isRunning ? 0.35 : 0.18), radius: isRunning ? 3 : 1.5)
+
+            // Inner highlight line (double-border gamer seal)
+            if !usesMinimalRenderMode {
+                Rectangle()
+                    .inset(by: 1.5)
+                    .stroke(.white.opacity(isSuperSlayRenderMode ? 0.16 : 0.10), lineWidth: 0.5)
+            }
+
+            // Right-edge neon seam
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accentColor.opacity(0),
+                                accentColor.opacity(0.90),
+                                .white.opacity(0.80),
+                                accentColor.opacity(0.90),
+                                accentColor.opacity(0)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 2)
+                    .padding(.vertical, 2)
+                    .shadow(color: accentColor.opacity(isRunning ? 0.85 : 0.55), radius: 3)
+                    .blendMode(.screen)
+            }
+        }
     }
 
     private var avatarBackgroundFill: AnyShapeStyle {
         if usesMinimalRenderMode {
-            return AnyShapeStyle(accentColor.opacity(0.44))
+            return AnyShapeStyle(accentColor.opacity(0.48))
         }
 
         return AnyShapeStyle(
             LinearGradient(
                 colors: [
-                    accentColor.opacity(scaledGlow(avatarBackgroundPrimaryOpacity)),
+                    accentColor.opacity(scaledGlow(min(avatarBackgroundPrimaryOpacity + 0.10, 1.0))),
                     accentColor.opacity(scaledGlow(avatarBackgroundSecondaryOpacity)),
-                    accentColor.opacity(0.24),
-                    FloaterPalette.panelShadow.opacity(0.34)
+                    FloaterPalette.panelShadow.opacity(0.58),
+                    Color.black.opacity(0.44)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
