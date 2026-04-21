@@ -1,5 +1,6 @@
 import AppKit
 import Darwin
+import ImageIO
 import QuartzCore
 import SwiftUI
 
@@ -20,8 +21,8 @@ private struct FloaterThemePalette {
 }
 
 enum FloaterPalette {
-    private static var palette: FloaterThemePalette {
-        switch FloaterTheme.current {
+    private static func palette(for theme: FloaterTheme) -> FloaterThemePalette {
+        switch theme {
         case .dark:
             return FloaterThemePalette(
                 panelTint: Color(red: 0.075, green: 0.082, blue: 0.118),
@@ -57,6 +58,10 @@ enum FloaterPalette {
         }
     }
 
+    private static var palette: FloaterThemePalette {
+        palette(for: FloaterTheme.current)
+    }
+
     static var panelTint: Color { palette.panelTint }
     static var panelShadow: Color { palette.panelShadow }
     static var primaryText: Color { palette.primaryText }
@@ -70,6 +75,18 @@ enum FloaterPalette {
     static var warning: Color { palette.warning }
     static var chipFill: Color { palette.chipFill }
     static var closeHover: Color { palette.closeHover }
+
+    static func statusColor(for state: ClaudeStatusState, theme: FloaterTheme) -> Color {
+        let palette = palette(for: theme)
+        switch state {
+        case .running:
+            return palette.running
+        case .idle:
+            return palette.idle
+        case .complete:
+            return palette.complete
+        }
+    }
 }
 
 // MARK: - Sprite Sheet Infrastructure
@@ -330,11 +347,18 @@ private final class FloaterLowFrequencyTicker: ObservableObject {
     @Published private(set) var tick = 0
 
     private var timer: Timer?
+    private var subscriberCount = 0
 
-    private init() {
+    private init() {}
+
+    func activate() {
+        subscriberCount += 1
+        guard timer == nil else { return }
+
+        now = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+            guard let self else { return }
+            MainActor.assumeIsolated {
                 self.now = Date()
                 self.tick += 1
             }
@@ -342,6 +366,13 @@ private final class FloaterLowFrequencyTicker: ObservableObject {
         if let timer {
             RunLoop.main.add(timer, forMode: .common)
         }
+    }
+
+    func deactivate() {
+        subscriberCount = max(subscriberCount - 1, 0)
+        guard subscriberCount == 0 else { return }
+        timer?.invalidate()
+        timer = nil
     }
 
     deinit {
@@ -372,8 +403,9 @@ private final class FloatifyCPUUsageMonitor: ObservableObject {
 
         lastSample = makeSample()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.refresh()
+            guard let self else { return }
+            MainActor.assumeIsolated {
+                self.refresh()
             }
         }
 
@@ -462,6 +494,12 @@ private struct RunningDurationBadge: View {
                 .fill(accentColor.opacity(floaterSize == .compact ? 0.12 : 0.15))
         )
         .fixedSize()
+        .onAppear {
+            FloaterLowFrequencyTicker.shared.activate()
+        }
+        .onDisappear {
+            FloaterLowFrequencyTicker.shared.deactivate()
+        }
     }
 }
 
@@ -487,6 +525,12 @@ private struct TypingDots: View {
                     .animation(.easeInOut(duration: 0.25), value: phase)
             }
         }
+        .onAppear {
+            FloaterLowFrequencyTicker.shared.activate()
+        }
+        .onDisappear {
+            FloaterLowFrequencyTicker.shared.deactivate()
+        }
     }
 }
 
@@ -507,6 +551,12 @@ private struct LiteTypingDots: View {
                     .fill(color.opacity(phase == i ? 0.92 : 0.28))
                     .frame(width: fontSize * 0.28, height: fontSize * 0.28)
             }
+        }
+        .onAppear {
+            FloaterLowFrequencyTicker.shared.activate()
+        }
+        .onDisappear {
+            FloaterLowFrequencyTicker.shared.deactivate()
         }
     }
 }
@@ -923,6 +973,127 @@ private struct SlaySheenCacheKey: Hashable {
     let glowBucket: Int
 }
 
+private struct SlayLEDStripCacheKey: Hashable {
+    let width: Int
+    let height: Int
+    let cornerRadius: Int
+    let colorKey: String
+}
+
+private struct SlayScanSweepCacheKey: Hashable {
+    let width: Int
+    let height: Int
+    let colorKey: String
+}
+
+private struct SlayRainbowBorderCacheKey: Hashable {
+    let width: Int
+    let height: Int
+    let cornerRadius: Int
+    let intensityBucket: Int
+}
+
+private enum SlayPrebuiltSequenceKind: String {
+    case stage = "stage"
+    case sheen = "sheen"
+    case ledStrip = "led-strip"
+    case scanSweep = "scan-sweep"
+    case rainbowBorder = "rainbow-border"
+}
+
+struct SlayPrebuildSummary {
+    let sequenceCount: Int
+    let frameCount: Int
+}
+
+private struct SlayRasterSequence {
+    let atlas: CGImage
+    let frameCount: Int
+    let columns: Int
+    let rows: Int
+}
+
+private struct SlayRasterSequenceMetadata: Codable {
+    let frameCount: Int
+    let columns: Int
+    let rows: Int
+}
+
+private extension SlayStageState {
+    var cacheIdentifier: String {
+        switch self {
+        case .running:
+            return "running"
+        case .idle:
+            return "idle"
+        case .complete:
+            return "complete"
+        }
+    }
+}
+
+private extension SlayStageCacheKey {
+    var cacheIdentifier: String {
+        [
+            "size\(size)",
+            "state\(state.cacheIdentifier)",
+            "mode\(renderMode.rawValue)",
+            "color\(colorKey)",
+            "glow\(glowBucket)",
+            "counter\(showsCounterArc ? 1 : 0)",
+            "secondary\(showsSecondaryOrbit ? 1 : 0)",
+            "flash\(flashBucket)",
+            "rays\(extraCompletionRays)",
+            "orbs\(extraCompletionOrbs)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlaySheenCacheKey {
+    var cacheIdentifier: String {
+        [
+            "w\(width)",
+            "h\(height)",
+            "corner\(cornerRadius)",
+            "mode\(renderMode.rawValue)",
+            "color\(colorKey)",
+            "glow\(glowBucket)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlayLEDStripCacheKey {
+    var cacheIdentifier: String {
+        [
+            "w\(width)",
+            "h\(height)",
+            "corner\(cornerRadius)",
+            "color\(colorKey)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlayScanSweepCacheKey {
+    var cacheIdentifier: String {
+        [
+            "w\(width)",
+            "h\(height)",
+            "color\(colorKey)"
+        ].joined(separator: "_")
+    }
+}
+
+private extension SlayRainbowBorderCacheKey {
+    var cacheIdentifier: String {
+        [
+            "w\(width)",
+            "h\(height)",
+            "corner\(cornerRadius)",
+            "intensity\(intensityBucket)"
+        ].joined(separator: "_")
+    }
+}
+
 private extension NSColor {
     var floaterCacheKey: String {
         let converted = usingColorSpace(.deviceRGB) ?? self
@@ -937,20 +1108,314 @@ private extension NSColor {
 }
 
 @MainActor
-private enum SlaySnapshotCache {
-    private static var stageFrameCache: [SlayStageCacheKey: [NSImage]] = [:]
-    private static var sheenFrameCache: [SlaySheenCacheKey: [NSImage]] = [:]
+enum SlaySnapshotCache {
+    private static let prebuiltDirectoryName = "FloaterEffectFrames-v1"
+    private static var stageFrameCache: [SlayStageCacheKey: SlayRasterSequence] = [:]
+    private static var sheenFrameCache: [SlaySheenCacheKey: SlayRasterSequence] = [:]
+    private static var ledStripFrameCache: [SlayLEDStripCacheKey: SlayRasterSequence] = [:]
+    private static var scanSweepFrameCache: [SlayScanSweepCacheKey: SlayRasterSequence] = [:]
+    private static var rainbowBorderFrameCache: [SlayRainbowBorderCacheKey: SlayRasterSequence] = [:]
+    private static var missingPrebuiltSequences: Set<String> = []
 
-    static func stageFrames(
+    fileprivate static func stageFrames(
         state: SlayStageState,
         renderMode: FloaterRenderMode,
         statusColor: Color,
         stageSize: CGFloat,
         effectTuning: FloaterEffectTuning
-    ) -> [NSImage] {
+    ) -> SlayRasterSequence? {
+        let cacheKey = stageCacheKey(
+            state: state,
+            renderMode: renderMode,
+            statusColor: statusColor,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )
+
+        if let cached = stageFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .stage, identifier: cacheKey.cacheIdentifier) {
+            stageFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeStageFrames(
+            state: state,
+            renderMode: renderMode,
+            statusColor: statusColor,
+            stageSize: stageSize,
+            effectTuning: effectTuning
+        )) else {
+            return nil
+        }
+        stageFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func sheenFrames(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayRasterSequence? {
+        let cacheKey = sheenCacheKey(
+            renderMode: renderMode,
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )
+
+        if let cached = sheenFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .sheen, identifier: cacheKey.cacheIdentifier) {
+            sheenFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeSheenFrames(
+            renderMode: renderMode,
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size,
+            effectTuning: effectTuning
+        )) else {
+            return nil
+        }
+        sheenFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func ledStripFrames(
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize
+    ) -> SlayRasterSequence? {
+        let cacheKey = ledStripCacheKey(color: color, cornerRadius: cornerRadius, size: size)
+
+        if let cached = ledStripFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .ledStrip, identifier: cacheKey.cacheIdentifier) {
+            ledStripFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeLEDStripFrames(color: color, cornerRadius: cornerRadius, size: size)) else {
+            return nil
+        }
+        ledStripFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func avatarScanSweepFrames(
+        color: Color,
+        size: CGSize
+    ) -> SlayRasterSequence? {
+        let cacheKey = scanSweepCacheKey(color: color, size: size)
+
+        if let cached = scanSweepFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .scanSweep, identifier: cacheKey.cacheIdentifier) {
+            scanSweepFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeScanSweepFrames(color: color, size: size)) else {
+            return nil
+        }
+        scanSweepFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    fileprivate static func rainbowBorderFrames(
+        cornerRadius: CGFloat,
+        intensity: Double,
+        size: CGSize
+    ) -> SlayRasterSequence? {
+        let cacheKey = rainbowBorderCacheKey(cornerRadius: cornerRadius, intensity: intensity, size: size)
+
+        if let cached = rainbowBorderFrameCache[cacheKey] {
+            return cached
+        }
+
+        if let prebuilt = loadPrebuiltSequence(kind: .rainbowBorder, identifier: cacheKey.cacheIdentifier) {
+            rainbowBorderFrameCache[cacheKey] = prebuilt
+            return prebuilt
+        }
+
+        guard let frames = makeSequence(from: makeRainbowBorderFrames(cornerRadius: cornerRadius, intensity: intensity, size: size)) else {
+            return nil
+        }
+        rainbowBorderFrameCache[cacheKey] = frames
+        return frames
+    }
+
+    static func prebuildBundledAssets(
+        settings: FloatifySettings = .shared,
+        catalog: FloaterVisualCatalog = .shared
+    ) throws -> SlayPrebuildSummary {
+        settings.normalizeVisualSelection(catalog: catalog)
+
+        let outputRoot = try prebuildOutputRootURL()
+        try FileManager.default.createDirectory(at: outputRoot, withIntermediateDirectories: true)
+
+        let presets = effectPresetsToPrebuild(settings: settings, catalog: catalog)
+        let themes = FloaterTheme.allCases
+        let stageStates: [SlayStageState] = [.running, .idle, .complete]
+        var sequenceCount = 0
+        var frameCount = 0
+
+        for floaterSize in FloaterSize.allCases {
+            let panelSize = CGSize(width: floaterSize.persistentPanelWidth, height: floaterSize.rowHeight)
+            let stageSize = floaterSize.persistentStageSize
+            let avatarBackgroundSize = CGSize(width: floaterSize.avatarHitSize, height: floaterSize.avatarHitSize)
+
+            for preset in presets {
+                for renderMode in FloaterRenderMode.allCases {
+                    for theme in themes {
+                        for stageState in stageStates {
+                            let statusState = statusState(for: stageState)
+                            let color = FloaterPalette.statusColor(for: statusState, theme: theme)
+                            let cacheKey = stageCacheKey(
+                                state: stageState,
+                                renderMode: renderMode,
+                                statusColor: color,
+                                stageSize: stageSize,
+                                effectTuning: preset.tuning
+                            )
+                            let frames = makeStageFrames(
+                                state: stageState,
+                                renderMode: renderMode,
+                                statusColor: color,
+                                stageSize: stageSize,
+                                effectTuning: preset.tuning
+                            )
+                            guard let sequence = makeSequence(from: frames) else { continue }
+                            try writePrebuiltSequence(sequence, kind: .stage, identifier: cacheKey.cacheIdentifier, rootURL: outputRoot)
+                            sequenceCount += 1
+                            frameCount += sequence.frameCount
+                        }
+
+                        let runningColor = FloaterPalette.statusColor(for: .running, theme: theme)
+                        let sheenKey = sheenCacheKey(
+                            renderMode: renderMode,
+                            color: runningColor,
+                            cornerRadius: floaterSize.cornerRadius,
+                            size: panelSize,
+                            effectTuning: preset.tuning
+                        )
+                        let sheenFrames = makeSheenFrames(
+                            renderMode: renderMode,
+                            color: runningColor,
+                            cornerRadius: floaterSize.cornerRadius,
+                            size: panelSize,
+                            effectTuning: preset.tuning
+                        )
+                        guard let sheenSequence = makeSequence(from: sheenFrames) else { continue }
+                        try writePrebuiltSequence(sheenSequence, kind: .sheen, identifier: sheenKey.cacheIdentifier, rootURL: outputRoot)
+                        sequenceCount += 1
+                        frameCount += sheenSequence.frameCount
+                    }
+                }
+            }
+
+            for theme in themes {
+                let runningColor = FloaterPalette.statusColor(for: .running, theme: theme)
+                let ledKey = ledStripCacheKey(color: runningColor, cornerRadius: floaterSize.cornerRadius, size: panelSize)
+                let ledFrames = makeLEDStripFrames(color: runningColor, cornerRadius: floaterSize.cornerRadius, size: panelSize)
+                guard let ledSequence = makeSequence(from: ledFrames) else { continue }
+                try writePrebuiltSequence(ledSequence, kind: .ledStrip, identifier: ledKey.cacheIdentifier, rootURL: outputRoot)
+                sequenceCount += 1
+                frameCount += ledSequence.frameCount
+
+                let scanKey = scanSweepCacheKey(color: runningColor, size: avatarBackgroundSize)
+                let scanFrames = makeScanSweepFrames(color: runningColor, size: avatarBackgroundSize)
+                guard let scanSequence = makeSequence(from: scanFrames) else { continue }
+                try writePrebuiltSequence(scanSequence, kind: .scanSweep, identifier: scanKey.cacheIdentifier, rootURL: outputRoot)
+                sequenceCount += 1
+                frameCount += scanSequence.frameCount
+            }
+
+            let rainbowKey = rainbowBorderCacheKey(
+                cornerRadius: floaterSize.cornerRadius,
+                intensity: 0.55,
+                size: panelSize
+            )
+            let rainbowFrames = makeRainbowBorderFrames(
+                cornerRadius: floaterSize.cornerRadius,
+                intensity: 0.55,
+                size: panelSize
+            )
+            guard let rainbowSequence = makeSequence(from: rainbowFrames) else { continue }
+            try writePrebuiltSequence(rainbowSequence, kind: .rainbowBorder, identifier: rainbowKey.cacheIdentifier, rootURL: outputRoot)
+            sequenceCount += 1
+            frameCount += rainbowSequence.frameCount
+        }
+
+        return SlayPrebuildSummary(sequenceCount: sequenceCount, frameCount: frameCount)
+    }
+
+    static func prewarmCurrentConfiguration(
+        settings: FloatifySettings = .shared,
+        catalog: FloaterVisualCatalog = .shared
+    ) {
+        settings.normalizeVisualSelection(catalog: catalog)
+
+        let preset = catalog.resolvedEffectPreset(
+            in: settings.selectedVisualPackID,
+            effectPresetID: settings.selectedEffectPresetID
+        )
+        let floaterSize = settings.floaterSize
+        let renderMode = settings.floaterRenderMode
+        let panelSize = CGSize(width: floaterSize.persistentPanelWidth, height: floaterSize.rowHeight)
+        let avatarBackgroundSize = CGSize(width: floaterSize.avatarHitSize, height: floaterSize.avatarHitSize)
+        let theme = settings.floaterTheme
+
+        for state in [ClaudeStatusState.running, .idle, .complete] {
+            _ = stageFrames(
+                state: stageState(for: state),
+                renderMode: renderMode,
+                statusColor: FloaterPalette.statusColor(for: state, theme: theme),
+                stageSize: floaterSize.persistentStageSize,
+                effectTuning: preset.tuning
+            )
+        }
+
+        let runningColor = FloaterPalette.statusColor(for: .running, theme: theme)
+        _ = sheenFrames(
+            renderMode: renderMode,
+            color: runningColor,
+            cornerRadius: floaterSize.cornerRadius,
+            size: panelSize,
+            effectTuning: preset.tuning
+        )
+        _ = ledStripFrames(color: runningColor, cornerRadius: floaterSize.cornerRadius, size: panelSize)
+        _ = avatarScanSweepFrames(color: runningColor, size: avatarBackgroundSize)
+
+        if renderMode == .superSlay {
+            _ = rainbowBorderFrames(cornerRadius: floaterSize.cornerRadius, intensity: 0.55, size: panelSize)
+        }
+    }
+
+    private static func stageCacheKey(
+        state: SlayStageState,
+        renderMode: FloaterRenderMode,
+        statusColor: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> SlayStageCacheKey {
         let showsCounterArc = effectTuning.showsCounterArc ?? (renderMode == .superSlay)
         let showsSecondaryOrbit = effectTuning.showsSecondaryOrbit ?? (renderMode == .superSlay)
-        let cacheKey = SlayStageCacheKey(
+        return SlayStageCacheKey(
             size: Int(stageSize.rounded(.toNearestOrAwayFromZero)),
             state: state,
             renderMode: renderMode,
@@ -962,33 +1427,92 @@ private enum SlaySnapshotCache {
             extraCompletionRays: effectTuning.extraCompletionRays,
             extraCompletionOrbs: effectTuning.extraCompletionOrbs
         )
+    }
 
-        if let cached = stageFrameCache[cacheKey] {
-            return cached
-        }
+    private static func sheenCacheKey(
+        renderMode: FloaterRenderMode,
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize,
+        effectTuning: FloaterEffectTuning
+    ) -> SlaySheenCacheKey {
+        SlaySheenCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            renderMode: renderMode,
+            colorKey: NSColor(color).floaterCacheKey,
+            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded())
+        )
+    }
 
+    private static func ledStripCacheKey(
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize
+    ) -> SlayLEDStripCacheKey {
+        SlayLEDStripCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            colorKey: NSColor(color).floaterCacheKey
+        )
+    }
+
+    private static func scanSweepCacheKey(
+        color: Color,
+        size: CGSize
+    ) -> SlayScanSweepCacheKey {
+        SlayScanSweepCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            colorKey: NSColor(color).floaterCacheKey
+        )
+    }
+
+    private static func rainbowBorderCacheKey(
+        cornerRadius: CGFloat,
+        intensity: Double,
+        size: CGSize
+    ) -> SlayRainbowBorderCacheKey {
+        SlayRainbowBorderCacheKey(
+            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
+            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
+            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
+            intensityBucket: Int((intensity * 100).rounded())
+        )
+    }
+
+    private static func makeStageFrames(
+        state: SlayStageState,
+        renderMode: FloaterRenderMode,
+        statusColor: Color,
+        stageSize: CGFloat,
+        effectTuning: FloaterEffectTuning
+    ) -> [CGImage] {
         let frameCount: Int
         switch (renderMode, state) {
         case (.superSlay, .running):
-            frameCount = 96
-        case (.superSlay, .idle):
-            frameCount = 12
-        case (.superSlay, .complete):
-            frameCount = 24
-        case (.slay, .running):
-            frameCount = 18
-        case (.slay, .idle):
-            frameCount = 8
-        case (.slay, .complete):
             frameCount = 16
-        case (_, .running):
+        case (.superSlay, .idle):
+            frameCount = 8
+        case (.superSlay, .complete):
             frameCount = 12
-        case (_, .idle):
+        case (.slay, .running):
+            frameCount = 8
+        case (.slay, .idle):
             frameCount = 6
+        case (.slay, .complete):
+            frameCount = 10
+        case (_, .running):
+            frameCount = 6
+        case (_, .idle):
+            frameCount = 4
         case (_, .complete):
-            frameCount = 12
+            frameCount = 8
         }
-        let frames = (0..<frameCount).map { index in
+
+        return (0..<frameCount).compactMap { index in
             let progress = frameCount == 1 ? 0.26 : CGFloat(index) / CGFloat(max(frameCount - 1, 1))
             return renderImage(size: CGSize(width: stageSize, height: stageSize)) {
                 SlayStageSnapshotContent(
@@ -1001,33 +1525,17 @@ private enum SlaySnapshotCache {
                 )
             }
         }
-
-        stageFrameCache[cacheKey] = frames
-        return frames
     }
 
-    static func sheenFrames(
+    private static func makeSheenFrames(
         renderMode: FloaterRenderMode,
         color: Color,
         cornerRadius: CGFloat,
         size: CGSize,
         effectTuning: FloaterEffectTuning
-    ) -> [NSImage] {
-        let cacheKey = SlaySheenCacheKey(
-            width: Int(size.width.rounded(.toNearestOrAwayFromZero)),
-            height: Int(size.height.rounded(.toNearestOrAwayFromZero)),
-            cornerRadius: Int(cornerRadius.rounded(.toNearestOrAwayFromZero)),
-            renderMode: renderMode,
-            colorKey: NSColor(color).floaterCacheKey,
-            glowBucket: Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded())
-        )
-
-        if let cached = sheenFrameCache[cacheKey] {
-            return cached
-        }
-
-        let frameCount = renderMode == .superSlay ? 60 : 10
-        let frames = (0..<frameCount).map { index in
+    ) -> [CGImage] {
+        let frameCount = renderMode == .superSlay ? 16 : 6
+        return (0..<frameCount).compactMap { index in
             let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
             return renderImage(size: size) {
                 SlaySheenSnapshotContent(
@@ -1040,17 +1548,277 @@ private enum SlaySnapshotCache {
                 )
             }
         }
-
-        sheenFrameCache[cacheKey] = frames
-        return frames
     }
 
-    private static func renderImage<Content: View>(size: CGSize, @ViewBuilder content: () -> Content) -> NSImage {
+    private static func makeLEDStripFrames(
+        color: Color,
+        cornerRadius: CGFloat,
+        size: CGSize
+    ) -> [CGImage] {
+        let frameCount = 8
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: size) {
+                SlayLEDStripSnapshotContent(
+                    color: color,
+                    cornerRadius: cornerRadius,
+                    size: size,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func makeScanSweepFrames(
+        color: Color,
+        size: CGSize
+    ) -> [CGImage] {
+        let frameCount = 8
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: size) {
+                SlayAvatarScanSweepSnapshotContent(
+                    color: color,
+                    size: size,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func makeRainbowBorderFrames(
+        cornerRadius: CGFloat,
+        intensity: Double,
+        size: CGSize
+    ) -> [CGImage] {
+        let frameCount = 12
+        return (0..<frameCount).compactMap { index in
+            let progress = CGFloat(index) / CGFloat(max(frameCount - 1, 1))
+            return renderImage(size: size) {
+                SlayRainbowBorderSnapshotContent(
+                    cornerRadius: cornerRadius,
+                    intensity: intensity,
+                    size: size,
+                    progress: progress
+                )
+            }
+        }
+    }
+
+    private static func statusState(for stageState: SlayStageState) -> ClaudeStatusState {
+        switch stageState {
+        case .running:
+            return .running
+        case .idle:
+            return .idle
+        case .complete:
+            return .complete
+        }
+    }
+
+    private static func stageState(for statusState: ClaudeStatusState) -> SlayStageState {
+        switch statusState {
+        case .running:
+            return .running
+        case .idle:
+            return .idle
+        case .complete:
+            return .complete
+        }
+    }
+
+    private static func effectPresetsToPrebuild(
+        settings: FloatifySettings,
+        catalog: FloaterVisualCatalog
+    ) -> [FloaterEffectPreset] {
+        let selectedPreset = catalog.resolvedEffectPreset(
+            in: settings.selectedVisualPackID,
+            effectPresetID: settings.selectedEffectPresetID
+        )
+
+        var results: [FloaterEffectPreset] = []
+        var seen: Set<String> = []
+
+        for preset in FloaterEffectPreset.builtInPresets + [selectedPreset] {
+            let signature = effectPresetSignature(preset)
+            if seen.insert(signature).inserted {
+                results.append(preset)
+            }
+        }
+
+        return results
+    }
+
+    private static func effectPresetSignature(_ preset: FloaterEffectPreset) -> String {
+        let tuning = preset.tuning
+        return [
+            preset.id,
+            "sheen\(tuning.showsSheen.map { $0 ? 1 : 0 } ?? -1)",
+            "trail\(tuning.showsParticleTrail.map { $0 ? 1 : 0 } ?? -1)",
+            "counter\(tuning.showsCounterArc.map { $0 ? 1 : 0 } ?? -1)",
+            "secondary\(tuning.showsSecondaryOrbit.map { $0 ? 1 : 0 } ?? -1)",
+            "glow\(Int((tuning.glowMultiplier * 100).rounded()))",
+            "sheenDur\(Int((tuning.sheenDurationMultiplier * 100).rounded()))",
+            "orbitDur\(Int((tuning.orbitDurationMultiplier * 100).rounded()))",
+            "arcDur\(Int((tuning.arcDurationMultiplier * 100).rounded()))",
+            "pulseDur\(Int((tuning.pulseDurationMultiplier * 100).rounded()))",
+            "statusPulse\(Int((tuning.statusPulseDurationMultiplier * 100).rounded()))",
+            "completeDur\(Int((tuning.completionDurationMultiplier * 100).rounded()))",
+            "flash\(Int((tuning.flashIntensityMultiplier * 100).rounded()))",
+            "rays\(tuning.extraCompletionRays)",
+            "orbs\(tuning.extraCompletionOrbs)"
+        ].joined(separator: "_")
+    }
+
+    private static func loadPrebuiltSequence(
+        kind: SlayPrebuiltSequenceKind,
+        identifier: String
+    ) -> SlayRasterSequence? {
+        let sequenceKey = "\(kind.rawValue):\(identifier)"
+        if missingPrebuiltSequences.contains(sequenceKey) {
+            return nil
+        }
+
+        guard let rootURL = bundledPrebuiltRootURL() else {
+            missingPrebuiltSequences.insert(sequenceKey)
+            return nil
+        }
+
+        let directoryURL = sequenceDirectoryURL(kind: kind, identifier: identifier, rootURL: rootURL)
+        let atlasURL = directoryURL.appendingPathComponent("atlas.png")
+        let metadataURL = directoryURL.appendingPathComponent("metadata.json")
+
+        guard let atlas = loadCGImage(from: atlasURL),
+              let metadataData = try? Data(contentsOf: metadataURL),
+              let metadata = try? JSONDecoder().decode(SlayRasterSequenceMetadata.self, from: metadataData),
+              metadata.frameCount > 0,
+              metadata.columns > 0,
+              metadata.rows > 0 else {
+            missingPrebuiltSequences.insert(sequenceKey)
+            return nil
+        }
+
+        return SlayRasterSequence(
+            atlas: atlas,
+            frameCount: metadata.frameCount,
+            columns: metadata.columns,
+            rows: metadata.rows
+        )
+    }
+
+    private static func prebuildOutputRootURL() throws -> URL {
+        if let path = ProcessInfo.processInfo.environment["FLOATIFY_PREBUILD_OUTPUT_DIR"], !path.isEmpty {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+
+        guard let url = bundledPrebuiltRootURL() else {
+            throw NSError(domain: "FloatifyPrebuild", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Missing bundle resource URL for prebuilt effect output."
+            ])
+        }
+
+        return url
+    }
+
+    private static func bundledPrebuiltRootURL() -> URL? {
+        Bundle.main.resourceURL?.appendingPathComponent(prebuiltDirectoryName, isDirectory: true)
+    }
+
+    private static func sequenceDirectoryURL(
+        kind: SlayPrebuiltSequenceKind,
+        identifier: String,
+        rootURL: URL
+    ) -> URL {
+        rootURL
+            .appendingPathComponent(kind.rawValue, isDirectory: true)
+            .appendingPathComponent(identifier, isDirectory: true)
+    }
+
+    private static func writePrebuiltSequence(
+        _ sequence: SlayRasterSequence,
+        kind: SlayPrebuiltSequenceKind,
+        identifier: String,
+        rootURL: URL
+    ) throws {
+        let directoryURL = sequenceDirectoryURL(kind: kind, identifier: identifier, rootURL: rootURL)
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try writePNG(sequence.atlas, to: directoryURL.appendingPathComponent("atlas.png"))
+        let metadata = SlayRasterSequenceMetadata(
+            frameCount: sequence.frameCount,
+            columns: sequence.columns,
+            rows: sequence.rows
+        )
+        let metadataData = try JSONEncoder().encode(metadata)
+        try metadataData.write(to: directoryURL.appendingPathComponent("metadata.json"), options: .atomic)
+    }
+
+    private static func loadCGImage(from url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+            return nil
+        }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
+    private static func writePNG(_ image: CGImage, to url: URL) throws {
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else {
+            throw NSError(domain: "FloatifyPrebuild", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to create PNG writer for \(url.path)."
+            ])
+        }
+
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw NSError(domain: "FloatifyPrebuild", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to write PNG frame at \(url.path)."
+            ])
+        }
+    }
+
+    private static func makeSequence(from frames: [CGImage]) -> SlayRasterSequence? {
+        guard let first = frames.first else { return nil }
+
+        let frameCount = frames.count
+        let columns = min(max(Int(ceil(sqrt(Double(frameCount)))), 1), frameCount)
+        let rows = Int(ceil(Double(frameCount) / Double(columns)))
+        let atlasWidth = first.width * columns
+        let atlasHeight = first.height * rows
+
+        guard let context = CGContext(
+            data: nil,
+            width: atlasWidth,
+            height: atlasHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+
+        context.interpolationQuality = .none
+
+        for (index, frame) in frames.enumerated() {
+            let column = index % columns
+            let row = index / columns
+            let rect = CGRect(
+                x: column * first.width,
+                y: row * first.height,
+                width: first.width,
+                height: first.height
+            )
+            context.draw(frame, in: rect)
+        }
+
+        guard let atlas = context.makeImage() else { return nil }
+        return SlayRasterSequence(atlas: atlas, frameCount: frameCount, columns: columns, rows: rows)
+    }
+
+    private static func renderImage<Content: View>(size: CGSize, @ViewBuilder content: () -> Content) -> CGImage? {
         let renderer = ImageRenderer(content: content().frame(width: size.width, height: size.height))
         renderer.proposedSize = ProposedViewSize(size)
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        renderer.scale = max(NSScreen.main?.backingScaleFactor ?? 2, 2)
         renderer.isOpaque = false
-        return renderer.nsImage ?? NSImage(size: size)
+        return renderer.cgImage
     }
 }
 
@@ -1569,6 +2337,100 @@ private struct SlaySheenSnapshotContent: View {
     }
 }
 
+private struct SlayLEDStripSnapshotContent: View {
+    let color: Color
+    let cornerRadius: CGFloat
+    let size: CGSize
+    let progress: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            ZStack {
+                Rectangle()
+                    .fill(color.opacity(0.42))
+                    .frame(height: 5)
+                    .blur(radius: 3)
+                    .opacity(0.7)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: color.opacity(0.30), location: 0.0),
+                                .init(color: color.opacity(0.55), location: max(0, progress - 0.18)),
+                                .init(color: .white.opacity(0.95), location: progress),
+                                .init(color: color.opacity(0.55), location: min(1, progress + 0.18)),
+                                .init(color: color.opacity(0.30), location: 1.0)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 1.5)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 2)
+        }
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
+private struct SlayAvatarScanSweepSnapshotContent: View {
+    let color: Color
+    let size: CGSize
+    let progress: CGFloat
+
+    var body: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0.0),
+                .init(color: .clear, location: max(0.0, progress - 0.20)),
+                .init(color: color.opacity(0.55), location: max(0.0, progress - 0.01)),
+                .init(color: .white.opacity(0.70), location: progress),
+                .init(color: color.opacity(0.45), location: min(1.0, progress + 0.02)),
+                .init(color: .clear, location: min(1.0, progress + 0.22)),
+                .init(color: .clear, location: 1.0)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .blendMode(.screen)
+        .frame(width: size.width, height: size.height)
+    }
+}
+
+private struct SlayRainbowBorderSnapshotContent: View {
+    let cornerRadius: CGFloat
+    let intensity: Double
+    let size: CGSize
+    let progress: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .strokeBorder(
+                AngularGradient(
+                    gradient: Gradient(colors: [
+                        Color(hue: 0.00, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 0.13, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 0.30, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 0.50, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 0.70, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 0.85, saturation: 0.95, brightness: 1.0),
+                        Color(hue: 1.00, saturation: 0.95, brightness: 1.0)
+                    ]),
+                    center: .center,
+                    angle: .degrees(progress * 360.0)
+                ),
+                lineWidth: 1.2
+            )
+            .opacity(intensity)
+            .blendMode(.screen)
+            .frame(width: size.width, height: size.height)
+    }
+}
+
 private extension NSImage {
     func floaterCGImage() -> CGImage? {
         cgImage(forProposedRect: nil, context: nil, hints: nil)
@@ -1599,6 +2461,65 @@ private func avatarFrameDuration(for avatar: FloaterAvatarDefinition?) -> CFTime
     }
 }
 
+private func rasterSequenceRects(for sequence: SlayRasterSequence) -> [CGRect] {
+    let width = 1.0 / CGFloat(sequence.columns)
+    let height = 1.0 / CGFloat(sequence.rows)
+
+    return (0..<sequence.frameCount).map { index in
+        let column = index % sequence.columns
+        let row = index / sequence.columns
+        return CGRect(
+            x: CGFloat(column) * width,
+            y: CGFloat(row) * height,
+            width: width,
+            height: height
+        )
+    }
+}
+
+private func rasterSequence(from images: [NSImage]) -> SlayRasterSequence? {
+    let frames = images.compactMap { $0.floaterCGImage() }
+    guard !frames.isEmpty else { return nil }
+
+    let frameCount = frames.count
+    let columns = min(max(Int(ceil(sqrt(Double(frameCount)))), 1), frameCount)
+    let rows = Int(ceil(Double(frameCount) / Double(columns)))
+    let first = frames[0]
+    let atlasWidth = first.width * columns
+    let atlasHeight = first.height * rows
+
+    guard let context = CGContext(
+        data: nil,
+        width: atlasWidth,
+        height: atlasHeight,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+        return nil
+    }
+
+    context.interpolationQuality = .none
+
+    for (index, frame) in frames.enumerated() {
+        let column = index % columns
+        let row = index / columns
+        context.draw(
+            frame,
+            in: CGRect(
+                x: column * first.width,
+                y: row * first.height,
+                width: first.width,
+                height: first.height
+            )
+        )
+    }
+
+    guard let atlas = context.makeImage() else { return nil }
+    return SlayRasterSequence(atlas: atlas, frameCount: frameCount, columns: columns, rows: rows)
+}
+
 @MainActor
 private final class SlayImageSequenceRendererView: NSView {
     private let sequenceLayer = CALayer()
@@ -1612,7 +2533,7 @@ private final class SlayImageSequenceRendererView: NSView {
         layer?.addSublayer(sequenceLayer)
         sequenceLayer.contentsGravity = .resize
         sequenceLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
-        sequenceLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        sequenceLayer.actions = ["contents": NSNull(), "contentsRect": NSNull(), "bounds": NSNull(), "position": NSNull()]
     }
 
     required init?(coder: NSCoder) {
@@ -1626,7 +2547,7 @@ private final class SlayImageSequenceRendererView: NSView {
     }
 
     func update(
-        frames: [NSImage],
+        sequence: SlayRasterSequence?,
         frameDuration: CFTimeInterval,
         signature: String,
         cornerRadius: CGFloat
@@ -1636,9 +2557,10 @@ private final class SlayImageSequenceRendererView: NSView {
         sequenceLayer.cornerRadius = cornerRadius
         sequenceLayer.masksToBounds = true
 
-        guard !frames.isEmpty else {
+        guard let sequence else {
             sequenceLayer.removeAnimation(forKey: "sequence")
             sequenceLayer.contents = nil
+            sequenceLayer.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
             currentSignature = signature
             return
         }
@@ -1646,16 +2568,17 @@ private final class SlayImageSequenceRendererView: NSView {
         guard currentSignature != signature else { return }
         currentSignature = signature
 
-        let cgFrames = frames.compactMap { $0.floaterCGImage() }
         sequenceLayer.removeAnimation(forKey: "sequence")
-        sequenceLayer.contents = cgFrames.first
+        sequenceLayer.contents = sequence.atlas
+        let frameRects = rasterSequenceRects(for: sequence)
+        sequenceLayer.contentsRect = frameRects.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        guard cgFrames.count > 1 else { return }
+        guard sequence.frameCount > 1 else { return }
 
-        let animation = CAKeyframeAnimation(keyPath: "contents")
-        animation.values = cgFrames
-        animation.keyTimes = (0..<cgFrames.count).map { NSNumber(value: Double($0) / Double(max(cgFrames.count - 1, 1))) }
-        animation.duration = frameDuration * Double(cgFrames.count)
+        let animation = CAKeyframeAnimation(keyPath: "contentsRect")
+        animation.values = frameRects.map { NSValue(rect: $0) }
+        animation.keyTimes = (0..<sequence.frameCount).map { NSNumber(value: Double($0) / Double(max(sequence.frameCount - 1, 1))) }
+        animation.duration = frameDuration * Double(sequence.frameCount)
         animation.repeatCount = .infinity
         animation.calculationMode = .discrete
         animation.isRemovedOnCompletion = false
@@ -1682,10 +2605,10 @@ private final class SlayStageRendererView: NSView {
         layer?.addSublayer(avatarLayer)
         stageLayer.contentsGravity = .resize
         stageLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
-        stageLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        stageLayer.actions = ["contents": NSNull(), "contentsRect": NSNull(), "bounds": NSNull(), "position": NSNull()]
         avatarLayer.contentsGravity = .resizeAspect
         avatarLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
-        avatarLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        avatarLayer.actions = ["contents": NSNull(), "contentsRect": NSNull(), "bounds": NSNull(), "position": NSNull()]
         avatarLayer.magnificationFilter = .nearest
         avatarLayer.minificationFilter = .nearest
     }
@@ -1708,7 +2631,7 @@ private final class SlayStageRendererView: NSView {
     }
 
     func update(
-        stageFrames: [NSImage],
+        stageSequence: SlayRasterSequence?,
         stageFrameDuration: CFTimeInterval,
         stageRepeats: Bool,
         stageSignature: String,
@@ -1722,20 +2645,21 @@ private final class SlayStageRendererView: NSView {
         currentAvatarSize = avatarSize
         needsLayout = true
 
-        updateStageSequence(frames: stageFrames, frameDuration: stageFrameDuration, repeats: stageRepeats, signature: stageSignature)
+        updateStageSequence(sequence: stageSequence, frameDuration: stageFrameDuration, repeats: stageRepeats, signature: stageSignature)
         updateAvatarSequence(frames: avatarFrames, frameDuration: avatarFrameDuration, signature: avatarSignature)
         updateAvatarEffects(state: avatarState, signature: avatarEffectSignature)
     }
 
     private func updateStageSequence(
-        frames: [NSImage],
+        sequence: SlayRasterSequence?,
         frameDuration: CFTimeInterval,
         repeats: Bool,
         signature: String
     ) {
-        guard !frames.isEmpty else {
+        guard let sequence else {
             stageLayer.removeAnimation(forKey: "sequence")
             stageLayer.contents = nil
+            stageLayer.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
             currentStageSignature = signature
             return
         }
@@ -1743,16 +2667,17 @@ private final class SlayStageRendererView: NSView {
         guard currentStageSignature != signature else { return }
         currentStageSignature = signature
 
-        let cgFrames = frames.compactMap { $0.floaterCGImage() }
         stageLayer.removeAnimation(forKey: "sequence")
-        stageLayer.contents = cgFrames.first
+        stageLayer.contents = sequence.atlas
+        let frameRects = rasterSequenceRects(for: sequence)
+        stageLayer.contentsRect = frameRects.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        guard cgFrames.count > 1 else { return }
+        guard sequence.frameCount > 1 else { return }
 
-        let animation = CAKeyframeAnimation(keyPath: "contents")
-        animation.values = cgFrames
-        animation.keyTimes = (0..<cgFrames.count).map { NSNumber(value: Double($0) / Double(max(cgFrames.count - 1, 1))) }
-        animation.duration = frameDuration * Double(cgFrames.count)
+        let animation = CAKeyframeAnimation(keyPath: "contentsRect")
+        animation.values = frameRects.map { NSValue(rect: $0) }
+        animation.keyTimes = (0..<sequence.frameCount).map { NSNumber(value: Double($0) / Double(max(sequence.frameCount - 1, 1))) }
+        animation.duration = frameDuration * Double(sequence.frameCount)
         animation.repeatCount = repeats ? .infinity : 0
         animation.calculationMode = .discrete
         animation.isRemovedOnCompletion = false
@@ -1775,16 +2700,24 @@ private final class SlayStageRendererView: NSView {
         guard currentAvatarSignature != signature else { return }
         currentAvatarSignature = signature
 
-        let cgFrames = frames.compactMap { $0.floaterCGImage() }
+        guard let sequence = rasterSequence(from: frames) else {
+            avatarLayer.removeAnimation(forKey: "sequence")
+            avatarLayer.contents = nil
+            avatarLayer.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+            return
+        }
+
         avatarLayer.removeAnimation(forKey: "sequence")
-        avatarLayer.contents = cgFrames.first
+        avatarLayer.contents = sequence.atlas
+        let frameRects = rasterSequenceRects(for: sequence)
+        avatarLayer.contentsRect = frameRects.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        guard cgFrames.count > 1 else { return }
+        guard sequence.frameCount > 1 else { return }
 
-        let animation = CAKeyframeAnimation(keyPath: "contents")
-        animation.values = cgFrames
-        animation.keyTimes = (0..<cgFrames.count).map { NSNumber(value: Double($0) / Double(max(cgFrames.count - 1, 1))) }
-        animation.duration = frameDuration * Double(cgFrames.count)
+        let animation = CAKeyframeAnimation(keyPath: "contentsRect")
+        animation.values = frameRects.map { NSValue(rect: $0) }
+        animation.keyTimes = (0..<sequence.frameCount).map { NSNumber(value: Double($0) / Double(max(sequence.frameCount - 1, 1))) }
+        animation.duration = frameDuration * Double(sequence.frameCount)
         animation.repeatCount = .infinity
         animation.calculationMode = .discrete
         animation.isRemovedOnCompletion = false
@@ -1888,12 +2821,12 @@ private struct SlaySheenRendererRepresentable: NSViewRepresentable {
             NSColor(color).floaterCacheKey,
             "\(Int((max(effectTuning.glowMultiplier, 0.2) * 100).rounded()))"
         ].joined(separator: ":")
-        let frameDuration = renderMode == .superSlay
-            ? min(max(0.020, 0.020 * effectTuning.sheenDurationMultiplier), 0.025)
-            : max(0.12, 0.18 * effectTuning.sheenDurationMultiplier)
+        let totalDuration = renderMode == .superSlay
+            ? min(max(1.2, 1.2 * effectTuning.sheenDurationMultiplier), 1.5)
+            : max(1.2, 1.8 * effectTuning.sheenDurationMultiplier)
         nsView.update(
-            frames: frames,
-            frameDuration: frameDuration,
+            sequence: frames,
+            frameDuration: totalDuration / Double(max(frames?.frameCount ?? 1, 1)),
             signature: signature,
             cornerRadius: cornerRadius
         )
@@ -1941,15 +2874,18 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
         let stageRepeats: Bool
         switch state {
         case .running:
-            stageFrameDuration = renderMode == .superSlay
-                ? min(max(0.020, 0.020 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier)), 0.025)
-                : max(0.10, 0.22 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
+            let cycleDuration = renderMode == .superSlay
+                ? min(max(1.2, 1.92 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier)), 2.2)
+                : max(1.4, 3.96 * max(effectTuning.orbitDurationMultiplier, effectTuning.arcDurationMultiplier))
+            stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
             stageRepeats = true
         case .idle:
-            stageFrameDuration = renderMode == .superSlay ? 0.042 : 0.0625
+            let cycleDuration = renderMode == .superSlay ? 0.50 : 0.50
+            stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
             stageRepeats = true
         case .complete:
-            stageFrameDuration = renderMode == .superSlay ? 0.036 : 0.044
+            let cycleDuration = renderMode == .superSlay ? 0.86 : 0.70
+            stageFrameDuration = cycleDuration / Double(max(stageFrames?.frameCount ?? 1, 1))
             stageRepeats = false
         }
         let showsCounterArc = effectTuning.showsCounterArc ?? (renderMode == .superSlay)
@@ -1979,7 +2915,7 @@ private struct SlayStageRendererRepresentable: NSViewRepresentable {
         let avatarPayload = shouldAnimateAvatar ? avatarFrames : Array(avatarFrames.prefix(1))
 
         nsView.update(
-            stageFrames: stageFrames,
+            stageSequence: stageFrames,
             stageFrameDuration: stageFrameDuration,
             stageRepeats: stageRepeats,
             stageSignature: stageSignature,
@@ -2013,6 +2949,96 @@ private struct SlayRunningSheenView: View {
     }
 }
 
+private struct SlayPowerLEDStripRepresentable: NSViewRepresentable {
+    let size: CGSize
+    let color: Color
+    let cornerRadius: CGFloat
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(origin: .zero, size: size))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        let frames = SlaySnapshotCache.ledStripFrames(
+            color: color,
+            cornerRadius: cornerRadius,
+            size: size
+        )
+        let signature = [
+            "led-strip",
+            "\(Int(size.width.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(size.height.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(cornerRadius.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(color).floaterCacheKey
+        ].joined(separator: ":")
+        nsView.update(
+            sequence: frames,
+            frameDuration: 2.6 / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
+private struct SlayAvatarScanSweepRepresentable: NSViewRepresentable {
+    let size: CGSize
+    let color: Color
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(origin: .zero, size: size))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        let frames = SlaySnapshotCache.avatarScanSweepFrames(
+            color: color,
+            size: size
+        )
+        let signature = [
+            "avatar-scan",
+            "\(Int(size.width.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(size.height.rounded(.toNearestOrAwayFromZero)))",
+            NSColor(color).floaterCacheKey
+        ].joined(separator: ":")
+        nsView.update(
+            sequence: frames,
+            frameDuration: 2.2 / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: 0
+        )
+    }
+}
+
+private struct SlayRainbowBorderRepresentable: NSViewRepresentable {
+    let size: CGSize
+    let cornerRadius: CGFloat
+    let intensity: Double
+
+    func makeNSView(context: Context) -> SlayImageSequenceRendererView {
+        SlayImageSequenceRendererView(frame: CGRect(origin: .zero, size: size))
+    }
+
+    func updateNSView(_ nsView: SlayImageSequenceRendererView, context: Context) {
+        let frames = SlaySnapshotCache.rainbowBorderFrames(
+            cornerRadius: cornerRadius,
+            intensity: intensity,
+            size: size
+        )
+        let signature = [
+            "rainbow-border",
+            "\(Int(size.width.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(size.height.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int(cornerRadius.rounded(.toNearestOrAwayFromZero)))",
+            "\(Int((intensity * 100).rounded()))"
+        ].joined(separator: ":")
+        nsView.update(
+            sequence: frames,
+            frameDuration: 4.0 / Double(max(frames?.frameCount ?? 1, 1)),
+            signature: signature,
+            cornerRadius: cornerRadius
+        )
+    }
+}
+
 private struct SlaySpriteStageView: View {
     let avatar: FloaterAvatarDefinition?
     let statusColor: Color
@@ -2026,17 +3052,16 @@ private struct SlaySpriteStageView: View {
     let isComplete: Bool
     let completeTrigger: UUID?
 
-    @ObservedObject private var ticker = FloaterLowFrequencyTicker.shared
     @State private var idleSparkleTrigger: UUID?
     @State private var doneSparkleTrigger: UUID?
     @State private var doneAvatarTrigger: UUID?
 
-    private var idleSparkleInterval: Int {
-        renderMode == .superSlay ? 3 : 8
+    private var idleSparkleInterval: TimeInterval {
+        renderMode == .superSlay ? 2.4 : 6.4
     }
 
-    private var completeAvatarInterval: Int {
-        renderMode == .superSlay ? 6 : 20
+    private var completeAvatarInterval: TimeInterval {
+        renderMode == .superSlay ? 4.8 : 16.0
     }
 
     var body: some View {
@@ -2076,12 +3101,24 @@ private struct SlaySpriteStageView: View {
                 doneAvatarTrigger = UUID()
             }
         }
-        .onChange(of: ticker.tick) { _, tick in
-            if isIdle, tick.isMultiple(of: idleSparkleInterval) {
-                idleSparkleTrigger = UUID()
+        .task(id: "idle-\(isIdle)-\(renderMode.rawValue)") {
+            guard isIdle else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(idleSparkleInterval * 1_000_000_000))
+                guard !Task.isCancelled, isIdle else { break }
+                await MainActor.run {
+                    idleSparkleTrigger = UUID()
+                }
             }
-            if isComplete, tick.isMultiple(of: completeAvatarInterval) {
-                doneAvatarTrigger = UUID()
+        }
+        .task(id: "complete-\(isComplete)-\(renderMode.rawValue)") {
+            guard isComplete else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(completeAvatarInterval * 1_000_000_000))
+                guard !Task.isCancelled, isComplete else { break }
+                await MainActor.run {
+                    doneAvatarTrigger = UUID()
+                }
             }
         }
         .onChange(of: completeTrigger) { _, newValue in
@@ -2232,35 +3269,49 @@ private struct PixelGridPattern: Shape {
     }
 }
 
+private struct AnimatedPowerLEDStrip: View {
+    let accentColor: Color
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            SlayPowerLEDStripRepresentable(
+                size: geometry.size,
+                color: accentColor,
+                cornerRadius: cornerRadius
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct AnimatedAvatarScanSweep: View {
+    let accentColor: Color
+
+    var body: some View {
+        GeometryReader { geometry in
+            SlayAvatarScanSweepRepresentable(
+                size: geometry.size,
+                color: accentColor
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 private struct RainbowStarPowerBorder: View {
     let cornerRadius: CGFloat
     let intensity: Double
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let rotation = (t.truncatingRemainder(dividingBy: 4.0)) / 4.0
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(
-                    AngularGradient(
-                        gradient: Gradient(colors: [
-                            Color(hue: 0.00, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 0.13, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 0.30, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 0.50, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 0.70, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 0.85, saturation: 0.95, brightness: 1.0),
-                            Color(hue: 1.00, saturation: 0.95, brightness: 1.0)
-                        ]),
-                        center: .center,
-                        angle: .degrees(rotation * 360.0)
-                    ),
-                    lineWidth: 1.2
-                )
-                .opacity(intensity)
-                .blendMode(.screen)
+        GeometryReader { geometry in
+            SlayRainbowBorderRepresentable(
+                size: geometry.size,
+                cornerRadius: cornerRadius,
+                intensity: intensity
+            )
         }
-        .allowsHitTesting(false)
+            .allowsHitTesting(false)
     }
 }
 
@@ -2885,47 +3936,14 @@ private struct StatusPill: View {
     let label: String
     let dotSize: CGFloat
     let fontSize: CGFloat
-    let renderMode: FloaterRenderMode
-    let effectTuning: FloaterEffectTuning
-    let isPulsing: Bool
-    let showsTypingDots: Bool
-
-    @ObservedObject private var ticker = FloaterLowFrequencyTicker.shared
-
-    private var isSuperSlay: Bool {
-        renderMode == .superSlay
-    }
-
-    private var pulsePhaseActive: Bool {
-        ticker.tick.isMultiple(of: 2)
-    }
 
     var body: some View {
         HStack(spacing: 4) {
             ZStack {
-                if isPulsing {
-                    if isSuperSlay {
-                        Circle()
-                            .fill(color.opacity(pulsePhaseActive ? 0.42 : 0.18))
-                            .frame(
-                                width: dotSize * (pulsePhaseActive ? 2.2 : 1.55),
-                                height: dotSize * (pulsePhaseActive ? 2.2 : 1.55)
-                            )
-                            .opacity(pulsePhaseActive ? 0.42 : 0.18)
-                    } else {
-                        Circle()
-                            .fill(color.opacity(pulsePhaseActive ? 0.24 : 0.12))
-                            .frame(
-                                width: dotSize * (pulsePhaseActive ? 2.0 : 1.5),
-                                height: dotSize * (pulsePhaseActive ? 2.0 : 1.5)
-                            )
-                            .opacity(pulsePhaseActive ? 0.24 : 0.12)
-                    }
-                }
                 Circle()
                     .fill(color)
                     .frame(width: dotSize, height: dotSize)
-                    .shadow(color: color.opacity(0.6), radius: isPulsing ? 3 : 1.5, x: 0, y: 0)
+                    .shadow(color: color.opacity(0.28), radius: 1.5, x: 0, y: 0)
             }
             .frame(width: dotSize + 4, height: dotSize + 4)
 
@@ -2935,18 +3953,7 @@ private struct StatusPill: View {
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .fixedSize()
-                .shadow(color: color.opacity(0.45), radius: 1.5, x: 0, y: 0)
-
-            if showsTypingDots {
-                Group {
-                    if isSuperSlay {
-                        TypingDots(color: color, fontSize: fontSize)
-                    } else {
-                        LiteTypingDots(color: color, fontSize: fontSize)
-                    }
-                }
-                .padding(.leading, 2)
-            }
+                .shadow(color: color.opacity(0.24), radius: 1, x: 0, y: 0)
         }
         .padding(.leading, 6)
         .padding(.trailing, 8)
@@ -2997,8 +4004,7 @@ private struct StatusPill: View {
                 .inset(by: 0.8)
                 .stroke(.white.opacity(0.16), lineWidth: 0.4)
         )
-        .shadow(color: color.opacity(isPulsing ? 0.38 : 0.18), radius: isPulsing ? 3 : 1.5, x: 0, y: 0.5)
-        .animation(.easeInOut(duration: 0.35 * effectTuning.statusPulseDurationMultiplier), value: pulsePhaseActive)
+        .shadow(color: color.opacity(0.14), radius: 1.2, x: 0, y: 0.5)
     }
 }
 
@@ -3267,6 +4273,8 @@ struct FloaterPanelView: View {
                             floaterSize: item.floaterSize,
                             renderMode: item.renderMode,
                             effectPreset: item.effectPreset,
+                            runningPanelCount: item.runningPanelCount,
+                            runningPanelIndex: item.runningPanelIndex,
                             lastActivity: item.item.lastActivity,
                             modifiedFilesCount: item.item.modifiedFilesCount,
                             shouldShake: item.shouldShake,
@@ -3312,6 +4320,8 @@ struct FloaterStatusView: View {
     var floaterSize: FloaterSize = .regular
     var renderMode: FloaterRenderMode = .slay
     var effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0]
+    var runningPanelCount: Int = 0
+    var runningPanelIndex: Int?
     var isCompact: Bool = false
     var lastActivity: Date?
     var modifiedFilesCount: Int = 0
@@ -3329,7 +4339,6 @@ struct FloaterStatusView: View {
     @State private var panelVictoryFlashOffset: CGFloat
     @State private var panelVictoryFlashOpacity: Double
     @State private var panelVictoryFlashScale: CGFloat
-    @StateObject private var particleSystem = ParticleSystem()
 
     init(
         message: String,
@@ -3347,6 +4356,8 @@ struct FloaterStatusView: View {
         floaterSize: FloaterSize = .regular,
         renderMode: FloaterRenderMode = .slay,
         effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0],
+        runningPanelCount: Int = 0,
+        runningPanelIndex: Int? = nil,
         isCompact: Bool = false,
         lastActivity: Date? = nil,
         modifiedFilesCount: Int = 0,
@@ -3368,6 +4379,8 @@ struct FloaterStatusView: View {
         self.floaterSize = floaterSize
         self.renderMode = renderMode
         self.effectPreset = effectPreset
+        self.runningPanelCount = runningPanelCount
+        self.runningPanelIndex = runningPanelIndex
         self.isCompact = isCompact || floaterSize == .compact
         self.lastActivity = lastActivity
         self.modifiedFilesCount = modifiedFilesCount
@@ -3383,12 +4396,51 @@ struct FloaterStatusView: View {
         _panelVictoryFlashScale = State(initialValue: 0.94)
     }
 
+    private enum RunningEffectBudget {
+        case focus
+        case standard
+        case reduced
+        case minimal
+    }
+
     private var effectiveSound: String? {
         sound
     }
 
     private var isRunning: Bool {
         statusState?.isProgressState == true
+    }
+
+    private var runningEffectBudget: RunningEffectBudget {
+        guard isRunning else { return .focus }
+
+        let count = runningPanelCount
+        let index = runningPanelIndex ?? 0
+
+        switch count {
+        case 0...1:
+            return .focus
+        case 2:
+            return index == 0 ? .standard : .minimal
+        default:
+            if index == 0 { return .standard }
+            return .minimal
+        }
+    }
+
+    private var effectiveRenderMode: FloaterRenderMode {
+        guard isRunning else { return renderMode }
+
+        switch runningEffectBudget {
+        case .focus:
+            return renderMode
+        case .standard:
+            return renderMode == .superSlay ? .slay : renderMode
+        case .reduced:
+            return renderMode == .lame ? .lame : .slay
+        case .minimal:
+            return .lame
+        }
     }
 
     private var accentColor: Color {
@@ -3400,23 +4452,35 @@ struct FloaterStatusView: View {
     }
 
     private var effectGlowMultiplier: Double {
-        max(effectTuning.glowMultiplier, 0.2)
+        let base = max(effectTuning.glowMultiplier, 0.2)
+        guard isRunning else { return base }
+
+        switch runningEffectBudget {
+        case .focus:
+            return base
+        case .standard:
+            return min(base, 0.75)
+        case .reduced:
+            return min(base, 0.52)
+        case .minimal:
+            return 0.2
+        }
     }
 
     private var usesMinimalRenderMode: Bool {
-        isPersistent && renderMode == .lame
+        isPersistent && effectiveRenderMode == .lame
     }
 
     private var isSuperSlayRenderMode: Bool {
-        renderMode == .superSlay
+        effectiveRenderMode == .superSlay
     }
 
     private var showsFancyFloaterEffects: Bool {
-        isPersistent && renderMode != .lame
+        isPersistent && effectiveRenderMode != .lame && runningEffectBudget != .minimal
     }
 
     private var showsParticleTrail: Bool {
-        renderMode != .lame && (effectTuning.showsParticleTrail ?? true)
+        false
     }
 
     private func scaledGlow(_ value: Double) -> Double {
@@ -3424,7 +4488,38 @@ struct FloaterStatusView: View {
     }
 
     private var animatesPersistentStatus: Bool {
-        renderMode != .lame && animatesStatus
+        effectiveRenderMode != .lame && runningEffectBudget != .minimal && animatesStatus
+    }
+
+    private var showsRunningSheen: Bool {
+        false
+    }
+
+    private var showsPowerLEDStrip: Bool {
+        false
+    }
+
+    private var showsAvatarScanSweep: Bool {
+        false
+    }
+
+    private var showsRainbowBorder: Bool {
+        false
+    }
+
+    private var panelGlowShadowOpacity: Double {
+        guard isRunning else { return scaledGlow(0.03) }
+
+        switch runningEffectBudget {
+        case .focus:
+            return scaledGlow(0.08)
+        case .standard:
+            return scaledGlow(0.045)
+        case .reduced:
+            return scaledGlow(0.02)
+        case .minimal:
+            return 0
+        }
     }
 
     private var avatarBackgroundPrimaryOpacity: Double {
@@ -3468,7 +4563,7 @@ struct FloaterStatusView: View {
     }
 
     private var showsRunningDuration: Bool {
-        !usesMinimalRenderMode && isRunning && lastActivity != nil
+        false
     }
 
     private var showsActivitySection: Bool {
@@ -3505,11 +4600,6 @@ struct FloaterStatusView: View {
 
     var body: some View {
         ZStack {
-            if showsParticleTrail {
-                ParticleTrailView(system: particleSystem, color: FloaterPalette.idle)
-                    .frame(width: 300, height: 100)
-            }
-
             panelBackground
             persistentContent
         }
@@ -3525,20 +4615,21 @@ struct FloaterStatusView: View {
         .overlay {
             if showsFancyFloaterEffects {
                 ZStack {
-                    if isRunning, effectTuning.showsSheen ?? true {
+                    if showsRunningSheen {
                         SlayRunningSheenView(
                             color: accentColor,
                             cornerRadius: floaterSize.cornerRadius,
-                            renderMode: renderMode,
+                            renderMode: effectiveRenderMode,
                             effectTuning: effectTuning
                         )
                     }
 
                     // Star-power rainbow border (Mario Kart invincibility vibe)
-                    if isRunning {
+                    // Gated to Super Slay to save CPU on lower-tier modes.
+                    if showsRainbowBorder {
                         RainbowStarPowerBorder(
                             cornerRadius: floaterSize.cornerRadius,
-                            intensity: isSuperSlayRenderMode ? 0.55 : 0.36
+                            intensity: 0.55
                         )
                     }
 
@@ -3550,9 +4641,6 @@ struct FloaterStatusView: View {
                         glowScale: panelVictoryFlashScale
                     )
                     .opacity(panelVictoryFlashOpacity)
-
-                    // Pixel confetti burst on completion
-                    PixelConfettiBurst(color: accentColor, trigger: completionTrigger)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .compositingGroup()
@@ -3569,8 +4657,13 @@ struct FloaterStatusView: View {
                     .animation(.easeInOut(duration: 0.15), value: isHovering)
             }
         }
-        .shadow(color: FloaterPalette.panelShadow.opacity(isHovering ? 0.22 : 0.16), radius: isHovering ? floaterSize.cardShadowRadius : max(floaterSize.cardShadowRadius - 2, 6), x: 0, y: isHovering ? 5 : 3)
-        .shadow(color: accentColor.opacity(scaledGlow(isRunning ? 0.08 : 0.03)), radius: isHovering ? 10 : 7, x: 0, y: 2)
+        .shadow(
+            color: FloaterPalette.panelShadow.opacity(isRunning ? 0.06 : (isHovering ? 0.22 : 0.16)),
+            radius: isRunning ? 3 : (isHovering ? floaterSize.cardShadowRadius : max(floaterSize.cardShadowRadius - 2, 6)),
+            x: 0,
+            y: isRunning ? 1 : (isHovering ? 5 : 3)
+        )
+        .shadow(color: accentColor.opacity(isRunning ? 0.0 : panelGlowShadowOpacity), radius: isHovering ? 10 : 7, x: 0, y: 2)
         .animation(.easeInOut(duration: 0.18), value: isHovering)
         .animation(.easeInOut(duration: 0.22), value: accentColor)
         .scaleEffect(panelScale)
@@ -3606,100 +4699,17 @@ struct FloaterStatusView: View {
                 RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
                     .fill(accentColor.opacity(isRunning ? 0.10 : 0.06))
             } else {
-                // Deep Switch-bezel base
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.96 : 0.92))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                            .fill(.thinMaterial.opacity(0.18))
+                // Static panel layers: rasterized once via drawingGroup until
+                // inputs (color, hovering, state, renderMode) change.
+                panelBackgroundStaticLayers
+                    .drawingGroup(opaque: false)
+
+                // Power-LED strip (animated when running) - outside drawingGroup.
+                if showsPowerLEDStrip {
+                    AnimatedPowerLEDStrip(
+                        accentColor: accentColor,
+                        cornerRadius: floaterSize.cornerRadius
                     )
-
-                // Cartridge body gradient: top lift, bottom shadow
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.06),
-                                .clear,
-                                Color.black.opacity(0.14)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-
-                // Subtle pixel-grid texture
-                PixelGridPattern(cell: 5, dotSize: 1)
-                    .fill(.white.opacity(isSuperSlayRenderMode ? 0.025 : 0.018))
-                    .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
-
-                if isPersistent {
-                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.24 : 0.18) : (isSuperSlayRenderMode ? 0.14 : 0.10)),
-                                    .clear
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                }
-
-                // Glossy top sheen (Switch/CRT screen feel)
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                FloaterPalette.highlight.opacity(0.14),
-                                FloaterPalette.highlight.opacity(0.04),
-                                .clear
-                            ],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-
-                // Chunky Nintendo-style inner bevel
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 1)
-                    .inset(by: 1)
-                    .stroke(.white.opacity(isSuperSlayRenderMode ? 0.14 : 0.09), lineWidth: 0.8)
-
-                // Power-LED strip (animated when running)
-                if isRunning {
-                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-                        let period = 2.6
-                        let phase = CGFloat((context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period)) / period)
-                        VStack(spacing: 0) {
-                            Spacer(minLength: 0)
-                            Rectangle()
-                                .fill(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: accentColor.opacity(0.30), location: 0.0),
-                                            .init(color: accentColor.opacity(0.55), location: max(0, phase - 0.18)),
-                                            .init(color: .white.opacity(0.95), location: phase),
-                                            .init(color: accentColor.opacity(0.55), location: min(1, phase + 0.18)),
-                                            .init(color: accentColor.opacity(0.30), location: 1.0)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(height: 1.5)
-                                .shadow(color: accentColor.opacity(0.85), radius: 3, y: -1)
-                                .padding(.horizontal, 8)
-                                .padding(.bottom, 2)
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
-                    .allowsHitTesting(false)
-                }
-
-                if isSuperSlayRenderMode {
-                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .strokeBorder(.white.opacity(isRunning ? 0.14 : 0.08), lineWidth: 0.8)
                 }
             }
         }
@@ -3758,11 +4768,7 @@ struct FloaterStatusView: View {
                     color: accentColor,
                     label: stateLabel,
                     dotSize: floaterSize.dotSize,
-                    fontSize: floaterSize.metaFontSize,
-                    renderMode: renderMode,
-                    effectTuning: effectTuning,
-                    isPulsing: isRunning && animatesPersistentStatus,
-                    showsTypingDots: isRunning && animatesPersistentStatus
+                    fontSize: floaterSize.metaFontSize
                 )
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -3824,9 +4830,9 @@ struct FloaterStatusView: View {
                 statusColor: accentColor,
                 stageSize: floaterSize.persistentStageSize,
                 spriteSize: floaterSize.persistentSpriteSize,
-                renderMode: renderMode,
+                renderMode: effectiveRenderMode,
                 effectTuning: effectTuning,
-                isAnimating: animatesStatus,
+                isAnimating: animatesStatus && runningEffectBudget != .minimal,
                 isRunning: isRunning,
                 isIdle: statusState == .idle,
                 isComplete: statusState == .complete,
@@ -3836,7 +4842,93 @@ struct FloaterStatusView: View {
         }
     }
 
+    @ViewBuilder
+    private var panelBackgroundStaticLayers: some View {
+        ZStack {
+            // Deep Switch-bezel base
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.96 : 0.92))
+                .overlay(
+                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                        .fill(Color.white.opacity(0.05))
+                )
+
+            // Cartridge body gradient: top lift, bottom shadow
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.06),
+                            .clear,
+                            Color.black.opacity(0.14)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+            // Subtle pixel-grid texture
+            PixelGridPattern(cell: 5, dotSize: 1)
+                .fill(.white.opacity(isSuperSlayRenderMode ? 0.025 : 0.018))
+                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
+
+            if isPersistent {
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.24 : 0.18) : (isSuperSlayRenderMode ? 0.14 : 0.10)),
+                                .clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+
+            // Glossy top sheen
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            FloaterPalette.highlight.opacity(0.14),
+                            FloaterPalette.highlight.opacity(0.04),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+
+            // Inner bevel
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 1)
+                .inset(by: 1)
+                .stroke(.white.opacity(isSuperSlayRenderMode ? 0.14 : 0.09), lineWidth: 0.8)
+
+            if isSuperSlayRenderMode {
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+                    .strokeBorder(.white.opacity(isRunning ? 0.14 : 0.08), lineWidth: 0.8)
+            }
+        }
+    }
+
     private var persistentAvatarBackground: some View {
+        ZStack {
+            // Static layers: rasterized once via drawingGroup and cached by SwiftUI
+            // until inputs change (accentColor, state, renderMode).
+            persistentAvatarBackgroundStaticLayers
+                .drawingGroup(opaque: false)
+
+            // Animated scan sweep (running only) - outside drawingGroup so it
+            // animates cheaply on top of the cached static raster.
+            if showsAvatarScanSweep {
+                AnimatedAvatarScanSweep(accentColor: accentColor)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var persistentAvatarBackgroundStaticLayers: some View {
         ZStack {
             // Base: deep void with status-tinted gradient
             Rectangle()
@@ -3882,29 +4974,6 @@ struct FloaterStatusView: View {
                     .blendMode(.overlay)
             }
 
-            // Animated scan sweep (running only)
-            if !usesMinimalRenderMode, isRunning {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-                    let period = 2.2
-                    let t = context.date.timeIntervalSinceReferenceDate
-                    let phase = CGFloat((t.truncatingRemainder(dividingBy: period)) / period)
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0.0),
-                            .init(color: .clear, location: max(0.0, phase - 0.20)),
-                            .init(color: accentColor.opacity(0.55), location: max(0.0, phase - 0.01)),
-                            .init(color: .white.opacity(0.70), location: phase),
-                            .init(color: accentColor.opacity(0.45), location: min(1.0, phase + 0.02)),
-                            .init(color: .clear, location: min(1.0, phase + 0.22)),
-                            .init(color: .clear, location: 1.0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .blendMode(.screen)
-                }
-            }
-
             // Top light wash (HUD highlight)
             if !usesMinimalRenderMode {
                 LinearGradient(
@@ -3918,21 +4987,19 @@ struct FloaterStatusView: View {
                 .blendMode(.screen)
             }
 
-            // HUD corner brackets
+            // HUD corner brackets (static once rasterized, shadow bakes into raster)
             if !usesMinimalRenderMode {
                 HUDCornerBrackets(length: 6, thickness: 1.2)
                     .stroke(
                         accentColor.opacity(isRunning ? 0.95 : 0.62),
                         style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
                     )
-                    .shadow(color: accentColor.opacity(isRunning ? 0.7 : 0.35), radius: 2)
                     .padding(3)
             }
 
-            // Outer neon border
+            // Outer neon border (shadow baked into raster, no per-frame pass)
             Rectangle()
                 .strokeBorder(accentColor.opacity(min(avatarBackgroundBorderOpacity + 0.18, 1.0)), lineWidth: 1.0)
-                .shadow(color: accentColor.opacity(isRunning ? 0.35 : 0.18), radius: isRunning ? 3 : 1.5)
 
             // Inner highlight line (double-border gamer seal)
             if !usesMinimalRenderMode {
@@ -3960,7 +5027,6 @@ struct FloaterStatusView: View {
                     )
                     .frame(width: 2)
                     .padding(.vertical, 2)
-                    .shadow(color: accentColor.opacity(isRunning ? 0.85 : 0.55), radius: 3)
                     .blendMode(.screen)
             }
         }

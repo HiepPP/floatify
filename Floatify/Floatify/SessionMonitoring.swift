@@ -164,8 +164,11 @@ private func projectName(for path: String) -> String {
 final class ClaudeSessionMonitor {
     var onSessionsChange: (([SessionDescriptor]) -> Void)?
 
+    private let activePollingInterval: TimeInterval = 4
+    private let idlePollingInterval: TimeInterval = 10
     private let queue = DispatchQueue(label: "com.floatify.claude-sessions")
     private var timer: DispatchSourceTimer?
+    private var currentPollingInterval: TimeInterval?
     private var lastPublished: [SessionDescriptor] = []
     private var projectCache: [Int: ProjectContext] = [:]
     private var lastActivityCache: [Int: Date] = [:]
@@ -173,30 +176,43 @@ final class ClaudeSessionMonitor {
 
     func start() {
         stop()
-        publish(force: true)
+        let hasActiveSessions = publish(force: true)
 
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 4.0, repeating: 4.0)
+        self.timer = timer
+        updatePollingInterval(hasActiveSessions: hasActiveSessions)
         timer.setEventHandler { [weak self] in
             self?.publish(force: false)
         }
-        self.timer = timer
         timer.resume()
     }
 
     func stop() {
         timer?.cancel()
         timer = nil
+        currentPollingInterval = nil
     }
 
-    private func publish(force: Bool) {
+    @discardableResult
+    private func publish(force: Bool) -> Bool {
         let sessions = detectSessions()
-        guard force || sessions != lastPublished else { return }
+        updatePollingInterval(hasActiveSessions: !sessions.isEmpty)
+        guard force || sessions != lastPublished else { return !sessions.isEmpty }
         lastPublished = sessions
 
         DispatchQueue.main.async { [weak self] in
             self?.onSessionsChange?(sessions)
         }
+
+        return !sessions.isEmpty
+    }
+
+    private func updatePollingInterval(hasActiveSessions: Bool) {
+        let nextInterval = hasActiveSessions ? activePollingInterval : idlePollingInterval
+        guard currentPollingInterval != nextInterval, let timer else { return }
+
+        currentPollingInterval = nextInterval
+        timer.schedule(deadline: .now() + nextInterval, repeating: nextInterval)
     }
 
     private func detectSessions() -> [SessionDescriptor] {
@@ -279,8 +295,11 @@ final class CodexActivityMonitor {
         let state: ActivityState
     }
 
+    private let activePollingInterval: TimeInterval = 3
+    private let idlePollingInterval: TimeInterval = 10
     private let queue = DispatchQueue(label: "com.floatify.codex-activity")
     private var timer: DispatchSourceTimer?
+    private var currentPollingInterval: TimeInterval?
     private var lastPublished: [SessionDescriptor] = []
     private var projectCache: [Int: ProjectContext] = [:]
     private var sessionLogPathCache: [Int: String] = [:]
@@ -300,30 +319,43 @@ final class CodexActivityMonitor {
 
     func start() {
         stop()
-        publishSessions(force: true)
+        let hasActiveSessions = publishSessions(force: true)
 
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 3.0, repeating: 3.0)
+        self.timer = timer
+        updatePollingInterval(hasActiveSessions: hasActiveSessions)
         timer.setEventHandler { [weak self] in
             self?.publishSessions(force: false)
         }
-        self.timer = timer
         timer.resume()
     }
 
     func stop() {
         timer?.cancel()
         timer = nil
+        currentPollingInterval = nil
     }
 
-    private func publishSessions(force: Bool) {
+    @discardableResult
+    private func publishSessions(force: Bool) -> Bool {
         let sessions = detectCodexSessions()
-        guard force || sessions != lastPublished else { return }
+        updatePollingInterval(hasActiveSessions: !sessions.isEmpty)
+        guard force || sessions != lastPublished else { return !sessions.isEmpty }
         lastPublished = sessions
 
         DispatchQueue.main.async { [weak self] in
             self?.onSessionsChange?(sessions)
         }
+
+        return !sessions.isEmpty
+    }
+
+    private func updatePollingInterval(hasActiveSessions: Bool) {
+        let nextInterval = hasActiveSessions ? activePollingInterval : idlePollingInterval
+        guard currentPollingInterval != nextInterval, let timer else { return }
+
+        currentPollingInterval = nextInterval
+        timer.schedule(deadline: .now() + nextInterval, repeating: nextInterval)
     }
 
     private func detectCodexSessions() -> [SessionDescriptor] {
