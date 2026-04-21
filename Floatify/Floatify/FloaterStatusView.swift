@@ -4422,8 +4422,9 @@ struct FloaterStatusView: View {
             return .focus
         case 2:
             return index == 0 ? .standard : .minimal
+        case 3...4:
+            return index == 0 ? .reduced : .minimal
         default:
-            if index == 0 { return .standard }
             return .minimal
         }
     }
@@ -4437,7 +4438,7 @@ struct FloaterStatusView: View {
         case .standard:
             return renderMode == .superSlay ? .slay : renderMode
         case .reduced:
-            return renderMode == .lame ? .lame : .slay
+            return .lame
         case .minimal:
             return .lame
         }
@@ -4488,7 +4489,7 @@ struct FloaterStatusView: View {
     }
 
     private var animatesPersistentStatus: Bool {
-        effectiveRenderMode != .lame && runningEffectBudget != .minimal && animatesStatus
+        effectiveRenderMode != .lame && (runningEffectBudget == .focus || runningEffectBudget == .standard) && animatesStatus
     }
 
     private var showsRunningSheen: Bool {
@@ -4832,7 +4833,7 @@ struct FloaterStatusView: View {
                 spriteSize: floaterSize.persistentSpriteSize,
                 renderMode: effectiveRenderMode,
                 effectTuning: effectTuning,
-                isAnimating: animatesStatus && runningEffectBudget != .minimal,
+                isAnimating: animatesPersistentStatus,
                 isRunning: isRunning,
                 isIdle: statusState == .idle,
                 isComplete: statusState == .complete,
