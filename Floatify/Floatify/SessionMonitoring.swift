@@ -15,7 +15,7 @@ private struct ProjectContext: Equatable {
     let path: String?
 }
 
-private enum ProcessInspection {
+enum ProcessInspection {
     private struct CommandCacheEntry {
         let output: String?
         let timestamp: Date

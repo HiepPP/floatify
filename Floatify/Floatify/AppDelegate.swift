@@ -129,17 +129,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .complete
     }
 
-    private func makeStatusItem(sessionID: String, project: String, state: ClaudeStatusState, lastActivity: Date) -> PersistentStatusItem {
+    private func makeStatusItem(
+        sessionID: String,
+        project: String,
+        projectPath: String?,
+        state: ClaudeStatusState,
+        lastActivity: Date
+    ) -> PersistentStatusItem {
         let monitoredSession = monitoredSession(for: sessionID)
         let existingItem = statusItemsByID[sessionID]
+        let resolvedProjectPath = monitoredSession?.projectPath ?? existingItem?.projectPath ?? projectPath
+        let modifiedFilesCount = monitoredSession?.modifiedFilesCount
+            ?? ProcessInspection.modifiedFilesCount(for: resolvedProjectPath)
 
         return PersistentStatusItem(
             id: sessionID,
             project: monitoredSession?.project ?? existingItem?.project ?? project,
-            projectPath: monitoredSession?.projectPath ?? existingItem?.projectPath,
+            projectPath: resolvedProjectPath,
             state: state,
             lastActivity: lastActivity,
-            modifiedFilesCount: monitoredSession?.modifiedFilesCount ?? existingItem?.modifiedFilesCount ?? 0
+            modifiedFilesCount: modifiedFilesCount
         )
     }
 
@@ -215,6 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItemsByID[sessionID] = makeStatusItem(
             sessionID: sessionID,
             project: payload.statusProject,
+            projectPath: payload.normalizedProjectPath,
             state: displayState,
             lastActivity: now
         )

@@ -98,6 +98,7 @@ func inferSessionContext() -> (source: String, session: String)? {
 if let status {
     payload["status"] = status
     payload["project"] = project
+    payload["projectPath"] = FileManager.default.currentDirectoryPath
     if let context = inferSessionContext() {
         payload["source"] = context.source
         payload["session"] = context.session

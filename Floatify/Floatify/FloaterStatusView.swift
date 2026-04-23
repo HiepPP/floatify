@@ -6055,17 +6055,6 @@ struct FloaterStatusView: View {
         Color(red: 1.000, green: 0.840, blue: 0.360)
     }
 
-    private var sourceChipLabel: String? {
-        switch sessionKind {
-        case .claude:
-            return "Claude Code"
-        case .codex:
-            return "Codex"
-        case .unknown:
-            return "Session"
-        }
-    }
-
     private var statusDisplayLabel: String? {
         stateLabel
     }
@@ -6075,7 +6064,7 @@ struct FloaterStatusView: View {
     }
 
     private var hasFooterContent: Bool {
-        statusDisplayLabel != nil || modifiedFilesCount > 0
+        statusDisplayLabel != nil
     }
 
     var body: some View {
@@ -6253,7 +6242,7 @@ struct FloaterStatusView: View {
                 }
             }
 
-            persistentSourceLine
+            persistentFileChangeLine
 
             if hasFooterContent {
                 Spacer(minLength: usesCondensedPersistentLayout ? 2 : 0)
@@ -6266,32 +6255,36 @@ struct FloaterStatusView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    private var persistentSourceLine: some View {
+    private var persistentFileChangeLine: some View {
         HStack(spacing: 0) {
             if usesCondensedPersistentLayout {
-                HStack(spacing: max(4, persistentMetaFontSize * 0.30)) {
-                    Image(systemName: sessionKind.iconName)
-                        .font(.system(size: max(9, persistentMetaFontSize - 1.2), weight: .bold))
-
-                    if let sourceChipLabel {
-                        Text(sourceChipLabel)
-                            .font(.system(size: max(10, persistentMetaFontSize - 1), weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                    }
-                }
-                .foregroundStyle(secondaryContentColor)
+                fileChangeLabel
+                    .foregroundStyle(fileChangeTint)
                 .shadow(color: Color.black.opacity(contentShadowOpacity * 0.7), radius: 0, x: 0, y: 1)
             } else {
                 FloaterMetaChip(
-                    icon: sessionKind.iconName,
-                    label: sourceChipLabel,
+                    icon: "pencil",
+                    label: "\(modifiedFilesCount)",
                     fontSize: persistentMetaFontSize,
-                    tint: cardTheme.sourceTint,
-                    fill: cardTheme.sourceTint.opacity(FloaterTheme.current == .dark ? 0.12 : 0.10),
-                    stroke: cardTheme.sourceTint.opacity(0.22)
+                    tint: fileChangeTint,
+                    fill: fileChangeTint.opacity(FloaterTheme.current == .dark ? 0.14 : 0.10),
+                    stroke: fileChangeTint.opacity(0.25),
+                    isMonospaced: true
                 )
             }
             Spacer(minLength: 0)
+        }
+    }
+
+    private var fileChangeLabel: some View {
+        HStack(spacing: max(4, persistentMetaFontSize * 0.34)) {
+            Image(systemName: "pencil")
+                .font(.system(size: max(9, persistentMetaFontSize - 0.8), weight: .bold))
+
+            Text("\(modifiedFilesCount)")
+                .font(.system(size: max(10, persistentMetaFontSize - 0.5), weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
         }
     }
 
@@ -6313,22 +6306,6 @@ struct FloaterStatusView: View {
                     dotSize: floaterSize.dotSize,
                     fontSize: persistentMetaFontSize
                 )
-            }
-
-            if modifiedFilesCount > 0 {
-                Rectangle()
-                    .fill(footerDividerColor)
-                    .frame(width: 1, height: max(12, persistentMetaFontSize + 5))
-
-                HStack(spacing: max(4, persistentBodySpacing + 2)) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: max(9, persistentMetaFontSize), weight: .bold))
-
-                    Text("\(modifiedFilesCount)")
-                        .font(.system(size: persistentMetaFontSize + 0.1, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                }
-                .foregroundStyle(fileChangeTint)
             }
 
             Spacer(minLength: 0)

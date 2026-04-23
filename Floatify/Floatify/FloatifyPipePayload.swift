@@ -5,6 +5,7 @@ struct FloatifyPipePayload: Decodable {
     let status: String?
     let source: String?
     let session: String?
+    let projectPath: String?
 
     var normalizedSource: String {
         source?.lowercased() ?? "claude"
@@ -17,6 +18,11 @@ struct FloatifyPipePayload: Decodable {
 
     var statusProject: String {
         normalizedProject ?? normalizedSource
+    }
+
+    var normalizedProjectPath: String? {
+        let trimmed = projectPath?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed?.isEmpty == false) ? trimmed : nil
     }
 
     var statusSessionID: String {
