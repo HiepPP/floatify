@@ -43,81 +43,81 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var rowHeight: CGFloat {
         switch self {
-        case .compact: return 38
-        case .regular: return 44
-        case .large: return 56
-        case .larger: return 68
-        case .superLarge: return 80
+        case .compact: return 86
+        case .regular: return 102
+        case .large: return 136
+        case .larger: return 162
+        case .superLarge: return 190
         }
     }
 
     var spriteSize: CGFloat {
         switch self {
-        case .compact: return 18
-        case .regular: return 24
-        case .large: return 36
-        case .larger: return 44
-        case .superLarge: return 52
+        case .compact: return 44
+        case .regular: return 54
+        case .large: return 72
+        case .larger: return 86
+        case .superLarge: return 102
         }
     }
 
     var stageSize: CGFloat {
         switch self {
-        case .compact: return 24
-        case .regular: return 30
-        case .large: return 44
-        case .larger: return 52
-        case .superLarge: return 60
+        case .compact: return 54
+        case .regular: return 62
+        case .large: return 78
+        case .larger: return 94
+        case .superLarge: return 110
         }
     }
 
     var dotSize: CGFloat {
         switch self {
-        case .compact: return 5
-        case .regular: return 6
-        case .large: return 9
-        case .larger: return 10
-        case .superLarge: return 12
-        }
-    }
-
-    var cornerRadius: CGFloat {
-        switch self {
-        case .compact: return 9
+        case .compact: return 8
         case .regular: return 10
-        case .large: return 14
-        case .larger: return 16
-        case .superLarge: return 18
-        }
-    }
-
-    var horizontalPadding: CGFloat {
-        switch self {
-        case .compact: return 7
-        case .regular: return 8
         case .large: return 12
         case .larger: return 14
         case .superLarge: return 16
         }
     }
 
+    var cornerRadius: CGFloat {
+        switch self {
+        case .compact: return 16
+        case .regular: return 20
+        case .large: return 24
+        case .larger: return 28
+        case .superLarge: return 32
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .compact: return 14
+        case .regular: return 18
+        case .large: return 24
+        case .larger: return 28
+        case .superLarge: return 32
+        }
+    }
+
     var projectFontSize: CGFloat {
         switch self {
-        case .compact: return 11.5
-        case .regular: return 12.5
-        case .large: return 14.5
-        case .larger: return 16
-        case .superLarge: return 18
+        case .compact: return 17
+        case .regular: return 21
+        case .large: return 26
+        case .larger: return 31
+        case .superLarge: return 36
         }
     }
 
     var metaFontSize: CGFloat {
         switch self {
-        case .compact: return 9
-        case .regular: return 9.5
-        case .large: return 11.5
-        case .larger: return 12.5
-        case .superLarge: return 14
+        case .compact: return 12
+        case .regular: return 14
+        case .large: return 16
+        case .larger: return 18
+        case .superLarge: return 20
         }
     }
 
@@ -133,21 +133,21 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var persistentPanelWidth: CGFloat {
         switch self {
-        case .compact: return 188
-        case .regular: return 236
-        case .large: return 304
-        case .larger: return 356
-        case .superLarge: return 416
+        case .compact: return 340
+        case .regular: return 440
+        case .large: return 560
+        case .larger: return 660
+        case .superLarge: return 760
         }
     }
 
     var contentSpacing: CGFloat {
         switch self {
-        case .compact: return 6
-        case .regular: return 7
-        case .large: return 8
-        case .larger: return 10
-        case .superLarge: return 11
+        case .compact: return 12
+        case .regular: return 16
+        case .large: return 22
+        case .larger: return 26
+        case .superLarge: return 30
         }
     }
 
@@ -163,11 +163,11 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var closeButtonSize: CGFloat {
         switch self {
-        case .compact: return 12
-        case .regular: return 13
-        case .large: return 14
-        case .larger: return 15
-        case .superLarge: return 16
+        case .compact: return 24
+        case .regular: return 28
+        case .large: return 32
+        case .larger: return 36
+        case .superLarge: return 40
         }
     }
 
@@ -213,11 +213,11 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var bodySpacing: CGFloat {
         switch self {
-        case .compact: return 1
-        case .regular: return 2
-        case .large: return 3
-        case .larger: return 4
-        case .superLarge: return 5
+        case .compact: return 4
+        case .regular: return 5
+        case .large: return 6
+        case .larger: return 7
+        case .superLarge: return 8
         }
     }
 }

@@ -497,7 +497,7 @@ class FloaterPanelManager {
     }
 
     private func defaultFloaterPanelOrigin(for size: CGSize) -> CGPoint {
-        let screen = NSScreen.main?.frame ?? .zero
+        let screen = NSScreen.main?.visibleFrame ?? NSScreen.main?.frame ?? .zero
         return CGPoint(
             x: screen.maxX - size.width - 10,
             y: screen.minY + 10
@@ -506,16 +506,18 @@ class FloaterPanelManager {
 
     private func clampedFloaterPanelOrigin(_ origin: CGPoint, size: CGSize) -> CGPoint {
         let candidateRect = CGRect(origin: origin, size: size)
-        let screen = NSScreen.screens.first { $0.frame.intersects(candidateRect) } ?? NSScreen.main
+        let screen = NSScreen.screens.first { $0.visibleFrame.contains(candidateRect) }
+            ?? NSScreen.screens.first { $0.visibleFrame.intersects(candidateRect) }
+            ?? NSScreen.main
         guard let screen else {
             return origin
         }
 
-        let frame = screen.frame
+        let frame = screen.visibleFrame
         let minX = frame.minX
-        let maxX = frame.maxX - size.width
+        let maxX = max(minX, frame.maxX - size.width)
         let minY = frame.minY
-        let maxY = frame.maxY - size.height
+        let maxY = max(minY, frame.maxY - size.height)
 
         return CGPoint(
             x: min(max(origin.x, minX), maxX),

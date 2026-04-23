@@ -4981,77 +4981,47 @@ private struct SpriteStageView: View {
 private struct StatusPill: View {
     let color: Color
     let label: String
+    var icon: String? = nil
     let dotSize: CGFloat
     let fontSize: CGFloat
 
+    private var labelColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return color.opacity(0.96)
+        case .light:
+            return color.opacity(0.84)
+        }
+    }
+
     var body: some View {
-        HStack(spacing: 4) {
-            ZStack {
+        HStack(spacing: max(5, fontSize * 0.34)) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: max(10, fontSize - 0.2), weight: .bold))
+                    .foregroundStyle(color)
+            } else {
                 Circle()
                     .fill(color)
                     .frame(width: dotSize, height: dotSize)
-                    .shadow(color: color.opacity(0.28), radius: 1.5, x: 0, y: 0)
             }
-            .frame(width: dotSize + 4, height: dotSize + 4)
 
-            Text(label.uppercased())
-                .font(.system(size: fontSize, weight: .semibold, design: .rounded))
-                .tracking(0.6)
-                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .foregroundStyle(labelColor)
                 .lineLimit(1)
                 .fixedSize()
-                .shadow(color: color.opacity(0.24), radius: 1, x: 0, y: 0)
         }
-        .padding(.leading, 6)
-        .padding(.trailing, 8)
-        .padding(.vertical, 2.5)
+        .padding(.horizontal, max(9, fontSize * 0.78))
+        .padding(.vertical, max(3, fontSize * 0.30))
         .background(
-            ZStack {
-                // Chunky Nintendo pixel hard shadow (offset, no blur)
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.black.opacity(0.35))
-                    .offset(x: 0, y: 1.2)
-
-                // Switch-button gradient fill
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                color.opacity(0.22),
-                                color.opacity(0.10)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-
-                // Top highlight bar (3D button lift)
-                VStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white.opacity(0.30), .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(height: 4)
-                        .padding(.horizontal, 2)
-                        .padding(.top, 1)
-                    Spacer(minLength: 0)
-                }
-            }
+            RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
+                .fill(color.opacity(FloaterTheme.current == .dark ? 0.16 : 0.12))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(color.opacity(0.55), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
+                .strokeBorder(color.opacity(0.30), lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .inset(by: 0.8)
-                .stroke(.white.opacity(0.16), lineWidth: 0.4)
-        )
-        .shadow(color: color.opacity(0.14), radius: 1.2, x: 0, y: 0.5)
     }
 }
 
@@ -5151,10 +5121,269 @@ private struct WindowDragRegion: NSViewRepresentable {
     func updateNSView(_ nsView: WindowDragRegionView, context: Context) {}
 }
 
+// MARK: - Floater Shell Styling
+
+private enum FloaterSessionKind {
+    case claude
+    case codex
+    case unknown
+
+    init(sessionID: String?) {
+        let normalizedID = sessionID?.lowercased() ?? ""
+        if normalizedID.hasPrefix("claude:") {
+            self = .claude
+        } else if normalizedID.hasPrefix("codex:") {
+            self = .codex
+        } else {
+            self = .unknown
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .claude:
+            return "Claude Code"
+        case .codex:
+            return "Codex"
+        case .unknown:
+            return "Session"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .claude:
+            return "terminal"
+        case .codex:
+            return "hexagon"
+        case .unknown:
+            return "circle.grid.2x2.fill"
+        }
+    }
+}
+
+private struct FloaterShellTheme {
+    let top: Color
+    let bottom: Color
+    let stroke: Color
+    let innerGlow: Color
+    let shadow: Color
+}
+
+private struct FloaterCardTheme {
+    let top: Color
+    let mid: Color
+    let bottom: Color
+    let border: Color
+    let stageTop: Color
+    let stageBottom: Color
+    let shadow: Color
+    let sourceTint: Color
+}
+
+private func makeFloaterShellTheme(for theme: FloaterTheme) -> FloaterShellTheme {
+    switch theme {
+    case .dark:
+        return FloaterShellTheme(
+            top: Color(red: 0.082, green: 0.122, blue: 0.238),
+            bottom: Color(red: 0.052, green: 0.082, blue: 0.168),
+            stroke: Color(red: 0.236, green: 0.304, blue: 0.486),
+            innerGlow: Color.white.opacity(0.09),
+            shadow: Color(red: 0.012, green: 0.018, blue: 0.036)
+        )
+    case .light:
+        return FloaterShellTheme(
+            top: Color(red: 0.965, green: 0.975, blue: 0.992),
+            bottom: Color(red: 0.780, green: 0.835, blue: 0.922),
+            stroke: Color(red: 0.620, green: 0.690, blue: 0.800),
+            innerGlow: Color.white.opacity(0.45),
+            shadow: Color(red: 0.128, green: 0.160, blue: 0.227)
+        )
+    }
+}
+
+private func makeFloaterCardTheme(for kind: FloaterSessionKind, theme: FloaterTheme) -> FloaterCardTheme {
+    let sourceTint: Color
+    switch kind {
+    case .claude:
+        sourceTint = Color(red: 0.760, green: 0.804, blue: 0.988)
+    case .codex:
+        sourceTint = Color(red: 0.700, green: 0.786, blue: 1.000)
+    case .unknown:
+        sourceTint = Color(red: 0.742, green: 0.780, blue: 0.872)
+    }
+
+    switch theme {
+    case .dark:
+        return FloaterCardTheme(
+            top: Color(red: 0.165, green: 0.236, blue: 0.496),
+            mid: Color(red: 0.120, green: 0.186, blue: 0.420),
+            bottom: Color(red: 0.094, green: 0.152, blue: 0.344),
+            border: Color(red: 0.314, green: 0.424, blue: 0.704),
+            stageTop: Color(red: 0.486, green: 0.676, blue: 0.976),
+            stageBottom: Color(red: 0.214, green: 0.382, blue: 0.748),
+            shadow: Color(red: 0.010, green: 0.016, blue: 0.032),
+            sourceTint: sourceTint
+        )
+    case .light:
+        return FloaterCardTheme(
+            top: Color(red: 0.996, green: 0.998, blue: 1.000),
+            mid: Color(red: 0.922, green: 0.944, blue: 0.982),
+            bottom: Color(red: 0.785, green: 0.835, blue: 0.915),
+            border: Color(red: 0.622, green: 0.696, blue: 0.810),
+            stageTop: Color(red: 0.975, green: 0.985, blue: 1.000),
+            stageBottom: Color(red: 0.790, green: 0.842, blue: 0.928),
+            shadow: Color(red: 0.118, green: 0.145, blue: 0.206),
+            sourceTint: sourceTint
+        )
+    }
+}
+
+private struct HeaderMetricChip: View {
+    let icon: String
+    let title: String?
+    let value: String?
+    let tint: Color
+    let fontSize: CGFloat
+    let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
+    let cornerRadius: CGFloat
+    let iconSize: CGFloat
+
+    var body: some View {
+        HStack(spacing: max(6, fontSize * 0.55)) {
+            Image(systemName: icon)
+                .font(.system(size: iconSize, weight: .bold))
+                .foregroundStyle(tint)
+
+            if let title, !title.isEmpty {
+                Text(title)
+                    .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.96))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+
+            if let value {
+                Text(value)
+                    .font(.system(size: fontSize, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .fixedSize()
+                    .padding(.horizontal, max(7, fontSize * 0.66))
+                    .padding(.vertical, max(2, fontSize * 0.24))
+                    .background(
+                        Capsule()
+                            .fill(tint.opacity(0.28))
+                    )
+            }
+        }
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.09),
+                            Color(red: 0.054, green: 0.122, blue: 0.286).opacity(0.92)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(.white.opacity(0.14), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+private struct HeaderCloudMark: View {
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "cloud.fill")
+                .font(.system(size: size * 0.86, weight: .black))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.780, green: 0.950, blue: 1.000),
+                            Color(red: 0.330, green: 0.760, blue: 0.970)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            HStack(spacing: size * 0.13) {
+                Circle()
+                    .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.72))
+                    .frame(width: size * 0.09, height: size * 0.09)
+                Circle()
+                    .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.72))
+                    .frame(width: size * 0.09, height: size * 0.09)
+            }
+            .offset(y: size * 0.02)
+
+            Capsule()
+                .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.55))
+                .frame(width: size * 0.17, height: size * 0.035)
+                .offset(y: size * 0.16)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: Color.black.opacity(0.26), radius: 5, x: 0, y: 3)
+    }
+}
+
+private struct FloaterMetaChip: View {
+    let icon: String
+    let label: String?
+    let fontSize: CGFloat
+    let tint: Color
+    let fill: Color
+    let stroke: Color
+    var isMonospaced = false
+
+    var body: some View {
+        HStack(spacing: max(4, fontSize * 0.32)) {
+            Image(systemName: icon)
+                .font(.system(size: max(9, fontSize - 0.3), weight: .bold))
+
+            if let label, !label.isEmpty {
+                if isMonospaced {
+                    Text(label)
+                        .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                } else {
+                    Text(label)
+                        .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                }
+            }
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, max(8, fontSize * 0.68))
+        .padding(.vertical, max(3, fontSize * 0.24))
+        .background(
+            RoundedRectangle(cornerRadius: max(9, fontSize * 0.90), style: .continuous)
+                .fill(fill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: max(9, fontSize * 0.90), style: .continuous)
+                .strokeBorder(stroke, lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Floater Panel Header
 
 private struct FloaterPanelHeaderView: View {
     let itemCount: Int
+    let floaterSize: FloaterSize
     let isCollapsed: Bool
     let showsCPUInHeader: Bool
     let onToggleCollapsed: () -> Void
@@ -5167,86 +5396,136 @@ private struct FloaterPanelHeaderView: View {
         mass: 1.0, stiffness: 160, damping: 18, initialVelocity: 0.0
     )
 
-    private var cpuText: String {
-        String(format: "%.1f%%CPU", cpuMonitor.cpuPercent)
+    private var cpuValueText: String {
+        String(format: "%.1f%%", cpuMonitor.cpuPercent)
+    }
+
+    private var sizeScale: CGFloat {
+        min(max(floaterSize.rowHeight / 136, 0.72), 1.42)
+    }
+
+    private var appIconSize: CGFloat {
+        40 * sizeScale
+    }
+
+    private var titleFontSize: CGFloat {
+        31 * sizeScale
+    }
+
+    private var chipFontSize: CGFloat {
+        14.5 * sizeScale
+    }
+
+    private var usesCondensedMetrics: Bool {
+        floaterSize == .compact
+    }
+
+    private var showsHeaderTitle: Bool {
+        true
+    }
+
+    private var chipHorizontalPadding: CGFloat {
+        (usesCondensedMetrics ? 11 : 15) * sizeScale
+    }
+
+    private var chipVerticalPadding: CGFloat {
+        (usesCondensedMetrics ? 8 : 10) * sizeScale
+    }
+
+    private var chipCornerRadius: CGFloat {
+        18 * sizeScale
+    }
+
+    private var chipIconSize: CGFloat {
+        17 * sizeScale
+    }
+
+    private var toggleButtonSize: CGFloat {
+        48 * sizeScale
+    }
+
+    private var toggleIconSize: CGFloat {
+        28 * sizeScale
+    }
+
+    private var contentSpacing: CGFloat {
+        18 * sizeScale
+    }
+
+    private var headerTextColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return .white.opacity(0.98)
+        case .light:
+            return Color(red: 0.082, green: 0.106, blue: 0.165).opacity(0.94)
+        }
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ZStack {
-                WindowDragRegion()
+        ZStack {
+            WindowDragRegion()
 
-                HStack(spacing: 7) {
-                    VStack(spacing: 2) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            HStack(spacing: 2) {
-                                Circle().fill(.white.opacity(0.22)).frame(width: 2.5, height: 2.5)
-                                Circle().fill(.white.opacity(0.22)).frame(width: 2.5, height: 2.5)
-                            }
-                        }
+            HStack(spacing: 10 * sizeScale) {
+                HStack(spacing: contentSpacing) {
+                    HeaderCloudMark(size: appIconSize)
+
+                    if showsHeaderTitle {
+                        Text("Floatify")
+                            .font(.system(size: titleFontSize, weight: .heavy, design: .rounded))
+                            .foregroundStyle(headerTextColor)
+                            .shadow(color: Color.black.opacity(FloaterTheme.current == .dark ? 0.22 : 0.08), radius: 1, x: 0, y: 1)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.74)
+                            .layoutPriority(1)
                     }
-
-                    Text("Floaters")
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .tracking(-0.1)
-                        .foregroundStyle(FloaterPalette.primaryText)
-
-                    Text("\(itemCount)")
-                        .font(.system(size: 10, weight: .bold))
-                        .monospacedDigit()
-                        .foregroundStyle(FloaterPalette.secondaryText)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(FloaterPalette.chipFill.opacity(0.85)))
-
-                    if showsCPUInHeader {
-                        Text(cpuText)
-                            .font(.system(size: 10, weight: .bold))
-                            .monospacedDigit()
-                            .foregroundStyle(FloaterPalette.secondaryText)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(FloaterPalette.chipFill.opacity(0.85)))
-                    }
-
-                    Spacer(minLength: 0)
                 }
-                .padding(.leading, 8)
-                .padding(.trailing, 3)
-                .padding(.vertical, 5)
-                .allowsHitTesting(false)
-            }
 
-            Capsule()
-                .fill(FloaterPalette.strokeSoft.opacity(0.55))
-                .frame(width: 1, height: 14)
+                Spacer(minLength: 0)
 
-            Button(action: onToggleCollapsed) {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(isHoveringCollapse ? FloaterPalette.primaryText : FloaterPalette.secondaryText)
-                    .rotationEffect(.degrees(isCollapsed ? 180 : 0))
-                    .animation(animation, value: isCollapsed)
-                    .frame(width: 26, height: 24)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .onHover { isHoveringCollapse = $0 }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 9)
-                .fill(FloaterPalette.panelTint.opacity(0.92))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9)
-                        .fill(.thinMaterial.opacity(0.14))
+                HeaderMetricChip(
+                    icon: "square.stack.3d.up.fill",
+                    title: nil,
+                    value: "\(itemCount)",
+                    tint: Color(red: 0.420, green: 0.620, blue: 1.000),
+                    fontSize: chipFontSize,
+                    horizontalPadding: chipHorizontalPadding,
+                    verticalPadding: chipVerticalPadding,
+                    cornerRadius: chipCornerRadius,
+                    iconSize: chipIconSize
                 )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 9)
-                .strokeBorder(FloaterPalette.highlight.opacity(0.10), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 9))
-        .shadow(color: FloaterPalette.panelShadow.opacity(0.18), radius: 6, x: 0, y: 2)
+
+                if showsCPUInHeader {
+                    HeaderMetricChip(
+                        icon: "waveform.path.ecg",
+                        title: usesCondensedMetrics ? cpuValueText : "\(cpuValueText) CPU",
+                        value: nil,
+                        tint: Color(red: 0.533, green: 0.945, blue: 0.514),
+                        fontSize: chipFontSize,
+                        horizontalPadding: chipHorizontalPadding,
+                        verticalPadding: chipVerticalPadding,
+                        cornerRadius: chipCornerRadius,
+                        iconSize: chipIconSize
+                    )
+                }
+
+                Button(action: onToggleCollapsed) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: toggleIconSize, weight: .black))
+                        .foregroundStyle(.white.opacity(0.96))
+                        .frame(width: toggleButtonSize, height: toggleButtonSize)
+                        .background(
+                            Circle()
+                                .fill(.white.opacity(isHoveringCollapse ? 0.12 : 0))
+                        )
+                        .scaleEffect(isHoveringCollapse ? 1.03 : 1.0)
+                        .animation(animation, value: isCollapsed)
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringCollapse = $0 }
+            }
+            .padding(.horizontal, 6 * sizeScale)
+            .padding(.vertical, 4 * sizeScale)
+        }
         .onAppear {
             syncCPUMonitorState()
         }
@@ -5291,10 +5570,29 @@ struct FloaterPanelView: View {
         mass: 1.0, stiffness: 160, damping: 18, initialVelocity: 0.0
     )
 
+    private var shellTheme: FloaterShellTheme {
+        makeFloaterShellTheme(for: FloaterTheme.current)
+    }
+
+    private var shellWidth: CGFloat {
+        items.first?.floaterSize.persistentPanelWidth ?? FloaterSize.regular.persistentPanelWidth
+    }
+
+    private var shellPadding: CGFloat {
+        let baseHeight = items.first?.floaterSize.rowHeight ?? FloaterSize.regular.rowHeight
+        return max(18, baseHeight * 0.17)
+    }
+
+    private var shellCornerRadius: CGFloat {
+        let cardRadius = items.first?.floaterSize.cornerRadius ?? FloaterSize.regular.cornerRadius
+        return cardRadius + 10
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             FloaterPanelHeaderView(
                 itemCount: items.count,
+                floaterSize: items.first?.floaterSize ?? .regular,
                 isCollapsed: isCollapsed,
                 showsCPUInHeader: showsCPUInHeader,
                 onToggleCollapsed: {
@@ -5303,11 +5601,25 @@ struct FloaterPanelView: View {
             )
 
             if !isCollapsed {
+                Rectangle()
+                    .fill(shellTheme.stroke.opacity(0.46))
+                    .frame(height: 1)
+                    .overlay(
+                        Rectangle()
+                            .fill(.white.opacity(0.05))
+                            .frame(height: 0.5),
+                        alignment: .top
+                    )
+                    .padding(.horizontal, max(2, shellPadding * 0.2))
+                    .padding(.top, max(10, shellPadding * 0.78))
+                    .padding(.bottom, max(14, spacing * 1.1))
+
                 VStack(alignment: .leading, spacing: spacing) {
                     ForEach(items) { item in
                         FloaterStatusView(
                             message: item.item.state.message,
                             project: item.item.project,
+                            sessionID: item.item.id,
                             effect: item.effect,
                             onTap: { onItemTap(item.item) },
                             onClose: { onItemClose(item.item) },
@@ -5329,7 +5641,6 @@ struct FloaterPanelView: View {
                         )
                     }
                 }
-                .padding(.top, spacing)
                 .transition(
                     .asymmetric(
                         insertion: .move(edge: .top)
@@ -5342,10 +5653,62 @@ struct FloaterPanelView: View {
                 )
             }
         }
-        .padding(6)
+        .frame(width: shellWidth, alignment: .leading)
+        .padding(shellPadding)
+        .background(shellBackground)
+        .clipShape(RoundedRectangle(cornerRadius: shellCornerRadius, style: .continuous))
+        .shadow(color: shellTheme.shadow.opacity(0.26), radius: 22, x: 0, y: 14)
         .fixedSize()
-        .background(.clear)
         .animation(animation, value: isCollapsed)
+    }
+
+    private var shellBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: shellCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            shellTheme.top,
+                            shellTheme.bottom
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: shellCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.12),
+                            .clear,
+                            .black.opacity(0.18)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: shellCornerRadius, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.08),
+                            .clear
+                        ],
+                        center: .topLeading,
+                        startRadius: 1,
+                        endRadius: shellWidth * 0.72
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: shellCornerRadius, style: .continuous)
+                .strokeBorder(shellTheme.stroke.opacity(0.80), lineWidth: 1.6)
+
+            RoundedRectangle(cornerRadius: shellCornerRadius - 3, style: .continuous)
+                .inset(by: 3)
+                .stroke(shellTheme.innerGlow, lineWidth: 0.7)
+        }
     }
 }
 
@@ -5354,6 +5717,7 @@ struct FloaterPanelView: View {
 struct FloaterStatusView: View {
     let message: String
     var project: String?
+    var sessionID: String?
     var effect: String?
     var sound: String?
     var onTap: (() -> Void)?
@@ -5388,6 +5752,7 @@ struct FloaterStatusView: View {
     init(
         message: String,
         project: String? = nil,
+        sessionID: String? = nil,
         effect: String? = nil,
         sound: String? = nil,
         onTap: (() -> Void)? = nil,
@@ -5411,6 +5776,7 @@ struct FloaterStatusView: View {
     ) {
         self.message = message
         self.project = project
+        self.sessionID = sessionID
         self.effect = effect
         self.sound = sound
         self.onTap = onTap
@@ -5450,6 +5816,14 @@ struct FloaterStatusView: View {
         sound
     }
 
+    private var sessionKind: FloaterSessionKind {
+        FloaterSessionKind(sessionID: sessionID)
+    }
+
+    private var cardTheme: FloaterCardTheme {
+        makeFloaterCardTheme(for: sessionKind, theme: FloaterTheme.current)
+    }
+
     private var isRunning: Bool {
         statusState?.isProgressState == true
     }
@@ -5480,125 +5854,56 @@ struct FloaterStatusView: View {
             return renderMode
         case .standard:
             return renderMode == .superSlay ? .slay : renderMode
-        case .reduced:
-            return .lame
-        case .minimal:
+        case .reduced, .minimal:
             return .lame
         }
     }
 
     private var accentColor: Color {
-        statusIndicatorColor ?? .blue
+        statusIndicatorColor ?? FloaterPalette.complete
     }
 
     private var effectTuning: FloaterEffectTuning {
         effectPreset.tuning
     }
 
-    private var effectGlowMultiplier: Double {
-        let base = max(effectTuning.glowMultiplier, 0.2)
-        guard isRunning else { return base }
-
-        switch runningEffectBudget {
-        case .focus:
-            return base
-        case .standard:
-            return min(base, 0.75)
-        case .reduced:
-            return min(base, 0.52)
-        case .minimal:
-            return 0.2
-        }
-    }
-
     private var usesMinimalRenderMode: Bool {
         isPersistent && effectiveRenderMode == .lame
-    }
-
-    private var isSuperSlayRenderMode: Bool {
-        effectiveRenderMode == .superSlay
     }
 
     private var showsFancyFloaterEffects: Bool {
         isPersistent && effectiveRenderMode != .lame && runningEffectBudget != .minimal
     }
 
-    private var showsParticleTrail: Bool {
-        false
-    }
-
-    private func scaledGlow(_ value: Double) -> Double {
-        min(value * effectGlowMultiplier, 1.0)
-    }
-
     private var animatesPersistentStatus: Bool {
         effectiveRenderMode != .lame && (runningEffectBudget == .focus || runningEffectBudget == .standard) && animatesStatus
     }
 
-    private var showsRunningSheen: Bool {
-        false
-    }
-
-    private var showsPowerLEDStrip: Bool {
-        false
-    }
-
-    private var showsAvatarScanSweep: Bool {
-        false
-    }
-
-    private var showsRainbowBorder: Bool {
-        false
-    }
-
-    private var panelGlowShadowOpacity: Double {
-        guard isRunning else { return scaledGlow(0.03) }
-
-        switch runningEffectBudget {
-        case .focus:
-            return scaledGlow(0.08)
-        case .standard:
-            return scaledGlow(0.045)
-        case .reduced:
-            return scaledGlow(0.02)
-        case .minimal:
-            return 0
-        }
-    }
-
-    private var avatarBackgroundPrimaryOpacity: Double {
-        guard let statusState else { return 0.18 }
-        switch statusState {
-        case .running: return 0.66
-        case .idle: return 0.58
-        case .complete: return 0.54
-        }
-    }
-
-    private var avatarBackgroundSecondaryOpacity: Double {
-        guard let statusState else { return 0.08 }
-        switch statusState {
-        case .running: return 0.40
-        case .idle: return 0.34
-        case .complete: return 0.30
-        }
-    }
-
-    private var avatarBackgroundBorderOpacity: Double {
-        guard let statusState else { return 0.08 }
-        switch statusState {
-        case .running: return 0.34
-        case .idle: return 0.30
-        case .complete: return 0.28
-        }
-    }
+    private var showsRunningSheen: Bool { false }
+    private var showsPowerLEDStrip: Bool { false }
+    private var showsAvatarScanSweep: Bool { false }
+    private var showsRainbowBorder: Bool { false }
 
     private var stateLabel: String? {
         guard let state = statusState else { return nil }
         switch state {
-        case .running: return "Running"
-        case .idle: return "Idle"
-        case .complete: return "Complete"
+        case .running:
+            return "Running"
+        case .idle:
+            return "Idle"
+        case .complete:
+            return "Complete"
+        }
+    }
+
+    private var statusIconName: String {
+        switch statusState ?? .complete {
+        case .running:
+            return "circle.fill"
+        case .idle:
+            return "pause.circle.fill"
+        case .complete:
+            return "checkmark.circle.fill"
         }
     }
 
@@ -5606,55 +5911,192 @@ struct FloaterStatusView: View {
         completionTrigger
     }
 
-    private var showsRunningDuration: Bool {
-        false
-    }
-
-    private var showsActivitySection: Bool {
-        showsRunningDuration
-    }
-
-    private func runningDurationText(referenceDate: Date) -> String? {
-        guard let lastActivity else { return nil }
-        let elapsed = max(Int(referenceDate.timeIntervalSince(lastActivity)), 0)
-        let hours = elapsed / 3600
-        let minutes = (elapsed % 3600) / 60
-        let seconds = elapsed % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        }
-
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
     private var projectName: String {
-        project ?? "Claude Code"
+        project ?? sessionKind.label
     }
 
     private var isPersistent: Bool {
         isDraggablePanel && statusIndicatorColor != nil
     }
 
-    private var trailingContentInset: CGFloat {
-        guard isPersistent else { return floaterSize.trailingInset }
-        guard onClose != nil else { return floaterSize.trailingInset }
-        return floaterSize.hoverTrailingInset
+    private var avatarCornerRadius: CGFloat {
+        max(16, floaterSize.cornerRadius * 0.82)
+    }
+
+    private var persistentLayoutScale: CGFloat {
+        min(max(floaterSize.rowHeight / 118, 0.72), 1.42)
+    }
+
+    private var persistentAvatarFrameSize: CGFloat {
+        max(42, floaterSize.rowHeight * 0.62)
+    }
+
+    private var persistentStageRenderSize: CGFloat {
+        min(floaterSize.persistentStageSize, persistentAvatarFrameSize)
+    }
+
+    private var persistentSpriteRenderSize: CGFloat {
+        min(floaterSize.persistentSpriteSize, max(22, persistentAvatarFrameSize - 6))
+    }
+
+    private var titleBeaconSize: CGFloat {
+        max(8, floaterSize.dotSize * 1.06)
+    }
+
+    private var persistentTitleFontSize: CGFloat {
+        floaterSize.projectFontSize
+    }
+
+    private var persistentMetaFontSize: CGFloat {
+        floaterSize.metaFontSize
+    }
+
+    private var persistentHorizontalPadding: CGFloat {
+        switch floaterSize {
+        case .compact:
+            return 12
+        case .regular:
+            return 14
+        case .large, .larger, .superLarge:
+            break
+        }
+
+        return floaterSize.horizontalPadding
+    }
+
+    private var persistentVerticalPadding: CGFloat {
+        switch floaterSize {
+        case .compact:
+            return 8
+        case .regular:
+            return 9
+        case .large, .larger, .superLarge:
+            break
+        }
+
+        return max(10, floaterSize.rowHeight * 0.11)
+    }
+
+    private var persistentBodySpacing: CGFloat {
+        switch floaterSize {
+        case .compact:
+            return 3
+        case .regular:
+            return 4
+        case .large, .larger, .superLarge:
+            break
+        }
+
+        return floaterSize.bodySpacing
+    }
+
+    private var persistentLineSpacing: CGFloat {
+        switch floaterSize {
+        case .compact:
+            return 6
+        case .regular:
+            return 7
+        case .large, .larger, .superLarge:
+            break
+        }
+
+        return max(7, floaterSize.contentSpacing * 0.50)
+    }
+
+    private var usesCondensedPersistentLayout: Bool {
+        floaterSize == .compact || floaterSize == .regular
+    }
+
+    private var condensedCloseButtonInset: CGFloat {
+        floaterSize == .compact ? 7 : 9
+    }
+
+    private var condensedTrailingReserve: CGFloat {
+        usesCondensedPersistentLayout ? floaterSize.closeButtonSize + 2 : 0
+    }
+
+    private var primaryContentColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return .white.opacity(0.98)
+        case .light:
+            return Color(red: 0.070, green: 0.086, blue: 0.124).opacity(0.92)
+        }
+    }
+
+    private var secondaryContentColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return .white.opacity(0.74)
+        case .light:
+            return Color(red: 0.150, green: 0.188, blue: 0.282).opacity(0.76)
+        }
+    }
+
+    private var sectionDividerColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return .white.opacity(0.12)
+        case .light:
+            return Color.black.opacity(0.10)
+        }
+    }
+
+    private var footerDividerColor: Color {
+        switch FloaterTheme.current {
+        case .dark:
+            return .white.opacity(0.16)
+        case .light:
+            return Color.black.opacity(0.12)
+        }
+    }
+
+    private var fileChangeTint: Color {
+        Color(red: 1.000, green: 0.840, blue: 0.360)
+    }
+
+    private var sourceChipLabel: String? {
+        switch sessionKind {
+        case .claude:
+            return "Claude Code"
+        case .codex:
+            return "Codex"
+        case .unknown:
+            return "Session"
+        }
+    }
+
+    private var statusDisplayLabel: String? {
+        stateLabel
+    }
+
+    private var contentShadowOpacity: Double {
+        FloaterTheme.current == .dark ? 0.18 : 0.06
+    }
+
+    private var hasFooterContent: Bool {
+        statusDisplayLabel != nil || modifiedFilesCount > 0
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             panelBackground
             persistentContent
+
+            if usesCondensedPersistentLayout, isPersistent, onClose != nil {
+                closeButton
+                    .padding(.top, condensedCloseButtonInset)
+                    .padding(.trailing, condensedCloseButtonInset)
+            }
         }
         .frame(
             width: floaterSize.persistentPanelWidth,
             height: floaterSize.rowHeight
         )
-        .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .strokeBorder(FloaterPalette.highlight.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                .strokeBorder(.white.opacity(isHovering ? 0.22 : 0.12), lineWidth: 1)
         )
         .overlay {
             if showsFancyFloaterEffects {
@@ -5668,8 +6110,6 @@ struct FloaterStatusView: View {
                         )
                     }
 
-                    // Star-power rainbow border (Mario Kart invincibility vibe)
-                    // Gated to Super Slay to save CPU on lower-tier modes.
                     if showsRainbowBorder {
                         RainbowStarPowerBorder(
                             cornerRadius: floaterSize.cornerRadius,
@@ -5687,26 +6127,21 @@ struct FloaterStatusView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .compositingGroup()
-                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if isPersistent, onClose != nil {
-                closeButton
-                    .padding(.top, 5)
-                    .padding(.trailing, 5)
-                    .opacity(isHovering ? 1 : 0.72)
-                    .scaleEffect(isHovering ? 1 : 0.96)
-                    .animation(.easeInOut(duration: 0.15), value: isHovering)
+                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous))
             }
         }
         .shadow(
-            color: FloaterPalette.panelShadow.opacity(isRunning ? 0.06 : (isHovering ? 0.22 : 0.16)),
-            radius: isRunning ? 3 : (isHovering ? floaterSize.cardShadowRadius : max(floaterSize.cardShadowRadius - 2, 6)),
+            color: cardTheme.shadow.opacity(isHovering ? 0.42 : 0.30),
+            radius: isHovering ? floaterSize.cardShadowRadius + 4 : floaterSize.cardShadowRadius,
             x: 0,
-            y: isRunning ? 1 : (isHovering ? 5 : 3)
+            y: isHovering ? 10 : 6
         )
-        .shadow(color: accentColor.opacity(isRunning ? 0.0 : panelGlowShadowOpacity), radius: isHovering ? 10 : 7, x: 0, y: 2)
+        .shadow(
+            color: accentColor.opacity(isRunning ? 0.12 : 0.05),
+            radius: isRunning ? 12 : 6,
+            x: 0,
+            y: 2
+        )
         .animation(.easeInOut(duration: 0.18), value: isHovering)
         .animation(.easeInOut(duration: 0.22), value: accentColor)
         .scaleEffect(panelScale)
@@ -5736,18 +6171,21 @@ struct FloaterStatusView: View {
     private var panelBackground: some View {
         ZStack {
             if usesMinimalRenderMode {
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.94 : 0.90))
-
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(accentColor.opacity(isRunning ? 0.10 : 0.06))
+                RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                cardTheme.top.opacity(isHovering ? 0.96 : 0.92),
+                                cardTheme.bottom
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             } else {
-                // Static panel layers: rasterized once via drawingGroup until
-                // inputs (color, hovering, state, renderMode) change.
                 panelBackgroundStaticLayers
                     .drawingGroup(opaque: false)
 
-                // Power-LED strip (animated when running) - outside drawingGroup.
                 if showsPowerLEDStrip {
                     AnimatedPowerLEDStrip(
                         accentColor: accentColor,
@@ -5760,7 +6198,7 @@ struct FloaterStatusView: View {
 
     @ViewBuilder
     private var persistentContent: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .center, spacing: floaterSize.contentSpacing) {
             Button(action: {
                 NSLog("Floatify: Avatar tapped, invoking onTap")
                 onTap?()
@@ -5768,80 +6206,129 @@ struct FloaterStatusView: View {
                 ZStack {
                     persistentAvatarBackground
                     avatarStage
-                        .scaleEffect(usesMinimalRenderMode ? 1.0 : (isAvatarHovering ? 1.06 : 1.0))
+                        .scaleEffect(usesMinimalRenderMode ? 1.0 : (isAvatarHovering ? 1.05 : 1.0))
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAvatarHovering)
                 }
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
-            .frame(width: floaterSize.avatarHitSize, height: floaterSize.avatarHitSize)
+            .frame(width: persistentAvatarFrameSize, height: persistentAvatarFrameSize)
             .onHover { isAvatarHovering = $0 }
             .help("Open project in editor")
 
             persistentBody
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, floaterSize.contentSpacing)
-                .padding(.trailing, trailingContentInset)
+                .padding(.trailing, condensedTrailingReserve)
         }
+        .padding(.horizontal, persistentHorizontalPadding)
+        .padding(.vertical, persistentVerticalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    @ViewBuilder
     private var persistentBody: some View {
-        VStack(alignment: .leading, spacing: floaterSize.bodySpacing) {
-            Text(projectName)
-                .font(.system(size: floaterSize.projectFontSize, weight: .semibold, design: .rounded))
-                .tracking(-0.2)
-                .foregroundStyle(FloaterPalette.primaryText)
-                .shadow(color: accentColor.opacity(isRunning ? 0.35 : 0.18), radius: 2, x: 0, y: 0)
-                .shadow(color: .black.opacity(0.35), radius: 0.5, x: 0, y: 0.5)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .layoutPriority(1)
-                .help(projectName)
+        VStack(alignment: .leading, spacing: persistentBodySpacing) {
+            HStack(spacing: persistentLineSpacing) {
+                ZStack {
+                    Circle()
+                        .fill(accentColor.opacity(0.16))
+                        .frame(width: titleBeaconSize * 1.6, height: titleBeaconSize * 1.6)
 
-            persistentMetaLine
-        }
-    }
+                    Circle()
+                        .fill(accentColor)
+                        .frame(width: titleBeaconSize, height: titleBeaconSize)
+                }
 
-    @ViewBuilder
-    private var persistentMetaLine: some View {
-        HStack(spacing: 5) {
-            if let stateLabel {
-                StatusPill(
-                    color: accentColor,
-                    label: stateLabel,
-                    dotSize: floaterSize.dotSize,
-                    fontSize: floaterSize.metaFontSize
-                )
-                .fixedSize(horizontal: true, vertical: false)
-            }
+                Text(projectName)
+                    .font(.system(size: persistentTitleFontSize, weight: .heavy, design: .rounded))
+                    .foregroundStyle(primaryContentColor)
+                    .shadow(color: Color.black.opacity(contentShadowOpacity), radius: 0, x: 0, y: 1)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
+                    .help(projectName)
 
-            if showsRunningDuration {
-                if let lastActivity {
-                    RunningDurationBadge(
-                        lastActivity: lastActivity,
-                        floaterSize: floaterSize,
-                        accentColor: accentColor
-                    )
+                Spacer(minLength: 4)
+
+                if !usesCondensedPersistentLayout, isPersistent, onClose != nil {
+                    closeButton
                 }
             }
 
-            if showsActivitySection, modifiedFilesCount > 0 {
-                Circle()
-                    .fill(FloaterPalette.secondaryText.opacity(0.45))
-                    .frame(width: 2, height: 2)
+            persistentSourceLine
+
+            if hasFooterContent {
+                Spacer(minLength: usesCondensedPersistentLayout ? 2 : 0)
+                if !usesCondensedPersistentLayout {
+                    persistentSectionDivider
+                }
+                persistentFooterLine
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var persistentSourceLine: some View {
+        HStack(spacing: 0) {
+            if usesCondensedPersistentLayout {
+                HStack(spacing: max(4, persistentMetaFontSize * 0.30)) {
+                    Image(systemName: sessionKind.iconName)
+                        .font(.system(size: max(9, persistentMetaFontSize - 1.2), weight: .bold))
+
+                    if let sourceChipLabel {
+                        Text(sourceChipLabel)
+                            .font(.system(size: max(10, persistentMetaFontSize - 1), weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                    }
+                }
+                .foregroundStyle(secondaryContentColor)
+                .shadow(color: Color.black.opacity(contentShadowOpacity * 0.7), radius: 0, x: 0, y: 1)
+            } else {
+                FloaterMetaChip(
+                    icon: sessionKind.iconName,
+                    label: sourceChipLabel,
+                    fontSize: persistentMetaFontSize,
+                    tint: cardTheme.sourceTint,
+                    fill: cardTheme.sourceTint.opacity(FloaterTheme.current == .dark ? 0.12 : 0.10),
+                    stroke: cardTheme.sourceTint.opacity(0.22)
+                )
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var persistentSectionDivider: some View {
+        Rectangle()
+            .fill(sectionDividerColor)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var persistentFooterLine: some View {
+        HStack(alignment: .center, spacing: max(14, floaterSize.contentSpacing * 0.72)) {
+            if let statusDisplayLabel {
+                StatusPill(
+                    color: accentColor,
+                    label: statusDisplayLabel,
+                    icon: statusIconName,
+                    dotSize: floaterSize.dotSize,
+                    fontSize: persistentMetaFontSize
+                )
             }
 
             if modifiedFilesCount > 0 {
-                HStack(spacing: 2) {
+                Rectangle()
+                    .fill(footerDividerColor)
+                    .frame(width: 1, height: max(12, persistentMetaFontSize + 5))
+
+                HStack(spacing: max(4, persistentBodySpacing + 2)) {
                     Image(systemName: "pencil")
-                        .font(.system(size: floaterSize.metaFontSize - 1, weight: .semibold))
+                        .font(.system(size: max(9, persistentMetaFontSize), weight: .bold))
+
                     Text("\(modifiedFilesCount)")
-                        .font(.system(size: floaterSize.metaFontSize, weight: .semibold))
+                        .font(.system(size: persistentMetaFontSize + 0.1, weight: .bold, design: .rounded))
                         .monospacedDigit()
                 }
-                .foregroundStyle(FloaterPalette.warning)
-                .fixedSize()
+                .foregroundStyle(fileChangeTint)
             }
 
             Spacer(minLength: 0)
@@ -5852,18 +6339,18 @@ struct FloaterStatusView: View {
     private var avatarStage: some View {
         if usesMinimalRenderMode {
             ZStack {
-                Circle()
-                    .fill(accentColor.opacity(0.34))
+                RoundedRectangle(cornerRadius: avatarCornerRadius * 0.8, style: .continuous)
+                    .fill(accentColor.opacity(0.22))
                     .frame(
-                        width: floaterSize.persistentStageSize * 0.58,
-                        height: floaterSize.persistentStageSize * 0.58
+                        width: persistentStageRenderSize * 0.60,
+                        height: persistentStageRenderSize * 0.60
                     )
 
                 Circle()
                     .fill(accentColor)
                     .frame(
-                        width: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22),
-                        height: max(floaterSize.dotSize * 1.8, floaterSize.persistentStageSize * 0.22)
+                        width: max(floaterSize.dotSize * 2.0, persistentStageRenderSize * 0.24),
+                        height: max(floaterSize.dotSize * 2.0, persistentStageRenderSize * 0.24)
                     )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -5871,8 +6358,8 @@ struct FloaterStatusView: View {
             SlaySpriteStageView(
                 avatar: avatar,
                 statusColor: accentColor,
-                stageSize: floaterSize.persistentStageSize,
-                spriteSize: floaterSize.persistentSpriteSize,
+                stageSize: persistentStageRenderSize,
+                spriteSize: persistentSpriteRenderSize,
                 renderMode: effectiveRenderMode,
                 effectTuning: effectTuning,
                 isAnimating: animatesPersistentStatus,
@@ -5889,226 +6376,149 @@ struct FloaterStatusView: View {
     @ViewBuilder
     private var panelBackgroundStaticLayers: some View {
         ZStack {
-            // Deep Switch-bezel base
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                .fill(FloaterPalette.panelTint.opacity(isHovering ? 0.96 : 0.92))
-                .overlay(
-                    RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                        .fill(Color.white.opacity(0.05))
-                )
-
-            // Cartridge body gradient: top lift, bottom shadow
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.06),
+                            cardTheme.top.opacity(isHovering ? 0.98 : 0.94),
+                            cardTheme.mid,
+                            cardTheme.bottom
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.14),
                             .clear,
-                            Color.black.opacity(0.14)
+                            .black.opacity(0.12)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
 
-            // Subtle pixel-grid texture
-            PixelGridPattern(cell: 5, dotSize: 1)
-                .fill(.white.opacity(isSuperSlayRenderMode ? 0.025 : 0.018))
-                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
-
-            if isPersistent {
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accentColor.opacity(isRunning ? (isSuperSlayRenderMode ? 0.24 : 0.18) : (isSuperSlayRenderMode ? 0.14 : 0.10)),
-                                .clear
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-            }
-
-            // Glossy top sheen
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
                 .fill(
-                    LinearGradient(
+                    RadialGradient(
                         colors: [
-                            FloaterPalette.highlight.opacity(0.14),
-                            FloaterPalette.highlight.opacity(0.04),
+                            .white.opacity(0.10),
                             .clear
                         ],
-                        startPoint: .top,
-                        endPoint: .center
+                        center: .topLeading,
+                        startRadius: 1,
+                        endRadius: floaterSize.persistentPanelWidth * 0.64
                     )
                 )
 
-            // Inner bevel
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 1)
-                .inset(by: 1)
-                .stroke(.white.opacity(isSuperSlayRenderMode ? 0.14 : 0.09), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            accentColor.opacity(isRunning ? 0.10 : 0.04),
+                            .clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
 
-            if isSuperSlayRenderMode {
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius)
-                    .strokeBorder(.white.opacity(isRunning ? 0.14 : 0.08), lineWidth: 0.8)
-            }
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                .strokeBorder(cardTheme.border.opacity(0.90), lineWidth: 1.2)
+
+            RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 2, style: .continuous)
+                .inset(by: 2)
+                .stroke(.white.opacity(0.12), lineWidth: 0.7)
         }
     }
 
     private var persistentAvatarBackground: some View {
         ZStack {
-            // Static layers: rasterized once via drawingGroup and cached by SwiftUI
-            // until inputs change (accentColor, state, renderMode).
             persistentAvatarBackgroundStaticLayers
                 .drawingGroup(opaque: false)
 
-            // Animated scan sweep (running only) - outside drawingGroup so it
-            // animates cheaply on top of the cached static raster.
             if showsAvatarScanSweep {
                 AnimatedAvatarScanSweep(accentColor: accentColor)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: avatarCornerRadius, style: .continuous))
     }
 
     @ViewBuilder
     private var persistentAvatarBackgroundStaticLayers: some View {
         ZStack {
-            // Base: deep void with status-tinted gradient
-            Rectangle()
-                .fill(avatarBackgroundFill)
-
-            // Angular iridescent sweep (gamer holographic feel)
-            if !usesMinimalRenderMode {
-                Rectangle()
-                    .fill(
-                        AngularGradient(
-                            gradient: Gradient(stops: [
-                                .init(color: accentColor.opacity(0.00), location: 0.00),
-                                .init(color: accentColor.opacity(0.38), location: 0.22),
-                                .init(color: .white.opacity(0.22), location: 0.50),
-                                .init(color: accentColor.opacity(0.32), location: 0.78),
-                                .init(color: accentColor.opacity(0.00), location: 1.00)
-                            ]),
-                            center: .center
-                        )
+            RoundedRectangle(cornerRadius: avatarCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            cardTheme.stageTop,
+                            cardTheme.stageBottom
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .blendMode(.screen)
-                    .opacity(isRunning ? 0.95 : 0.60)
-            }
-
-            // Neon core glow
-            RadialGradient(
-                colors: [
-                    .white.opacity(isRunning ? 0.28 : 0.16),
-                    accentColor.opacity(usesMinimalRenderMode ? 0.36 : 0.46),
-                    accentColor.opacity(0.08),
-                    .clear
-                ],
-                center: .center,
-                startRadius: 1,
-                endRadius: floaterSize.avatarHitSize * 0.58
-            )
-            .blendMode(.plusLighter)
-
-            // CRT scanlines
-            if !usesMinimalRenderMode {
-                ScanlinePattern(spacing: 2.5)
-                    .fill(.white.opacity(isSuperSlayRenderMode ? 0.07 : 0.05))
-                    .blendMode(.overlay)
-            }
-
-            // Top light wash (HUD highlight)
-            if !usesMinimalRenderMode {
-                LinearGradient(
-                    colors: [
-                        FloaterPalette.highlight.opacity(isSuperSlayRenderMode ? 0.22 : 0.14),
-                        .clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
                 )
-                .blendMode(.screen)
-            }
 
-            // HUD corner brackets (static once rasterized, shadow bakes into raster)
-            if !usesMinimalRenderMode {
-                HUDCornerBrackets(length: 6, thickness: 1.2)
-                    .stroke(
-                        accentColor.opacity(isRunning ? 0.95 : 0.62),
-                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
+            RoundedRectangle(cornerRadius: avatarCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.22),
+                            .clear,
+                            .black.opacity(0.10)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    .padding(3)
-            }
+                )
 
-            // Outer neon border (shadow baked into raster, no per-frame pass)
-            Rectangle()
-                .strokeBorder(accentColor.opacity(min(avatarBackgroundBorderOpacity + 0.18, 1.0)), lineWidth: 1.0)
-
-            // Inner highlight line (double-border gamer seal)
-            if !usesMinimalRenderMode {
-                Rectangle()
-                    .inset(by: 1.5)
-                    .stroke(.white.opacity(isSuperSlayRenderMode ? 0.16 : 0.10), lineWidth: 0.5)
-            }
-
-            // Right-edge neon seam
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accentColor.opacity(0),
-                                accentColor.opacity(0.90),
-                                .white.opacity(0.80),
-                                accentColor.opacity(0.90),
-                                accentColor.opacity(0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+            RoundedRectangle(cornerRadius: avatarCornerRadius, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.16),
+                            .clear
+                        ],
+                        center: .topLeading,
+                        startRadius: 1,
+                        endRadius: floaterSize.avatarHitSize * 0.82
                     )
-                    .frame(width: 2)
-                    .padding(.vertical, 2)
-                    .blendMode(.screen)
-            }
-        }
-    }
+                )
 
-    private var avatarBackgroundFill: AnyShapeStyle {
-        if usesMinimalRenderMode {
-            return AnyShapeStyle(accentColor.opacity(0.48))
-        }
+            RoundedRectangle(cornerRadius: avatarCornerRadius, style: .continuous)
+                .strokeBorder(cardTheme.border.opacity(0.70), lineWidth: 1.1)
 
-        return AnyShapeStyle(
-            LinearGradient(
-                colors: [
-                    accentColor.opacity(scaledGlow(min(avatarBackgroundPrimaryOpacity + 0.10, 1.0))),
-                    accentColor.opacity(scaledGlow(avatarBackgroundSecondaryOpacity)),
-                    FloaterPalette.panelShadow.opacity(0.58),
-                    Color.black.opacity(0.44)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+            RoundedRectangle(cornerRadius: avatarCornerRadius - 3, style: .continuous)
+                .inset(by: 3)
+                .stroke(.white.opacity(0.14), lineWidth: 0.7)
+        }
     }
 
     private var closeButton: some View {
         Button(action: { onClose?() }) {
             Image(systemName: "xmark")
-                .font(.system(size: 7, weight: .bold))
-                .foregroundStyle(isCloseHovering ? FloaterPalette.primaryText : FloaterPalette.secondaryText)
+                .font(.system(size: max(6, floaterSize.metaFontSize - 1), weight: .black))
+                .foregroundStyle(.white.opacity(0.96))
                 .frame(width: floaterSize.closeButtonSize, height: floaterSize.closeButtonSize)
                 .background(
                     Circle()
-                        .fill(isCloseHovering ? FloaterPalette.closeHover.opacity(0.92) : FloaterPalette.chipFill.opacity(0.46))
+                        .fill(
+                            Color(red: 0.082, green: 0.118, blue: 0.242)
+                                .opacity(isCloseHovering ? 0.96 : 0.90)
+                        )
+                )
+                .overlay(
+                    Circle()
+                        .strokeBorder(cardTheme.border.opacity(isCloseHovering ? 0.56 : 0.34), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .scaleEffect(isCloseHovering ? 1.06 : 1.0)
+        .scaleEffect(isCloseHovering ? 1.05 : 1.0)
         .onHover { isCloseHovering = $0 }
     }
 

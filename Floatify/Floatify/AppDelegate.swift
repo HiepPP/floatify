@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var claudeSessionsByID: [String: SessionDescriptor] = [:]
     private var codexSessionsByID: [String: SessionDescriptor] = [:]
     private var statusItemsByID: [String: PersistentStatusItem] = [:]
+    private var standaloneStatusItemIDs: Set<String> = []
     private var idleTransitionTimers: [String: Timer] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -69,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sessionsByID = activeSessionsByID()
         pruneInactiveStatuses(activeIDs: Set(sessionsByID.keys))
 
-        let items = sessionsByID.values.map { session in
+        var items = sessionsByID.values.map { session in
             let item = statusItemsByID[session.id]
             return PersistentStatusItem(
                 id: session.id,
@@ -80,6 +81,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 modifiedFilesCount: session.modifiedFilesCount
             )
         }
+        items.append(
+            contentsOf: statusItemsByID.values.filter {
+                standaloneStatusItemIDs.contains($0.id) && sessionsByID[$0.id] == nil
+            }
+        )
 
         FloaterPanelManager.shared.showPersistentStatuses(items)
     }
@@ -89,12 +95,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func pruneInactiveStatuses(activeIDs: Set<String>) {
-        for (sessionID, timer) in idleTransitionTimers where !activeIDs.contains(sessionID) {
+        for (sessionID, timer) in idleTransitionTimers
+            where !activeIDs.contains(sessionID) && !standaloneStatusItemIDs.contains(sessionID) {
             timer.invalidate()
         }
 
-        idleTransitionTimers = idleTransitionTimers.filter { activeIDs.contains($0.key) }
-        statusItemsByID = statusItemsByID.filter { activeIDs.contains($0.key) }
+        idleTransitionTimers = idleTransitionTimers.filter {
+            activeIDs.contains($0.key) || standaloneStatusItemIDs.contains($0.key)
+        }
+        statusItemsByID = statusItemsByID.filter {
+            activeIDs.contains($0.key) || standaloneStatusItemIDs.contains($0.key)
+        }
+        standaloneStatusItemIDs.formIntersection(statusItemsByID.keys)
     }
 
     private func monitoredSession(for sessionID: String) -> SessionDescriptor? {
@@ -193,6 +205,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         idleTransitionTimers[sessionID]?.invalidate()
         idleTransitionTimers.removeValue(forKey: sessionID)
+        if payload.session == nil && monitoredSession(for: sessionID) == nil {
+            standaloneStatusItemIDs.insert(sessionID)
+        } else {
+            standaloneStatusItemIDs.remove(sessionID)
+        }
 
         let displayState: ClaudeStatusState = state == .complete ? .idle : state
         statusItemsByID[sessionID] = makeStatusItem(
