@@ -41,134 +41,60 @@ enum FloaterSize: String, CaseIterable, Equatable {
         }
     }
 
+    private var styleTokens: FloaterStyleSizeTokens {
+        FloaterStyleCatalog.shared.currentPreset.sizeTokens(for: self)
+    }
+
     var rowHeight: CGFloat {
-        switch self {
-        case .compact: return 38
-        case .regular: return 44
-        case .large: return 136
-        case .larger: return 162
-        case .superLarge: return 190
-        }
+        styleTokens.rowHeight
     }
 
     var spriteSize: CGFloat {
-        switch self {
-        case .compact: return 18
-        case .regular: return 24
-        case .large: return 72
-        case .larger: return 86
-        case .superLarge: return 102
-        }
+        styleTokens.spriteSize
     }
 
     var stageSize: CGFloat {
-        switch self {
-        case .compact: return 24
-        case .regular: return 30
-        case .large: return 78
-        case .larger: return 94
-        case .superLarge: return 110
-        }
+        styleTokens.stageSize
     }
 
     var dotSize: CGFloat {
-        switch self {
-        case .compact: return 5
-        case .regular: return 6
-        case .large: return 12
-        case .larger: return 14
-        case .superLarge: return 16
-        }
+        styleTokens.dotSize
     }
 
     var cornerRadius: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 10
-        case .large: return 24
-        case .larger: return 28
-        case .superLarge: return 32
-        }
+        styleTokens.cornerRadius
     }
 
     var horizontalPadding: CGFloat {
-        switch self {
-        case .compact: return 7
-        case .regular: return 8
-        case .large: return 24
-        case .larger: return 28
-        case .superLarge: return 32
-        }
+        styleTokens.horizontalPadding
     }
 
     var projectFontSize: CGFloat {
-        switch self {
-        case .compact: return 11.5
-        case .regular: return 12.5
-        case .large: return 26
-        case .larger: return 31
-        case .superLarge: return 36
-        }
+        styleTokens.projectFontSize
     }
 
     var metaFontSize: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 9.5
-        case .large: return 16
-        case .larger: return 18
-        case .superLarge: return 20
-        }
+        styleTokens.metaFontSize
     }
 
     var panelWidth: CGFloat {
-        switch self {
-        case .compact: return 210
-        case .regular: return 262
-        case .large: return 352
-        case .larger: return 420
-        case .superLarge: return 492
-        }
+        styleTokens.panelWidth
     }
 
     var persistentPanelWidth: CGFloat {
-        switch self {
-        case .compact: return 236
-        case .regular: return 236
-        case .large: return 560
-        case .larger: return 660
-        case .superLarge: return 760
-        }
+        styleTokens.persistentPanelWidth
     }
 
     var contentSpacing: CGFloat {
-        switch self {
-        case .compact: return 6
-        case .regular: return 7
-        case .large: return 22
-        case .larger: return 26
-        case .superLarge: return 30
-        }
+        styleTokens.contentSpacing
     }
 
     var statusRailWidth: CGFloat {
-        switch self {
-        case .compact: return 4
-        case .regular: return 5
-        case .large: return 6
-        case .larger: return 7
-        case .superLarge: return 8
-        }
+        styleTokens.statusRailWidth
     }
 
     var closeButtonSize: CGFloat {
-        switch self {
-        case .compact: return 12
-        case .regular: return 13
-        case .large: return 32
-        case .larger: return 36
-        case .superLarge: return 40
-        }
+        styleTokens.closeButtonSize
     }
 
     var trailingInset: CGFloat {
@@ -192,33 +118,27 @@ enum FloaterSize: String, CaseIterable, Equatable {
     }
 
     var cardShadowRadius: CGFloat {
-        switch self {
-        case .compact: return 9
-        case .regular: return 11
-        case .large: return 14
-        case .larger: return 16
-        case .superLarge: return 18
-        }
+        styleTokens.cardShadowRadius
     }
 
     var statusPillMinWidth: CGFloat {
-        switch self {
-        case .compact: return 42
-        case .regular: return 58
-        case .large: return 66
-        case .larger: return 78
-        case .superLarge: return 90
-        }
+        styleTokens.statusPillMinWidth
     }
 
     var bodySpacing: CGFloat {
-        switch self {
-        case .compact: return 1
-        case .regular: return 2
-        case .large: return 6
-        case .larger: return 7
-        case .superLarge: return 8
-        }
+        styleTokens.bodySpacing
+    }
+
+    var persistentBodySpacing: CGFloat {
+        styleTokens.persistentBodySpacing
+    }
+
+    var persistentLineSpacing: CGFloat {
+        styleTokens.persistentLineSpacing
+    }
+
+    var persistentBodyVerticalInset: CGFloat {
+        styleTokens.persistentBodyVerticalInset
     }
 }
 
@@ -258,11 +178,12 @@ final class FloatifySettings {
     static let shared = FloatifySettings()
     static let cliSymlinkInstalledKey = "CLISymlinkInstalled"
 
-    private enum Key {
+    enum Key {
         static let floaterSize = "FloaterSize"
         static let floaterTheme = "FloaterTheme"
         static let floaterRenderMode = "FloaterRenderMode"
         static let floaterHeaderCPUDisplay = "FloaterHeaderCPUDisplay"
+        static let selectedFloaterStyleID = "SelectedFloaterStyleID"
         static let selectedVisualPackID = "SelectedVisualPackID"
         static let selectedAvatarID = "SelectedAvatarID"
         static let selectedEffectPresetID = "SelectedEffectPresetID"
@@ -293,6 +214,12 @@ final class FloatifySettings {
     var floaterHeaderCPUDisplay: FloaterHeaderCPUDisplay {
         didSet {
             defaults.set(floaterHeaderCPUDisplay.rawValue, forKey: Key.floaterHeaderCPUDisplay)
+        }
+    }
+
+    var selectedFloaterStyleID: String {
+        didSet {
+            defaults.set(selectedFloaterStyleID, forKey: Key.selectedFloaterStyleID)
         }
     }
 
@@ -336,6 +263,7 @@ final class FloatifySettings {
         self.floaterSize = FloaterSize(rawValue: defaults.string(forKey: Key.floaterSize) ?? FloaterSize.regular.rawValue) ?? .regular
         self.floaterRenderMode = FloaterRenderMode(rawValue: defaults.string(forKey: Key.floaterRenderMode) ?? FloaterRenderMode.slay.rawValue) ?? .slay
         self.floaterHeaderCPUDisplay = FloaterHeaderCPUDisplay(rawValue: defaults.string(forKey: Key.floaterHeaderCPUDisplay) ?? FloaterHeaderCPUDisplay.off.rawValue) ?? .off
+        self.selectedFloaterStyleID = defaults.string(forKey: Key.selectedFloaterStyleID) ?? FloaterStyleConstants.defaultStyleID
         self.selectedVisualPackID = defaults.string(forKey: Key.selectedVisualPackID) ?? FloaterVisualConstants.builtInPackID
         self.selectedAvatarID = defaults.string(forKey: Key.selectedAvatarID) ?? FloaterVisualConstants.autoAvatarID
         self.selectedEffectPresetID = defaults.string(forKey: Key.selectedEffectPresetID) ?? FloaterVisualConstants.defaultEffectPresetID
@@ -344,6 +272,7 @@ final class FloatifySettings {
         self.idleTimeout = storedIdleTimeout > 0 ? storedIdleTimeout : 10
 
         normalizeVisualSelection()
+        normalizeStyleSelection()
     }
 
     private static func migrateLegacyIdleTimeoutIfNeeded(defaults: UserDefaults) {
@@ -374,5 +303,17 @@ final class FloatifySettings {
     func selectVisualPack(_ packID: String, catalog: FloaterVisualCatalog = .shared) {
         selectedVisualPackID = packID
         normalizeVisualSelection(catalog: catalog)
+    }
+
+    func normalizeStyleSelection(catalog: FloaterStyleCatalog = .shared) {
+        let resolvedPreset = catalog.resolvedPreset(id: selectedFloaterStyleID)
+        if selectedFloaterStyleID != resolvedPreset.id {
+            selectedFloaterStyleID = resolvedPreset.id
+        }
+    }
+
+    func selectFloaterStyle(_ styleID: String, catalog: FloaterStyleCatalog = .shared) {
+        selectedFloaterStyleID = styleID
+        normalizeStyleSelection(catalog: catalog)
     }
 }

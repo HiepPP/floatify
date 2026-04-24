@@ -335,12 +335,15 @@ private struct SetupHealthRow<Actions: View>: View {
 struct SettingsView: View {
     @Environment(FloatifySettings.self) private var settings
     @Environment(FloaterVisualCatalog.self) private var visualCatalog
+    @Environment(FloaterStyleCatalog.self) private var styleCatalog
 
     @State private var health = SetupHealthSnapshot.capture()
     @State private var actionMessage = ""
     @State private var actionLevel: SetupHealthLevel = .good
     @State private var visualCatalogMessage = ""
     @State private var visualCatalogLevel: SetupHealthLevel = .good
+    @State private var styleCatalogMessage = ""
+    @State private var styleCatalogLevel: SetupHealthLevel = .good
     @State private var importAvatarName = ""
     @State private var isImportingAvatar = false
     @State private var managedPackID = FloaterVisualConstants.personalPackID
@@ -380,12 +383,22 @@ struct SettingsView: View {
 
         Form {
             Section {
-                Picker("Theme", selection: $settings.floaterTheme) {
-                    ForEach(FloaterTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
+                LabeledContent("Theme") {
+                    Picker(
+                        "Theme",
+                        selection: Binding(
+                            get: { settings.selectedFloaterStyleID },
+                            set: { settings.selectFloaterStyle($0, catalog: styleCatalog) }
+                        )
+                    ) {
+                        ForEach(styleCatalog.presets, id: \.id) { preset in
+                            Text(preset.displayName).tag(preset.id)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(width: 220, alignment: .trailing)
                 }
-                .pickerStyle(.inline)
 
                 Picker("Display Style", selection: $settings.floaterSize) {
                     ForEach(FloaterSize.allCases, id: \.self) { size in
@@ -410,6 +423,37 @@ struct SettingsView: View {
                     .labelsHidden()
                     .pickerStyle(.menu)
                     .frame(width: 220, alignment: .trailing)
+                }
+
+                LabeledContent("Style Presets") {
+                    Menu {
+                        Button("Reveal Styles Folder") {
+                            styleCatalog.revealStylesDirectory()
+                            setStyleCatalogMessage("Opened \(styleCatalog.stylesDirectoryPath).", level: .good)
+                        }
+
+                        Button("Reload Styles") {
+                            styleCatalog.reload()
+                            settings.normalizeStyleSelection(catalog: styleCatalog)
+                            setStyleCatalogMessage(styleCatalog.lastReloadMessage ?? "Reloaded style presets.", level: .good)
+                        }
+                    } label: {
+                        Text("Choose Action")
+                            .frame(width: 220, alignment: .leading)
+                    }
+                }
+
+                if !styleCatalogMessage.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Circle()
+                            .fill(styleCatalogLevel.tint)
+                            .frame(width: 8, height: 8)
+                            .padding(.top, 5)
+
+                        Text(styleCatalogMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } header: {
                 Text("Floater Appearance")
@@ -903,6 +947,11 @@ struct SettingsView: View {
         visualCatalogLevel = level
     }
 
+    private func setStyleCatalogMessage(_ message: String, level: SetupHealthLevel) {
+        styleCatalogMessage = message
+        styleCatalogLevel = level
+    }
+
     private func openAvatarImportPanel(for pack: FloaterVisualPack) {
         guard validateAvatarNameInput() else { return }
 
@@ -1196,4 +1245,5 @@ private enum AvatarImportUIError: LocalizedError {
     SettingsView()
         .environment(FloatifySettings.shared)
         .environment(FloaterVisualCatalog.shared)
+        .environment(FloaterStyleCatalog.shared)
 }

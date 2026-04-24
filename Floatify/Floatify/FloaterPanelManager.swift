@@ -72,6 +72,7 @@ struct FloaterPanelItem: Identifiable {
     let effect: String
     let avatar: FloaterAvatarDefinition?
     let effectPreset: FloaterEffectPreset
+    let stylePreset: FloaterStylePreset
     let floaterSize: FloaterSize
     let renderMode: FloaterRenderMode
     let runningPanelCount: Int
@@ -91,10 +92,12 @@ class FloaterPanelManager {
 
     private let settings = FloatifySettings.shared
     private let visualCatalog = FloaterVisualCatalog.shared
+    private let styleCatalog = FloaterStyleCatalog.shared
     private var floaterPanel: FloatPanel?
     private var floaterHostingView: NSHostingView<FloaterPanelView>?
     private var floaterPanelMoveObserver: NSObjectProtocol?
     private var visualCatalogObserver: NSObjectProtocol?
+    private var styleCatalogObserver: NSObjectProtocol?
     private var currentStatusItemsByID: [String: PersistentStatusItem] = [:]
     private var floaterDismissControllers: [String: DismissController] = [:]
     private var hiddenStatusPanelIDs: Set<String> = []
@@ -105,18 +108,21 @@ class FloaterPanelManager {
     private let floaterPanelAnimationDuration: TimeInterval = 0.38
     private let floaterPanelSpringDamping: CGFloat = 0.82
     private let floaterPanelSpringVelocity: CGFloat = 0.45
-    private let statusEffects = ["slide", "fade", "dropdown", "marquee", "trail"]
     private var isFloaterPanelCollapsed: Bool
 
     private init() {
         isFloaterPanelCollapsed = UserDefaults.standard.bool(forKey: floaterPanelCollapsedKey)
         observeSettings()
         observeVisualCatalog()
+        observeStyleCatalog()
     }
 
     deinit {
         if let visualCatalogObserver {
             NotificationCenter.default.removeObserver(visualCatalogObserver)
+        }
+        if let styleCatalogObserver {
+            NotificationCenter.default.removeObserver(styleCatalogObserver)
         }
     }
 
@@ -175,9 +181,10 @@ class FloaterPanelManager {
             .filter { $0.state == .running }
             .map(\.id)
         let runningIndexByID = Dictionary(uniqueKeysWithValues: runningIDs.enumerated().map { ($0.element, $0.offset) })
+        let stylePreset = styleCatalog.resolvedPreset(id: settings.selectedFloaterStyleID)
 
         let floaterItems = items.map { item in
-            let style = statusStyle(for: item)
+            let style = statusStyle(for: item, stylePreset: stylePreset)
             return FloaterPanelItem(
                 item: item,
                 dismissController: floaterDismissController(for: item.id),
@@ -186,6 +193,7 @@ class FloaterPanelManager {
                 effect: style.effect,
                 avatar: style.avatar,
                 effectPreset: style.effectPreset,
+                stylePreset: stylePreset,
                 floaterSize: floaterSize,
                 renderMode: settings.floaterRenderMode,
                 runningPanelCount: runningIDs.count,
@@ -193,7 +201,7 @@ class FloaterPanelManager {
             )
         }
 
-        let hostingView = makeFloaterPanelHostingView(items: floaterItems)
+        let hostingView = makeFloaterPanelHostingView(items: floaterItems, stylePreset: stylePreset)
         let size = fittingPanelSize(for: hostingView)
 
         if let panel = floaterPanel {
@@ -214,12 +222,16 @@ class FloaterPanelManager {
         panel.orderFrontRegardless()
     }
 
-    private func makeFloaterPanelHostingView(items: [FloaterPanelItem]) -> NSHostingView<FloaterPanelView> {
+    private func makeFloaterPanelHostingView(
+        items: [FloaterPanelItem],
+        stylePreset: FloaterStylePreset
+    ) -> NSHostingView<FloaterPanelView> {
         let rootView = FloaterPanelView(
             items: items,
             spacing: floaterPanelSpacing,
             isCollapsed: isFloaterPanelCollapsed,
             showsCPUInHeader: settings.floaterHeaderCPUDisplay == .on,
+            stylePreset: stylePreset,
             onToggleCollapsed: { [weak self] in
                 self?.toggleFloaterPanelCollapsed()
             },
@@ -275,6 +287,7 @@ class FloaterPanelManager {
             _ = settings.floaterTheme
             _ = settings.floaterRenderMode
             _ = settings.floaterHeaderCPUDisplay
+            _ = settings.selectedFloaterStyleID
             _ = settings.selectedVisualPackID
             _ = settings.selectedAvatarID
             _ = settings.selectedEffectPresetID
@@ -297,13 +310,30 @@ class FloaterPanelManager {
         }
     }
 
+    private func observeStyleCatalog() {
+        styleCatalogObserver = NotificationCenter.default.addObserver(
+            forName: .floaterStyleCatalogDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSettingsChange()
+        }
+    }
+
     private func handleSettingsChange() {
         settings.normalizeVisualSelection(catalog: visualCatalog)
+        settings.normalizeStyleSelection(catalog: styleCatalog)
         refreshFloaterPanel(animated: true)
     }
 
-    private func statusStyle(for item: PersistentStatusItem) -> PersistentStatusStyle {
+    private func statusStyle(
+        for item: PersistentStatusItem,
+        stylePreset: FloaterStylePreset
+    ) -> PersistentStatusStyle {
         let seed = stableSeed(for: item.id)
+        let statusEffects = stylePreset.variants.effects.entryEffects.isEmpty
+            ? FloaterStyleVariants().effects.entryEffects
+            : stylePreset.variants.effects.entryEffects
         let effect = statusEffects[seed % statusEffects.count]
         let resolvedStyle = visualCatalog.resolveStyle(
             packID: settings.selectedVisualPackID,

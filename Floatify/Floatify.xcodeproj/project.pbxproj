@@ -14,14 +14,17 @@
 		263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */; };
 		2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */; };
 		38B748E447FF06EC65D3FC02 /* dropdown_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 329A7A9B66196600C706A371 /* dropdown_entry.json */; };
-		3FDECEC56F61445657E65D3F /* FloaterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DACC97B72E843D8F308AB3E /* FloaterStatusView.swift */; };
+		3A9C3F95FE3A26EA6025A0C1 /* terminal.json in Resources */ = {isa = PBXBuildFile; fileRef = 2705746D8D076DE72DD5D3BE /* terminal.json */; };
 		4DF1E2C00D13115C9933D6A9 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */; };
 		63359078DBBA20E551A18811 /* trail_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 3486C751C77E07CF2BC60B50 /* trail_entry.json */; };
+		70DF2ED1585B4A6545962F93 /* default.json in Resources */ = {isa = PBXBuildFile; fileRef = F260DB397F54633F789EA1BA /* default.json */; };
+		7DD0472B00A269E6B0B08BDC /* FloaterStyleCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3F2B11FC7FF79DA70546B5 /* FloaterStyleCatalog.swift */; };
+		8983DBC19DFCD89C6F72E0C0 /* FloaterStylePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91F9957D208E97FAFD7F4C1 /* FloaterStylePreset.swift */; };
 		92400EB3439E7EA4DDD9B1B5 /* fade_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 0E2DED432B173764DA471BAF /* fade_entry.json */; };
 		93A3D922228BD48A28118336 /* avatar-sprite-sheet.png in Resources */ = {isa = PBXBuildFile; fileRef = 9D102825DD29872179C0349B /* avatar-sprite-sheet.png */; };
+		9DE80D514179ABED111C809E /* AddStylePreset.md in Resources */ = {isa = PBXBuildFile; fileRef = 5567358A5C766E1E4D871CD3 /* AddStylePreset.md */; };
 		B30711D21D567F22226BE83C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5384F019B036F95A28E65D7 /* Assets.xcassets */; };
 		B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */; };
-		C95C6817E7C45A90A43FE657 /* FloaterPanelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C9FF9FF7D99C1C4BEB05A0 /* FloaterPanelManager.swift */; };
 		CB7C73F6C9BF4FB5CFE53039 /* marquee_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = E8C725CAD9973074015DB996 /* marquee_entry.json */; };
 		D848384797D3EEC627B875C1 /* slide_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */; };
 		DEC543A6D8097FF90025D3E8 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 66EF78CC817ABB5716BC5E0D /* Lottie */; };
@@ -30,7 +33,9 @@
 		F0CD4B564D1ECAA6D9FBF60A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0CFF7F45B818C87EFDF510 /* main.swift */; };
 		F2C2CF84F2AF4D6427BC1600 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63DAD4239E10639F6510535 /* AppDelegate.swift */; };
 		F53714895F8A794904AFE214 /* IdleAnimations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */; };
+		F5A086420B5495DB5BD415E0 /* FloaterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4DF20CF43E3154D05BFEF2 /* FloaterStatusView.swift */; };
 		F6CCF2164687869393B36160 /* exit_fade.json in Resources */ = {isa = PBXBuildFile; fileRef = 14CB93C3AFE94711410CCED7 /* exit_fade.json */; };
+		FE981D499458D363A6BAB241 /* FloaterPanelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698839FB1C9995D8556AE4B2 /* FloaterPanelManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,25 +46,30 @@
 		218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMonitoring.swift; sourceTree = "<group>"; };
 		2573557764743955144C86DA /* FloatifyPipePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifyPipePayload.swift; sourceTree = "<group>"; };
+		2705746D8D076DE72DD5D3BE /* terminal.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = terminal.json; sourceTree = "<group>"; };
+		2C3F2B11FC7FF79DA70546B5 /* FloaterStyleCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStyleCatalog.swift; sourceTree = "<group>"; };
 		329A7A9B66196600C706A371 /* dropdown_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dropdown_entry.json; sourceTree = "<group>"; };
 		3486C751C77E07CF2BC60B50 /* trail_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trail_entry.json; sourceTree = "<group>"; };
+		3C4DF20CF43E3154D05BFEF2 /* FloaterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStatusView.swift; sourceTree = "<group>"; };
 		440F612B0DBA815B721CCD32 /* FloatEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatEffects.swift; sourceTree = "<group>"; };
-		4DACC97B72E843D8F308AB3E /* FloaterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStatusView.swift; sourceTree = "<group>"; };
 		4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		5567358A5C766E1E4D871CD3 /* AddStylePreset.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AddStylePreset.md; sourceTree = "<group>"; };
 		5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = slide_entry.json; sourceTree = "<group>"; };
 		696097BA1731283FE8A7584F /* Floatify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Floatify.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		698839FB1C9995D8556AE4B2 /* FloaterPanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterPanelManager.swift; sourceTree = "<group>"; };
 		7D0CFF7F45B818C87EFDF510 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		889D2E95327A399171312B59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleAnimations.swift; sourceTree = "<group>"; };
 		9D102825DD29872179C0349B /* avatar-sprite-sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "avatar-sprite-sheet.png"; sourceTree = "<group>"; };
 		A1B356A433DF882DBFC363E0 /* FloatifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifyApp.swift; sourceTree = "<group>"; };
 		B0FB1358410034C55CF7BF79 /* floatify */ = {isa = PBXFileReference; includeInIndex = 0; path = floatify; sourceTree = BUILT_PRODUCTS_DIR; };
+		B91F9957D208E97FAFD7F4C1 /* FloaterStylePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStylePreset.swift; sourceTree = "<group>"; };
 		BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimator.swift; sourceTree = "<group>"; };
-		C2C9FF9FF7D99C1C4BEB05A0 /* FloaterPanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterPanelManager.swift; sourceTree = "<group>"; };
 		C99E350187EB98B959FBA420 /* exit_slide.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = exit_slide.json; sourceTree = "<group>"; };
 		D5384F019B036F95A28E65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D63DAD4239E10639F6510535 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E8C725CAD9973074015DB996 /* marquee_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = marquee_entry.json; sourceTree = "<group>"; };
+		F260DB397F54633F789EA1BA /* default.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = default.json; sourceTree = "<group>"; };
 		F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifySettings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -75,6 +85,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0C5CBE768D70633008E0016D /* Docs */ = {
+			isa = PBXGroup;
+			children = (
+				5567358A5C766E1E4D871CD3 /* AddStylePreset.md */,
+			);
+			path = Docs;
+			sourceTree = "<group>";
+		};
 		24751368E8D0CEDBF89EFC56 /* output */ = {
 			isa = PBXGroup;
 			children = (
@@ -91,6 +109,15 @@
 				696097BA1731283FE8A7584F /* Floatify.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		65338F26C85EB8F6593978F4 /* StylePresets */ = {
+			isa = PBXGroup;
+			children = (
+				F260DB397F54633F789EA1BA /* default.json */,
+				2705746D8D076DE72DD5D3BE /* terminal.json */,
+			);
+			path = StylePresets;
 			sourceTree = "<group>";
 		};
 		688110CEE6DF412BC5AC24C6 /* cli */ = {
@@ -113,6 +140,23 @@
 			);
 			sourceTree = "<group>";
 		};
+		788B7BDAAC031BF6D69019B3 /* Skeleton */ = {
+			isa = PBXGroup;
+			children = (
+				B91F9957D208E97FAFD7F4C1 /* FloaterStylePreset.swift */,
+			);
+			path = Skeleton;
+			sourceTree = "<group>";
+		};
+		862DCA4A9B1339F445D0C018 /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				2C3F2B11FC7FF79DA70546B5 /* FloaterStyleCatalog.swift */,
+				0C5CBE768D70633008E0016D /* Docs */,
+			);
+			path = Styles;
+			sourceTree = "<group>";
+		};
 		9047FA5EE0D7C43B096D954B /* Animations */ = {
 			isa = PBXGroup;
 			children = (
@@ -133,12 +177,12 @@
 				D63DAD4239E10639F6510535 /* AppDelegate.swift */,
 				D5384F019B036F95A28E65D7 /* Assets.xcassets */,
 				440F612B0DBA815B721CCD32 /* FloatEffects.swift */,
+				698839FB1C9995D8556AE4B2 /* FloaterPanelManager.swift */,
+				3C4DF20CF43E3154D05BFEF2 /* FloaterStatusView.swift */,
 				0A5625AC91F75B69EEFB20AC /* FloaterVisualCatalog.swift */,
 				A1B356A433DF882DBFC363E0 /* FloatifyApp.swift */,
 				2573557764743955144C86DA /* FloatifyPipePayload.swift */,
 				F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */,
-				C2C9FF9FF7D99C1C4BEB05A0 /* FloaterPanelManager.swift */,
-				4DACC97B72E843D8F308AB3E /* FloaterStatusView.swift */,
 				892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */,
 				889D2E95327A399171312B59 /* Info.plist */,
 				BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */,
@@ -146,6 +190,7 @@
 				218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */,
 				4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */,
 				DF3AD548F6AE135DB258AE2A /* Resources */,
+				F40DD075C10A84C07AD84B22 /* UI */,
 			);
 			path = Floatify;
 			sourceTree = "<group>";
@@ -154,8 +199,18 @@
 			isa = PBXGroup;
 			children = (
 				9047FA5EE0D7C43B096D954B /* Animations */,
+				65338F26C85EB8F6593978F4 /* StylePresets */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		F40DD075C10A84C07AD84B22 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				788B7BDAAC031BF6D69019B3 /* Skeleton */,
+				862DCA4A9B1339F445D0C018 /* Styles */,
+			);
+			path = UI;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -243,14 +298,17 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9DE80D514179ABED111C809E /* AddStylePreset.md in Resources */,
 				B30711D21D567F22226BE83C /* Assets.xcassets in Resources */,
 				93A3D922228BD48A28118336 /* avatar-sprite-sheet.png in Resources */,
+				70DF2ED1585B4A6545962F93 /* default.json in Resources */,
 				38B748E447FF06EC65D3FC02 /* dropdown_entry.json in Resources */,
 				F6CCF2164687869393B36160 /* exit_fade.json in Resources */,
 				E2D967EF728278025832D30D /* exit_slide.json in Resources */,
 				92400EB3439E7EA4DDD9B1B5 /* fade_entry.json in Resources */,
 				CB7C73F6C9BF4FB5CFE53039 /* marquee_entry.json in Resources */,
 				D848384797D3EEC627B875C1 /* slide_entry.json in Resources */,
+				3A9C3F95FE3A26EA6025A0C1 /* terminal.json in Resources */,
 				63359078DBBA20E551A18811 /* trail_entry.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -264,8 +322,10 @@
 			files = (
 				F2C2CF84F2AF4D6427BC1600 /* AppDelegate.swift in Sources */,
 				105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */,
-				C95C6817E7C45A90A43FE657 /* FloaterPanelManager.swift in Sources */,
-				3FDECEC56F61445657E65D3F /* FloaterStatusView.swift in Sources */,
+				FE981D499458D363A6BAB241 /* FloaterPanelManager.swift in Sources */,
+				F5A086420B5495DB5BD415E0 /* FloaterStatusView.swift in Sources */,
+				7DD0472B00A269E6B0B08BDC /* FloaterStyleCatalog.swift in Sources */,
+				8983DBC19DFCD89C6F72E0C0 /* FloaterStylePreset.swift in Sources */,
 				11C58FF874EFE69F055B4A8D /* FloaterVisualCatalog.swift in Sources */,
 				E809983A24A30669CA13B384 /* FloatifyApp.swift in Sources */,
 				1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */,

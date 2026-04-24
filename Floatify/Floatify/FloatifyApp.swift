@@ -7,6 +7,7 @@ struct FloatifyApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let settings = FloatifySettings.shared
     private let visualCatalog = FloaterVisualCatalog.shared
+    private let styleCatalog = FloaterStyleCatalog.shared
 
     var body: some Scene {
         MenuBarExtra {
@@ -19,6 +20,7 @@ struct FloatifyApp: App {
             SettingsView()
                 .environment(settings)
                 .environment(visualCatalog)
+                .environment(styleCatalog)
         }
     }
 }
@@ -107,6 +109,7 @@ final class FloatifySettingsWindowPresenter {
     private var window: NSWindow?
     private let settings = FloatifySettings.shared
     private let visualCatalog = FloaterVisualCatalog.shared
+    private let styleCatalog = FloaterStyleCatalog.shared
 
     private init() {}
 
@@ -122,6 +125,7 @@ final class FloatifySettingsWindowPresenter {
         let contentView = SettingsView()
             .environment(settings)
             .environment(visualCatalog)
+            .environment(styleCatalog)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 700),

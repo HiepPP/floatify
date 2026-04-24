@@ -1,0 +1,143 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "description": "Green terminal-style preset for testing the skeleton system.",
+  "palette": {
+    "dark": {
+      "panelTint": "#07110C",
+      "panelShadow": "#000000",
+      "primaryText": "#DDFCE7",
+      "secondaryText": "#85CFA0",
+      "strokeStrong": "#4DFF88",
+      "strokeSoft": "#1F5F36",
+      "highlight": "#E9FFF0",
+      "running": "#FF6A4D",
+      "idle": "#F5D94D",
+      "complete": "#35F078",
+      "warning": "#FF9A45",
+      "chipFill": "#102418",
+      "closeHover": "#244D34"
+    },
+    "light": {
+      "panelTint": "#F5FFF8",
+      "panelShadow": "#12301D",
+      "primaryText": "#082013",
+      "secondaryText": "#2E6640",
+      "strokeStrong": "#36B866",
+      "strokeSoft": "#BDE9CA",
+      "highlight": "#FFFFFF",
+      "running": "#C8432F",
+      "idle": "#9A7B06",
+      "complete": "#147B3D",
+      "warning": "#C26A24",
+      "chipFill": "#E2F6E8",
+      "closeHover": "#C9EFD5"
+    }
+  },
+  "shell": {
+    "dark": {
+      "top": "#082013",
+      "bottom": "#030A06",
+      "stroke": "#245B35",
+      "innerGlow": { "hex": "#52FF8A", "alpha": 0.13 },
+      "shadow": "#000000"
+    },
+    "light": {
+      "top": "#F2FFF5",
+      "bottom": "#CDEFD8",
+      "stroke": "#66B77C",
+      "innerGlow": { "hex": "#FFFFFF", "alpha": 0.45 },
+      "shadow": "#183622"
+    }
+  },
+  "card": {
+    "dark": {
+      "top": "#12351E",
+      "mid": "#0B2615",
+      "bottom": "#06150C",
+      "border": "#2D9E53",
+      "stageTop": "#2FE76F",
+      "stageBottom": "#126733",
+      "shadow": "#000000"
+    },
+    "light": {
+      "top": "#FBFFFC",
+      "mid": "#E8F9ED",
+      "bottom": "#CDEBD7",
+      "border": "#65B77B",
+      "stageTop": "#ECFFF1",
+      "stageBottom": "#A8E4BB",
+      "shadow": "#17331F"
+    }
+  },
+  "typography": {
+    "panelHeaderTitle": {
+      "family": "Menlo",
+      "weight": "bold",
+      "design": "monospaced"
+    },
+    "panelHeaderChip": {
+      "family": "Menlo",
+      "weight": "bold",
+      "design": "monospaced"
+    },
+    "panelHeaderChipValue": {
+      "family": "Menlo",
+      "weight": "black",
+      "design": "monospaced"
+    },
+    "rowTitle": {
+      "family": "Menlo",
+      "weight": "bold",
+      "design": "monospaced"
+    },
+    "rowMeta": {
+      "family": "Menlo",
+      "weight": "medium",
+      "design": "monospaced"
+    },
+    "statusPill": {
+      "family": "Menlo",
+      "weight": "bold",
+      "design": "monospaced"
+    }
+  },
+  "components": {
+    "header": {
+      "darkText": { "hex": "#DDFCE7", "alpha": 0.98 },
+      "lightText": { "hex": "#082013", "alpha": 0.94 },
+      "buttonForeground": { "hex": "#DDFCE7", "alpha": 0.96 },
+      "metricChipBottom": { "hex": "#092212", "alpha": 0.94 },
+      "cpuTint": "#35F078",
+      "cloudTop": "#75FFA0",
+      "cloudBottom": "#23BD59",
+      "cloudDetail": { "hex": "#07110C", "alpha": 0.72 }
+    },
+    "row": {
+      "hoverStrokeOpacity": 0.32,
+      "restingStrokeOpacity": 0.20,
+      "radialHighlightOpacity": 0.08,
+      "borderOpacity": 0.96
+    },
+    "avatarStage": {
+      "borderOpacity": 0.82,
+      "radialHighlightOpacity": 0.10
+    },
+    "statusPill": {
+      "darkFillOpacity": 0.14,
+      "lightFillOpacity": 0.10,
+      "strokeOpacity": 0.40
+    }
+  },
+  "variants": {
+    "panelShell": "terminalShell",
+    "panelHeader": "cloudHeader",
+    "floaterRow": "terminalRow",
+    "avatarStage": "spriteStage",
+    "statusPill": "roundedStatusPill",
+    "closeButton": "circleCloseButton",
+    "effects": {
+      "entryEffects": ["fade", "slide", "trail"]
+    }
+  }
+}

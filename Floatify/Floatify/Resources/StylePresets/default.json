@@ -1,0 +1,280 @@
+{
+  "id": "default",
+  "name": "Default",
+  "description": "Current Floatify UI baseline.",
+  "palette": {
+    "dark": {
+      "panelTint": "#13151E",
+      "panelShadow": "#05060A",
+      "primaryText": { "hex": "#FFFFFF", "alpha": 0.98 },
+      "secondaryText": { "hex": "#FFFFFF", "alpha": 0.74 },
+      "strokeStrong": "#B8C9ED",
+      "strokeSoft": "#47546E",
+      "highlight": "#FAFCFF",
+      "running": "#F67868",
+      "idle": "#E9B452",
+      "complete": "#54D8A4",
+      "warning": "#F2985C",
+      "chipFill": "#252A3B",
+      "closeHover": "#3D4763"
+    },
+    "light": {
+      "panelTint": "#F7F9FC",
+      "panelShadow": "#1B2230",
+      "primaryText": { "red": 0.070, "green": 0.086, "blue": 0.124, "alpha": 0.92 },
+      "secondaryText": { "red": 0.150, "green": 0.188, "blue": 0.282, "alpha": 0.76 },
+      "strokeStrong": "#B8C4D8",
+      "strokeSoft": "#D5DDEC",
+      "highlight": "#FFFFFF",
+      "running": "#D84D41",
+      "idle": "#C58A15",
+      "complete": "#228A62",
+      "warning": "#D9773A",
+      "chipFill": "#E9EEF7",
+      "closeHover": "#DCE4F1"
+    }
+  },
+  "shell": {
+    "dark": {
+      "top": "#151F3D",
+      "bottom": "#0D152B",
+      "stroke": "#3C4E7C",
+      "innerGlow": { "hex": "#FFFFFF", "alpha": 0.09 },
+      "shadow": "#030509"
+    },
+    "light": {
+      "top": "#F6F9FD",
+      "bottom": "#C7D5EB",
+      "stroke": "#9EB0CC",
+      "innerGlow": { "hex": "#FFFFFF", "alpha": 0.45 },
+      "shadow": "#21293A"
+    }
+  },
+  "card": {
+    "dark": {
+      "top": "#2A3C7E",
+      "mid": "#1F306B",
+      "bottom": "#182758",
+      "border": "#506CB4",
+      "stageTop": "#7CACF9",
+      "stageBottom": "#3761BF",
+      "shadow": "#030408"
+    },
+    "light": {
+      "top": "#FEFFFF",
+      "mid": "#EBF1FA",
+      "bottom": "#C8D5E9",
+      "border": "#9FB2CF",
+      "stageTop": "#F9FBFF",
+      "stageBottom": "#C9D6ED",
+      "shadow": "#1E2535"
+    }
+  },
+  "sizes": {
+    "compact": {
+      "rowHeight": 38,
+      "spriteSize": 18,
+      "stageSize": 24,
+      "dotSize": 5,
+      "cornerRadius": 9,
+      "horizontalPadding": 7,
+      "projectFontSize": 11.5,
+      "metaFontSize": 9,
+      "panelWidth": 210,
+      "persistentPanelWidth": 236,
+      "contentSpacing": 6,
+      "statusRailWidth": 4,
+      "closeButtonSize": 12,
+      "cardShadowRadius": 9,
+      "statusPillMinWidth": 42,
+      "bodySpacing": 1,
+      "persistentBodySpacing": 1,
+      "persistentLineSpacing": 4,
+      "persistentBodyVerticalInset": 3
+    },
+    "regular": {
+      "rowHeight": 44,
+      "spriteSize": 24,
+      "stageSize": 30,
+      "dotSize": 6,
+      "cornerRadius": 10,
+      "horizontalPadding": 8,
+      "projectFontSize": 12.5,
+      "metaFontSize": 9.5,
+      "panelWidth": 262,
+      "persistentPanelWidth": 236,
+      "contentSpacing": 7,
+      "statusRailWidth": 5,
+      "closeButtonSize": 13,
+      "cardShadowRadius": 11,
+      "statusPillMinWidth": 58,
+      "bodySpacing": 2,
+      "persistentBodySpacing": 2,
+      "persistentLineSpacing": 5,
+      "persistentBodyVerticalInset": 4
+    },
+    "large": {
+      "rowHeight": 136,
+      "spriteSize": 72,
+      "stageSize": 78,
+      "dotSize": 12,
+      "cornerRadius": 24,
+      "horizontalPadding": 24,
+      "projectFontSize": 26,
+      "metaFontSize": 16,
+      "panelWidth": 352,
+      "persistentPanelWidth": 560,
+      "contentSpacing": 22,
+      "statusRailWidth": 6,
+      "closeButtonSize": 32,
+      "cardShadowRadius": 14,
+      "statusPillMinWidth": 66,
+      "bodySpacing": 6,
+      "persistentBodySpacing": 12,
+      "persistentLineSpacing": 11,
+      "persistentBodyVerticalInset": 20
+    },
+    "larger": {
+      "rowHeight": 162,
+      "spriteSize": 86,
+      "stageSize": 94,
+      "dotSize": 14,
+      "cornerRadius": 28,
+      "horizontalPadding": 28,
+      "projectFontSize": 31,
+      "metaFontSize": 18,
+      "panelWidth": 420,
+      "persistentPanelWidth": 660,
+      "contentSpacing": 26,
+      "statusRailWidth": 7,
+      "closeButtonSize": 36,
+      "cardShadowRadius": 16,
+      "statusPillMinWidth": 78,
+      "bodySpacing": 7,
+      "persistentBodySpacing": 14,
+      "persistentLineSpacing": 13,
+      "persistentBodyVerticalInset": 22
+    },
+    "superLarge": {
+      "rowHeight": 190,
+      "spriteSize": 102,
+      "stageSize": 110,
+      "dotSize": 16,
+      "cornerRadius": 32,
+      "horizontalPadding": 32,
+      "projectFontSize": 36,
+      "metaFontSize": 20,
+      "panelWidth": 492,
+      "persistentPanelWidth": 760,
+      "contentSpacing": 30,
+      "statusRailWidth": 8,
+      "closeButtonSize": 40,
+      "cardShadowRadius": 18,
+      "statusPillMinWidth": 90,
+      "bodySpacing": 8,
+      "persistentBodySpacing": 16,
+      "persistentLineSpacing": 15,
+      "persistentBodyVerticalInset": 24
+    }
+  },
+  "typography": {
+    "panelHeaderTitle": {
+      "family": "system",
+      "weight": "heavy",
+      "design": "rounded"
+    },
+    "panelHeaderChip": {
+      "family": "system",
+      "weight": "bold",
+      "design": "rounded"
+    },
+    "panelHeaderChipValue": {
+      "family": "system",
+      "weight": "black",
+      "design": "rounded"
+    },
+    "rowTitle": {
+      "family": "system",
+      "weight": "heavy",
+      "design": "rounded"
+    },
+    "rowMeta": {
+      "family": "system",
+      "weight": "bold",
+      "design": "rounded"
+    },
+    "statusPill": {
+      "family": "system",
+      "weight": "bold",
+      "design": "rounded"
+    }
+  },
+  "components": {
+    "header": {
+      "darkText": { "hex": "#FFFFFF", "alpha": 0.98 },
+      "lightText": { "red": 0.082, "green": 0.106, "blue": 0.165, "alpha": 0.94 },
+      "buttonForeground": { "hex": "#FFFFFF", "alpha": 0.96 },
+      "buttonHoverFillOpacity": 0.12,
+      "metricChipTop": { "hex": "#FFFFFF", "alpha": 0.09 },
+      "metricChipBottom": { "red": 0.054, "green": 0.122, "blue": 0.286, "alpha": 0.92 },
+      "metricChipStrokeOpacity": 0.14,
+      "metricChipShadowOpacity": 0.15,
+      "cpuTint": "#88F183",
+      "cloudTop": "#C7F2FF",
+      "cloudBottom": "#54C2F7",
+      "cloudDetail": { "red": 0.074, "green": 0.200, "blue": 0.300, "alpha": 0.72 },
+      "cloudMouthOpacity": 0.55,
+      "cloudShadowOpacity": 0.26
+    },
+    "row": {
+      "hoverStrokeOpacity": 0.24,
+      "restingStrokeOpacity": 0.14,
+      "topHighlightOpacity": 0.14,
+      "bottomShadowOpacity": 0.12,
+      "radialHighlightOpacity": 0.10,
+      "runningAccentOpacity": 0.10,
+      "restingAccentOpacity": 0.04,
+      "borderOpacity": 0.90,
+      "borderWidth": 1.2,
+      "innerStrokeOpacity": 0.12,
+      "innerStrokeWidth": 0.7
+    },
+    "avatarStage": {
+      "topHighlightOpacity": 0.22,
+      "bottomShadowOpacity": 0.10,
+      "radialHighlightOpacity": 0.16,
+      "borderOpacity": 0.70,
+      "borderWidth": 1.1,
+      "innerStrokeOpacity": 0.14,
+      "innerStrokeWidth": 0.7
+    },
+    "statusPill": {
+      "darkLabelOpacity": 0.96,
+      "lightLabelOpacity": 0.84,
+      "darkFillOpacity": 0.16,
+      "lightFillOpacity": 0.12,
+      "strokeOpacity": 0.30
+    },
+    "closeButton": {
+      "foreground": { "hex": "#FFFFFF", "alpha": 0.96 },
+      "fill": { "red": 0.082, "green": 0.118, "blue": 0.242 },
+      "persistentHoverFillOpacity": 0.18,
+      "persistentRestFillOpacity": 0,
+      "floatingHoverFillOpacity": 0.96,
+      "floatingRestFillOpacity": 0.90,
+      "floatingStrokeHoverOpacity": 0.56,
+      "floatingStrokeRestOpacity": 0.34
+    }
+  },
+  "variants": {
+    "panelShell": "gradientShell",
+    "panelHeader": "cloudHeader",
+    "floaterRow": "gradientRow",
+    "avatarStage": "spriteStage",
+    "statusPill": "roundedStatusPill",
+    "closeButton": "circleCloseButton",
+    "effects": {
+      "entryEffects": ["slide", "fade", "dropdown", "marquee", "trail"]
+    }
+  }
+}

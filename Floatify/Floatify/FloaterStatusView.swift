@@ -4,87 +4,45 @@ import ImageIO
 import QuartzCore
 import SwiftUI
 
-private struct FloaterThemePalette {
-    let panelTint: Color
-    let panelShadow: Color
-    let primaryText: Color
-    let secondaryText: Color
-    let strokeStrong: Color
-    let strokeSoft: Color
-    let highlight: Color
-    let running: Color
-    let idle: Color
-    let complete: Color
-    let warning: Color
-    let chipFill: Color
-    let closeHover: Color
-}
-
 enum FloaterPalette {
-    private static func palette(for theme: FloaterTheme) -> FloaterThemePalette {
-        switch theme {
-        case .dark:
-            return FloaterThemePalette(
-                panelTint: Color(red: 0.075, green: 0.082, blue: 0.118),
-                panelShadow: Color(red: 0.020, green: 0.024, blue: 0.040),
-                primaryText: Color(red: 0.955, green: 0.970, blue: 1.000),
-                secondaryText: Color(red: 0.645, green: 0.705, blue: 0.815),
-                strokeStrong: Color(red: 0.720, green: 0.790, blue: 0.930),
-                strokeSoft: Color(red: 0.280, green: 0.330, blue: 0.430),
-                highlight: Color(red: 0.980, green: 0.990, blue: 1.000),
-                running: Color(red: 0.965, green: 0.470, blue: 0.410),
-                idle: Color(red: 0.915, green: 0.705, blue: 0.320),
-                complete: Color(red: 0.330, green: 0.845, blue: 0.645),
-                warning: Color(red: 0.948, green: 0.598, blue: 0.360),
-                chipFill: Color(red: 0.145, green: 0.165, blue: 0.230),
-                closeHover: Color(red: 0.240, green: 0.280, blue: 0.390)
-            )
-        case .light:
-            return FloaterThemePalette(
-                panelTint: Color(red: 0.969, green: 0.976, blue: 0.988),
-                panelShadow: Color(red: 0.106, green: 0.133, blue: 0.188),
-                primaryText: Color(red: 0.094, green: 0.129, blue: 0.200),
-                secondaryText: Color(red: 0.357, green: 0.404, blue: 0.490),
-                strokeStrong: Color(red: 0.722, green: 0.769, blue: 0.847),
-                strokeSoft: Color(red: 0.835, green: 0.867, blue: 0.922),
-                highlight: Color(red: 1.000, green: 1.000, blue: 1.000),
-                running: Color(red: 0.847, green: 0.302, blue: 0.255),
-                idle: Color(red: 0.773, green: 0.541, blue: 0.082),
-                complete: Color(red: 0.133, green: 0.541, blue: 0.384),
-                warning: Color(red: 0.851, green: 0.467, blue: 0.227),
-                chipFill: Color(red: 0.914, green: 0.933, blue: 0.969),
-                closeHover: Color(red: 0.863, green: 0.894, blue: 0.945)
-            )
-        }
+    private static func palette(
+        for theme: FloaterTheme,
+        stylePreset: FloaterStylePreset = FloaterStyleCatalog.shared.currentPreset
+    ) -> FloaterStylePaletteTokens {
+        stylePreset.paletteTokens(for: theme)
     }
 
-    private static var palette: FloaterThemePalette {
+    private static var palette: FloaterStylePaletteTokens {
         palette(for: FloaterTheme.current)
     }
 
-    static var panelTint: Color { palette.panelTint }
-    static var panelShadow: Color { palette.panelShadow }
-    static var primaryText: Color { palette.primaryText }
-    static var secondaryText: Color { palette.secondaryText }
-    static var strokeStrong: Color { palette.strokeStrong }
-    static var strokeSoft: Color { palette.strokeSoft }
-    static var highlight: Color { palette.highlight }
-    static var running: Color { palette.running }
-    static var idle: Color { palette.idle }
-    static var complete: Color { palette.complete }
-    static var warning: Color { palette.warning }
-    static var chipFill: Color { palette.chipFill }
-    static var closeHover: Color { palette.closeHover }
+    static var panelTint: Color { palette.panelTint.color }
+    static var panelShadow: Color { palette.panelShadow.color }
+    static var primaryText: Color { palette.primaryText.color }
+    static var secondaryText: Color { palette.secondaryText.color }
+    static var strokeStrong: Color { palette.strokeStrong.color }
+    static var strokeSoft: Color { palette.strokeSoft.color }
+    static var highlight: Color { palette.highlight.color }
+    static var running: Color { palette.running.color }
+    static var idle: Color { palette.idle.color }
+    static var complete: Color { palette.complete.color }
+    static var warning: Color { palette.warning.color }
+    static var chipFill: Color { palette.chipFill.color }
+    static var closeHover: Color { palette.closeHover.color }
 
-    static func statusColor(for state: ClaudeStatusState, theme: FloaterTheme) -> Color {
-        let palette = palette(for: theme)
+    static func statusColor(
+        for state: ClaudeStatusState,
+        theme: FloaterTheme,
+        stylePreset: FloaterStylePreset = FloaterStyleCatalog.shared.currentPreset
+    ) -> Color {
+        let palette = palette(for: theme, stylePreset: stylePreset)
         switch state {
         case .running:
-            return palette.running
+            return palette.running.color
         case .idle:
-            return palette.idle
+            return palette.idle.color
         case .complete:
-            return palette.complete
+            return palette.complete.color
         }
     }
 }
@@ -4984,21 +4942,27 @@ private struct StatusPill: View {
     var icon: String? = nil
     let dotSize: CGFloat
     let fontSize: CGFloat
+    let stylePreset: FloaterStylePreset
 
     private var labelColor: Color {
+        let tokens = stylePreset.components.statusPill
         switch FloaterTheme.current {
         case .dark:
-            return color.opacity(0.96)
+            return color.opacity(tokens.darkLabelOpacity)
         case .light:
-            return color.opacity(0.84)
+            return color.opacity(tokens.lightLabelOpacity)
         }
     }
 
     var body: some View {
+        let tokens = stylePreset.components.statusPill
+        let typography = stylePreset.typography.statusPill
+        let fillOpacity = FloaterTheme.current == .dark ? tokens.darkFillOpacity : tokens.lightFillOpacity
+
         HStack(spacing: max(5, fontSize * 0.34)) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.system(size: max(10, fontSize - 0.2), weight: .bold))
+                    .font(typography.systemFont(defaultSize: max(10, fontSize - 0.2)))
                     .foregroundStyle(color)
             } else {
                 Circle()
@@ -5007,7 +4971,7 @@ private struct StatusPill: View {
             }
 
             Text(label)
-                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .font(typography.font(defaultSize: fontSize))
                 .foregroundStyle(labelColor)
                 .lineLimit(1)
                 .fixedSize()
@@ -5016,11 +4980,11 @@ private struct StatusPill: View {
         .padding(.vertical, max(3, fontSize * 0.30))
         .background(
             RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
-                .fill(color.opacity(FloaterTheme.current == .dark ? 0.16 : 0.12))
+                .fill(color.opacity(fillOpacity))
         )
         .overlay(
             RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
-                .strokeBorder(color.opacity(0.30), lineWidth: 1)
+                .strokeBorder(color.opacity(tokens.strokeOpacity), lineWidth: 1)
         )
     }
 }
@@ -5181,28 +5145,25 @@ private struct FloaterCardTheme {
     let sourceTint: Color
 }
 
-private func makeFloaterShellTheme(for theme: FloaterTheme) -> FloaterShellTheme {
-    switch theme {
-    case .dark:
-        return FloaterShellTheme(
-            top: Color(red: 0.082, green: 0.122, blue: 0.238),
-            bottom: Color(red: 0.052, green: 0.082, blue: 0.168),
-            stroke: Color(red: 0.236, green: 0.304, blue: 0.486),
-            innerGlow: Color.white.opacity(0.09),
-            shadow: Color(red: 0.012, green: 0.018, blue: 0.036)
-        )
-    case .light:
-        return FloaterShellTheme(
-            top: Color(red: 0.965, green: 0.975, blue: 0.992),
-            bottom: Color(red: 0.780, green: 0.835, blue: 0.922),
-            stroke: Color(red: 0.620, green: 0.690, blue: 0.800),
-            innerGlow: Color.white.opacity(0.45),
-            shadow: Color(red: 0.128, green: 0.160, blue: 0.227)
-        )
-    }
+private func makeFloaterShellTheme(
+    for theme: FloaterTheme,
+    stylePreset: FloaterStylePreset
+) -> FloaterShellTheme {
+    let tokens = stylePreset.shellTokens(for: theme)
+    return FloaterShellTheme(
+        top: tokens.top.color,
+        bottom: tokens.bottom.color,
+        stroke: tokens.stroke.color,
+        innerGlow: tokens.innerGlow.color,
+        shadow: tokens.shadow.color
+    )
 }
 
-private func makeFloaterCardTheme(for kind: FloaterSessionKind, theme: FloaterTheme) -> FloaterCardTheme {
+private func makeFloaterCardTheme(
+    for kind: FloaterSessionKind,
+    theme: FloaterTheme,
+    stylePreset: FloaterStylePreset
+) -> FloaterCardTheme {
     let sourceTint: Color
     switch kind {
     case .claude:
@@ -5213,30 +5174,17 @@ private func makeFloaterCardTheme(for kind: FloaterSessionKind, theme: FloaterTh
         sourceTint = Color(red: 0.742, green: 0.780, blue: 0.872)
     }
 
-    switch theme {
-    case .dark:
-        return FloaterCardTheme(
-            top: Color(red: 0.165, green: 0.236, blue: 0.496),
-            mid: Color(red: 0.120, green: 0.186, blue: 0.420),
-            bottom: Color(red: 0.094, green: 0.152, blue: 0.344),
-            border: Color(red: 0.314, green: 0.424, blue: 0.704),
-            stageTop: Color(red: 0.486, green: 0.676, blue: 0.976),
-            stageBottom: Color(red: 0.214, green: 0.382, blue: 0.748),
-            shadow: Color(red: 0.010, green: 0.016, blue: 0.032),
-            sourceTint: sourceTint
-        )
-    case .light:
-        return FloaterCardTheme(
-            top: Color(red: 0.996, green: 0.998, blue: 1.000),
-            mid: Color(red: 0.922, green: 0.944, blue: 0.982),
-            bottom: Color(red: 0.785, green: 0.835, blue: 0.915),
-            border: Color(red: 0.622, green: 0.696, blue: 0.810),
-            stageTop: Color(red: 0.975, green: 0.985, blue: 1.000),
-            stageBottom: Color(red: 0.790, green: 0.842, blue: 0.928),
-            shadow: Color(red: 0.118, green: 0.145, blue: 0.206),
-            sourceTint: sourceTint
-        )
-    }
+    let tokens = stylePreset.cardTokens(for: theme)
+    return FloaterCardTheme(
+        top: tokens.top.color,
+        mid: tokens.mid.color,
+        bottom: tokens.bottom.color,
+        border: tokens.border.color,
+        stageTop: tokens.stageTop.color,
+        stageBottom: tokens.stageBottom.color,
+        shadow: tokens.shadow.color,
+        sourceTint: sourceTint
+    )
 }
 
 private struct HeaderMetricChip: View {
@@ -5249,16 +5197,21 @@ private struct HeaderMetricChip: View {
     let verticalPadding: CGFloat
     let cornerRadius: CGFloat
     let iconSize: CGFloat
+    let stylePreset: FloaterStylePreset
 
     var body: some View {
+        let headerTokens = stylePreset.components.header
+        let chipTypography = stylePreset.typography.panelHeaderChip
+        let valueTypography = stylePreset.typography.panelHeaderChipValue
+
         HStack(spacing: max(6, fontSize * 0.55)) {
             Image(systemName: icon)
-                .font(.system(size: iconSize, weight: .bold))
+                .font(chipTypography.systemFont(defaultSize: iconSize))
                 .foregroundStyle(tint)
 
             if let title, !title.isEmpty {
                 Text(title)
-                    .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                    .font(chipTypography.font(defaultSize: fontSize))
                     .foregroundStyle(.white.opacity(0.96))
                     .lineLimit(1)
                     .fixedSize()
@@ -5266,7 +5219,7 @@ private struct HeaderMetricChip: View {
 
             if let value {
                 Text(value)
-                    .font(.system(size: fontSize, weight: .black, design: .rounded))
+                    .font(valueTypography.font(defaultSize: fontSize))
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .fixedSize()
@@ -5285,8 +5238,8 @@ private struct HeaderMetricChip: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.09),
-                            Color(red: 0.054, green: 0.122, blue: 0.286).opacity(0.92)
+                            headerTokens.metricChipTop.color,
+                            headerTokens.metricChipBottom.color
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -5295,25 +5248,28 @@ private struct HeaderMetricChip: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(.white.opacity(0.14), lineWidth: 1)
+                .strokeBorder(.white.opacity(headerTokens.metricChipStrokeOpacity), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(headerTokens.metricChipShadowOpacity), radius: 4, x: 0, y: 2)
         .fixedSize(horizontal: true, vertical: false)
     }
 }
 
 private struct HeaderCloudMark: View {
     let size: CGFloat
+    let stylePreset: FloaterStylePreset
 
     var body: some View {
+        let headerTokens = stylePreset.components.header
+
         ZStack {
             Image(systemName: "cloud.fill")
                 .font(.system(size: size * 0.86, weight: .black))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.780, green: 0.950, blue: 1.000),
-                            Color(red: 0.330, green: 0.760, blue: 0.970)
+                            headerTokens.cloudTop.color,
+                            headerTokens.cloudBottom.color
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -5322,21 +5278,21 @@ private struct HeaderCloudMark: View {
 
             HStack(spacing: size * 0.13) {
                 Circle()
-                    .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.72))
+                    .fill(headerTokens.cloudDetail.color)
                     .frame(width: size * 0.09, height: size * 0.09)
                 Circle()
-                    .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.72))
+                    .fill(headerTokens.cloudDetail.color)
                     .frame(width: size * 0.09, height: size * 0.09)
             }
             .offset(y: size * 0.02)
 
             Capsule()
-                .fill(Color(red: 0.074, green: 0.200, blue: 0.300).opacity(0.55))
+                .fill(headerTokens.cloudDetail.opacity(headerTokens.cloudMouthOpacity))
                 .frame(width: size * 0.17, height: size * 0.035)
                 .offset(y: size * 0.16)
         }
         .frame(width: size, height: size)
-        .shadow(color: Color.black.opacity(0.26), radius: 5, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(headerTokens.cloudShadowOpacity), radius: 5, x: 0, y: 3)
     }
 }
 
@@ -5385,6 +5341,7 @@ private struct FloaterPanelHeaderView: View {
     let floaterSize: FloaterSize
     let isCollapsed: Bool
     let showsCPUInHeader: Bool
+    let stylePreset: FloaterStylePreset
     let onToggleCollapsed: () -> Void
     let onOpenSettings: () -> Void
 
@@ -5450,25 +5407,28 @@ private struct FloaterPanelHeaderView: View {
     }
 
     private var headerTextColor: Color {
+        let headerTokens = stylePreset.components.header
         switch FloaterTheme.current {
         case .dark:
-            return .white.opacity(0.98)
+            return headerTokens.darkText.color
         case .light:
-            return Color(red: 0.082, green: 0.106, blue: 0.165).opacity(0.94)
+            return headerTokens.lightText.color
         }
     }
 
     var body: some View {
+        let headerTokens = stylePreset.components.header
+
         ZStack {
             WindowDragRegion()
 
             HStack(spacing: 10 * sizeScale) {
                 HStack(spacing: contentSpacing) {
-                    HeaderCloudMark(size: appIconSize)
+                    HeaderCloudMark(size: appIconSize, stylePreset: stylePreset)
 
                     if showsHeaderTitle {
                         Text("Floatify")
-                            .font(.system(size: titleFontSize, weight: .heavy, design: .rounded))
+                            .font(stylePreset.typography.panelHeaderTitle.font(defaultSize: titleFontSize))
                             .foregroundStyle(headerTextColor)
                             .shadow(color: Color.black.opacity(FloaterTheme.current == .dark ? 0.22 : 0.08), radius: 1, x: 0, y: 1)
                             .lineLimit(1)
@@ -5484,23 +5444,24 @@ private struct FloaterPanelHeaderView: View {
                         icon: "waveform.path.ecg",
                         title: "\(cpuValueText) CPU",
                         value: nil,
-                        tint: Color(red: 0.533, green: 0.945, blue: 0.514),
+                        tint: headerTokens.cpuTint.color,
                         fontSize: chipFontSize,
                         horizontalPadding: chipHorizontalPadding,
                         verticalPadding: chipVerticalPadding,
                         cornerRadius: chipCornerRadius,
-                        iconSize: chipIconSize
+                        iconSize: chipIconSize,
+                        stylePreset: stylePreset
                     )
                 }
 
                 Button(action: onToggleCollapsed) {
                     Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
                         .font(.system(size: toggleIconSize, weight: .black))
-                        .foregroundStyle(.white.opacity(0.96))
+                        .foregroundStyle(headerTokens.buttonForeground.color)
                         .frame(width: toggleButtonSize, height: toggleButtonSize)
                         .background(
                             Circle()
-                                .fill(.white.opacity(isHoveringCollapse ? 0.12 : 0))
+                                .fill(.white.opacity(isHoveringCollapse ? headerTokens.buttonHoverFillOpacity : 0))
                         )
                         .scaleEffect(isHoveringCollapse ? 1.03 : 1.0)
                         .animation(animation, value: isCollapsed)
@@ -5513,11 +5474,11 @@ private struct FloaterPanelHeaderView: View {
                 }) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: toggleIconSize * 0.90, weight: .black))
-                        .foregroundStyle(.white.opacity(0.96))
+                        .foregroundStyle(headerTokens.buttonForeground.color)
                         .frame(width: toggleButtonSize, height: toggleButtonSize)
                         .background(
                             Circle()
-                                .fill(.white.opacity(isHoveringSettings ? 0.12 : 0))
+                                .fill(.white.opacity(isHoveringSettings ? headerTokens.buttonHoverFillOpacity : 0))
                         )
                         .scaleEffect(isHoveringSettings ? 1.03 : 1.0)
                 }
@@ -5563,6 +5524,7 @@ struct FloaterPanelView: View {
     let spacing: CGFloat
     let isCollapsed: Bool
     let showsCPUInHeader: Bool
+    let stylePreset: FloaterStylePreset
     let onToggleCollapsed: () -> Void
     let onOpenSettings: () -> Void
     let onItemTap: (PersistentStatusItem) -> Void
@@ -5573,7 +5535,7 @@ struct FloaterPanelView: View {
     )
 
     private var shellTheme: FloaterShellTheme {
-        makeFloaterShellTheme(for: FloaterTheme.current)
+        makeFloaterShellTheme(for: FloaterTheme.current, stylePreset: stylePreset)
     }
 
     private var shellWidth: CGFloat {
@@ -5601,6 +5563,7 @@ struct FloaterPanelView: View {
                 floaterSize: items.first?.floaterSize ?? .regular,
                 isCollapsed: isCollapsed,
                 showsCPUInHeader: showsCPUInHeader,
+                stylePreset: stylePreset,
                 onToggleCollapsed: {
                     withAnimation(animation) { onToggleCollapsed() }
                 },
@@ -5639,6 +5602,7 @@ struct FloaterPanelView: View {
                             floaterSize: item.floaterSize,
                             renderMode: item.renderMode,
                             effectPreset: item.effectPreset,
+                            stylePreset: item.stylePreset,
                             runningPanelCount: item.runningPanelCount,
                             runningPanelIndex: item.runningPanelIndex,
                             lastActivity: item.item.lastActivity,
@@ -5739,6 +5703,7 @@ struct FloaterStatusView: View {
     var floaterSize: FloaterSize = .regular
     var renderMode: FloaterRenderMode = .slay
     var effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0]
+    var stylePreset: FloaterStylePreset = .defaultPreset
     var runningPanelCount: Int = 0
     var runningPanelIndex: Int?
     var isCompact: Bool = false
@@ -5774,6 +5739,7 @@ struct FloaterStatusView: View {
         floaterSize: FloaterSize = .regular,
         renderMode: FloaterRenderMode = .slay,
         effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0],
+        stylePreset: FloaterStylePreset = .defaultPreset,
         runningPanelCount: Int = 0,
         runningPanelIndex: Int? = nil,
         isCompact: Bool = false,
@@ -5798,6 +5764,7 @@ struct FloaterStatusView: View {
         self.floaterSize = floaterSize
         self.renderMode = renderMode
         self.effectPreset = effectPreset
+        self.stylePreset = stylePreset
         self.runningPanelCount = runningPanelCount
         self.runningPanelIndex = runningPanelIndex
         self.isCompact = isCompact || floaterSize == .compact
@@ -5829,7 +5796,7 @@ struct FloaterStatusView: View {
     }
 
     private var cardTheme: FloaterCardTheme {
-        makeFloaterCardTheme(for: sessionKind, theme: FloaterTheme.current)
+        makeFloaterCardTheme(for: sessionKind, theme: FloaterTheme.current, stylePreset: stylePreset)
     }
 
     private var isRunning: Bool {
@@ -5956,31 +5923,11 @@ struct FloaterStatusView: View {
     }
 
     private var persistentBodySpacing: CGFloat {
-        switch floaterSize {
-        case .compact:
-            return 1
-        case .regular:
-            return 2
-        case .large:
-            return 12
-        case .larger:
-            return 14
-        case .superLarge:
-            return 16
-        }
+        floaterSize.persistentBodySpacing
     }
 
     private var persistentLineSpacing: CGFloat {
-        switch floaterSize {
-        case .compact:
-            return 4
-        case .regular:
-            return 5
-        case .large, .larger, .superLarge:
-            break
-        }
-
-        return max(7, floaterSize.contentSpacing * 0.50)
+        floaterSize.persistentLineSpacing
     }
 
     private var condensedCloseButtonInset: CGFloat {
@@ -5992,36 +5939,15 @@ struct FloaterStatusView: View {
     }
 
     private var persistentBodyVerticalInset: CGFloat {
-        switch floaterSize {
-        case .compact:
-            return 3
-        case .regular:
-            return 4
-        case .large:
-            return 20
-        case .larger:
-            return 22
-        case .superLarge:
-            return 24
-        }
+        floaterSize.persistentBodyVerticalInset
     }
 
     private var primaryContentColor: Color {
-        switch FloaterTheme.current {
-        case .dark:
-            return .white.opacity(0.98)
-        case .light:
-            return Color(red: 0.070, green: 0.086, blue: 0.124).opacity(0.92)
-        }
+        stylePreset.paletteTokens(for: FloaterTheme.current).primaryText.color
     }
 
     private var secondaryContentColor: Color {
-        switch FloaterTheme.current {
-        case .dark:
-            return .white.opacity(0.74)
-        case .light:
-            return Color(red: 0.150, green: 0.188, blue: 0.282).opacity(0.76)
-        }
+        stylePreset.paletteTokens(for: FloaterTheme.current).secondaryText.color
     }
 
     private var fileChangeTint: Color {
@@ -6058,7 +5984,10 @@ struct FloaterStatusView: View {
         .clipShape(persistentRowShape)
         .overlay(
             persistentRowShape
-                .strokeBorder(.white.opacity(isHovering ? 0.24 : 0.14), lineWidth: 1)
+                .strokeBorder(
+                    .white.opacity(isHovering ? stylePreset.components.row.hoverStrokeOpacity : stylePreset.components.row.restingStrokeOpacity),
+                    lineWidth: 1
+                )
         )
         .overlay {
             if showsFancyFloaterEffects {
@@ -6189,7 +6118,7 @@ struct FloaterStatusView: View {
         VStack(alignment: .leading, spacing: persistentBodySpacing) {
             HStack(spacing: persistentLineSpacing) {
                 Text(projectName)
-                    .font(.system(size: persistentTitleFontSize, weight: .heavy, design: .rounded))
+                    .font(stylePreset.typography.rowTitle.font(defaultSize: persistentTitleFontSize))
                     .foregroundStyle(primaryContentColor)
                     .shadow(color: Color.black.opacity(contentShadowOpacity), radius: 0, x: 0, y: 1)
                     .lineLimit(1)
@@ -6211,10 +6140,10 @@ struct FloaterStatusView: View {
     private var fileChangeLabel: some View {
         HStack(spacing: max(4, persistentMetaFontSize * 0.34)) {
             Image(systemName: "pencil")
-                .font(.system(size: max(9, persistentMetaFontSize - 0.8), weight: .bold))
+                .font(stylePreset.typography.rowMeta.systemFont(defaultSize: max(9, persistentMetaFontSize - 0.8)))
 
             Text("\(modifiedFilesCount)")
-                .font(.system(size: max(10, persistentMetaFontSize - 0.5), weight: .bold, design: .rounded))
+                .font(stylePreset.typography.rowMeta.font(defaultSize: max(10, persistentMetaFontSize - 0.5)))
                 .monospacedDigit()
                 .lineLimit(1)
         }
@@ -6229,7 +6158,8 @@ struct FloaterStatusView: View {
                     label: statusDisplayLabel,
                     icon: statusIconName,
                     dotSize: floaterSize.dotSize,
-                    fontSize: persistentMetaFontSize
+                    fontSize: persistentMetaFontSize,
+                    stylePreset: stylePreset
                 )
             }
 
@@ -6281,6 +6211,8 @@ struct FloaterStatusView: View {
 
     @ViewBuilder
     private var panelBackgroundStaticLayers: some View {
+        let rowTokens = stylePreset.components.row
+
         ZStack {
             persistentRowShape
                 .fill(
@@ -6299,9 +6231,9 @@ struct FloaterStatusView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            .white.opacity(0.14),
+                            .white.opacity(rowTokens.topHighlightOpacity),
                             .clear,
-                            .black.opacity(0.12)
+                            .black.opacity(rowTokens.bottomShadowOpacity)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -6312,7 +6244,7 @@ struct FloaterStatusView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            .white.opacity(0.10),
+                            .white.opacity(rowTokens.radialHighlightOpacity),
                             .clear
                         ],
                         center: .topLeading,
@@ -6325,7 +6257,7 @@ struct FloaterStatusView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            accentColor.opacity(isRunning ? 0.10 : 0.04),
+                            accentColor.opacity(isRunning ? rowTokens.runningAccentOpacity : rowTokens.restingAccentOpacity),
                             .clear
                         ],
                         startPoint: .leading,
@@ -6334,11 +6266,11 @@ struct FloaterStatusView: View {
                 )
 
             persistentRowShape
-                .strokeBorder(cardTheme.border.opacity(0.90), lineWidth: 1.2)
+                .strokeBorder(cardTheme.border.opacity(rowTokens.borderOpacity), lineWidth: rowTokens.borderWidth)
 
             RoundedRectangle(cornerRadius: max(0, persistentRowCornerRadius - 2), style: .continuous)
                 .inset(by: 2)
-                .stroke(.white.opacity(0.12), lineWidth: 0.7)
+                .stroke(.white.opacity(rowTokens.innerStrokeOpacity), lineWidth: rowTokens.innerStrokeWidth)
         }
     }
 
@@ -6355,6 +6287,8 @@ struct FloaterStatusView: View {
 
     @ViewBuilder
     private var persistentAvatarBackgroundStaticLayers: some View {
+        let avatarTokens = stylePreset.components.avatarStage
+
         ZStack {
             avatarBackgroundShape
                 .fill(
@@ -6372,9 +6306,9 @@ struct FloaterStatusView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            .white.opacity(0.22),
+                            .white.opacity(avatarTokens.topHighlightOpacity),
                             .clear,
-                            .black.opacity(0.10)
+                            .black.opacity(avatarTokens.bottomShadowOpacity)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -6385,7 +6319,7 @@ struct FloaterStatusView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            .white.opacity(0.16),
+                            .white.opacity(avatarTokens.radialHighlightOpacity),
                             .clear
                         ],
                         center: .topLeading,
@@ -6395,11 +6329,11 @@ struct FloaterStatusView: View {
                 )
 
             avatarBackgroundShape
-                .strokeBorder(cardTheme.border.opacity(0.70), lineWidth: 1.1)
+                .strokeBorder(cardTheme.border.opacity(avatarTokens.borderOpacity), lineWidth: avatarTokens.borderWidth)
 
             avatarBackgroundShape
                 .inset(by: 3)
-                .stroke(.white.opacity(0.14), lineWidth: 0.7)
+                .stroke(.white.opacity(avatarTokens.innerStrokeOpacity), lineWidth: avatarTokens.innerStrokeWidth)
         }
     }
 
@@ -6408,21 +6342,29 @@ struct FloaterStatusView: View {
     }
 
     private var closeButton: some View {
-        Button(action: { onClose?() }) {
+        let closeTokens = stylePreset.components.closeButton
+
+        return Button(action: { onClose?() }) {
             Image(systemName: "xmark")
                 .font(.system(size: isPersistent ? max(8, floaterSize.closeButtonSize * 0.68) : max(6, floaterSize.metaFontSize - 1), weight: .black))
-                .foregroundStyle(.white.opacity(0.96))
+                .foregroundStyle(closeTokens.foreground.color)
                 .frame(width: floaterSize.closeButtonSize, height: floaterSize.closeButtonSize)
                 .background(
                     Circle()
                         .fill(
-                            Color(red: 0.082, green: 0.118, blue: 0.242)
-                                .opacity(isPersistent ? (isCloseHovering ? 0.18 : 0.0) : (isCloseHovering ? 0.96 : 0.90))
+                            closeTokens.fill.opacity(
+                                isPersistent
+                                    ? (isCloseHovering ? closeTokens.persistentHoverFillOpacity : closeTokens.persistentRestFillOpacity)
+                                    : (isCloseHovering ? closeTokens.floatingHoverFillOpacity : closeTokens.floatingRestFillOpacity)
+                            )
                         )
                 )
                 .overlay(
                     Circle()
-                        .strokeBorder(cardTheme.border.opacity(isPersistent ? 0 : (isCloseHovering ? 0.56 : 0.34)), lineWidth: 1)
+                        .strokeBorder(
+                            cardTheme.border.opacity(isPersistent ? 0 : (isCloseHovering ? closeTokens.floatingStrokeHoverOpacity : closeTokens.floatingStrokeRestOpacity)),
+                            lineWidth: 1
+                        )
                 )
         }
         .buttonStyle(.plain)
