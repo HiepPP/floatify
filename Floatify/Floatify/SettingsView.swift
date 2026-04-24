@@ -383,16 +383,9 @@ struct SettingsView: View {
 
         Form {
             Section {
-                Picker("Color Mode", selection: $settings.floaterTheme) {
-                    ForEach(FloaterTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
-                    }
-                }
-                .pickerStyle(.inline)
-
-                LabeledContent("Style") {
+                LabeledContent("Theme") {
                     Picker(
-                        "Style",
+                        "Theme",
                         selection: Binding(
                             get: { settings.selectedFloaterStyleID },
                             set: { settings.selectFloaterStyle($0, catalog: styleCatalog) }
