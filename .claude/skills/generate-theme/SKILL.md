@@ -106,6 +106,7 @@ Required panel structure:
 - header keeps Floatify app mark, `Floatify` title, optional CPU chip, collapse button, and settings button
 - each session row keeps left avatar stage, project title, footer line, status pill, pencil icon with modified file count, and close button
 - status pill stays in the footer line before the pencil change count
+- footer line contains only the status pill and pencil modified-file count
 - close button stays at top trailing of the row
 - avatar stage stays on the left
 - project title stays in the row body
@@ -114,6 +115,7 @@ Forbidden additions:
 
 - no extra cards, panels, menus, charts, timers, Wi-Fi widgets, battery widgets, percentage widgets, cups, badges, or decorative objects that are not already in the skeleton
 - no new titles such as `UI polish & responsive`
+- no relative timestamp text such as `updated 2m ago`, `updated xm ago`, `last updated`, or `ago`
 - no replacement of the pencil change count with another metric
 - no moving status to the far right if the current skeleton places it in the footer line
 - no invented app screens, toolbars, nav bars, or marketing layout
@@ -123,6 +125,7 @@ Image validation must pass before JSON work:
 - compare generated image against the required panel structure
 - reject the image if any required component is missing
 - reject the image if any forbidden addition appears
+- reject the image if the footer includes timestamps, activity age text, or any text besides status and pencil count
 - reject the image if component order or position changes
 - only then write or update the theme JSON
 
@@ -183,9 +186,9 @@ Prompt with:
 - Asset type: Floatify floater theme design reference
 - Primary request: user vibe and theme details
 - Blueprint: include Default Theme Blueprint block derived from current `default.json`
-- Skeleton: one compact persistent macOS NSPanel floater; header with app mark, `Floatify` title, optional CPU chip, collapse button, settings button; session row with left avatar stage, project title, footer status pill, pencil change count, and top-trailing close button
+- Skeleton: one compact persistent macOS NSPanel floater; header with app mark, `Floatify` title, optional CPU chip, collapse button, settings button; session row with left avatar stage, project title, footer status pill, pencil change count, and top-trailing close button; footer has no timestamp or activity-age text
 - Constraints: keep exact component set, labels, order, and positions; only change visual styling; no new business logic; no extra panels; no unrelated app screens
-- Forbidden: cups, Wi-Fi, battery, timers, random percentages, invented page titles, new widgets, extra badges, charts, menus, or marketing sections
+- Forbidden: cups, Wi-Fi, battery, timers, random percentages, relative timestamps such as `updated 2m ago`, invented page titles, new widgets, extra badges, charts, menus, or marketing sections
 - Output: polished final design reference that JSON tokens should follow
 
 ## Theme JSON Rules

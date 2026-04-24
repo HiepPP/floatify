@@ -9,7 +9,7 @@ Use JSON for style presets.
 It is safe for AI-assisted generation, easy to validate, and already matches Floatify visual-pack manifests.
 
 Swift keeps defaults for missing fields.
-This lets a preset override only colors, sizes, or component variants.
+This lets a preset override only colors, sizes, typography, component tokens, or entry effects.
 
 ## Create Preset
 
@@ -40,8 +40,6 @@ Use a unique `id`.
     }
   },
   "variants": {
-    "panelShell": "minimalShell",
-    "floaterRow": "minimalRow",
     "effects": {
       "entryEffects": ["fade"]
     }
@@ -57,7 +55,7 @@ Use a unique `id`.
 - `sizes` controls layout, spacing, typography sizes, radii, and hit targets.
 - `typography` controls font family, font size override, weight, and design.
 - `components` controls header, row, avatar stage, status pill, and close button tokens.
-- `variants` declares component variant names and entry effect choices.
+- `variants.effects.entryEffects` controls entry animation choices.
 
 ## Typography Tokens
 

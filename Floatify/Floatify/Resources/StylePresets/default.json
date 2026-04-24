@@ -267,12 +267,6 @@
     }
   },
   "variants": {
-    "panelShell": "gradientShell",
-    "panelHeader": "cloudHeader",
-    "floaterRow": "gradientRow",
-    "avatarStage": "spriteStage",
-    "statusPill": "roundedStatusPill",
-    "closeButton": "circleCloseButton",
     "effects": {
       "entryEffects": ["slide", "fade", "dropdown", "marquee", "trail"]
     }

@@ -130,12 +130,6 @@
     }
   },
   "variants": {
-    "panelShell": "terminalShell",
-    "panelHeader": "cloudHeader",
-    "floaterRow": "terminalRow",
-    "avatarStage": "spriteStage",
-    "statusPill": "roundedStatusPill",
-    "closeButton": "circleCloseButton",
     "effects": {
       "entryEffects": ["fade", "slide", "trail"]
     }
