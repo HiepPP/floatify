@@ -4945,28 +4945,24 @@ private struct StatusPill: View {
     let stylePreset: FloaterStylePreset
 
     private var labelColor: Color {
-        let tokens = stylePreset.components.statusPill
-        switch FloaterTheme.current {
-        case .dark:
-            return color.opacity(tokens.darkLabelOpacity)
-        case .light:
-            return color.opacity(tokens.lightLabelOpacity)
-        }
+        Color.black.opacity(0.86)
+    }
+
+    private var iconColor: Color {
+        Color.black.opacity(0.82)
     }
 
     var body: some View {
-        let tokens = stylePreset.components.statusPill
         let typography = stylePreset.typography.statusPill
-        let fillOpacity = FloaterTheme.current == .dark ? tokens.darkFillOpacity : tokens.lightFillOpacity
 
         HStack(spacing: max(5, fontSize * 0.34)) {
             if let icon {
                 Image(systemName: icon)
                     .font(typography.systemFont(defaultSize: max(10, fontSize - 0.2)))
-                    .foregroundStyle(color)
+                    .foregroundStyle(iconColor)
             } else {
                 Circle()
-                    .fill(color)
+                    .fill(iconColor)
                     .frame(width: dotSize, height: dotSize)
             }
 
@@ -4980,11 +4976,7 @@ private struct StatusPill: View {
         .padding(.vertical, max(3, fontSize * 0.30))
         .background(
             RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
-                .fill(color.opacity(fillOpacity))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: max(10, fontSize), style: .continuous)
-                .strokeBorder(color.opacity(tokens.strokeOpacity), lineWidth: 1)
+                .fill(color)
         )
     }
 }
@@ -5838,6 +5830,19 @@ struct FloaterStatusView: View {
         statusIndicatorColor ?? FloaterPalette.complete
     }
 
+    private var persistentStatusGlowOpacity: Double {
+        guard isPersistent, statusState != nil else { return 0 }
+        let tokens = stylePreset.components.row
+        let boost = isRunning ? tokens.runningGlowBoost : 1.0
+        return min(max(tokens.statusGlowOpacity * boost, 0), 1)
+    }
+
+    private var persistentStatusGlowRadius: CGFloat {
+        guard isPersistent, statusState != nil else { return 0 }
+        let tokens = stylePreset.components.row
+        return isRunning ? tokens.statusGlowRadius * 1.2 : tokens.statusGlowRadius
+    }
+
     private var effectTuning: FloaterEffectTuning {
         effectPreset.tuning
     }
@@ -5854,7 +5859,9 @@ struct FloaterStatusView: View {
         effectiveRenderMode != .lame && (runningEffectBudget == .focus || runningEffectBudget == .standard) && animatesStatus
     }
 
-    private var showsRunningSheen: Bool { false }
+    private var showsRunningSheen: Bool {
+        isRunning && stylePreset.components.row.runningSheenEnabled
+    }
     private var showsPowerLEDStrip: Bool { false }
     private var showsAvatarScanSweep: Bool { false }
     private var showsRainbowBorder: Bool { false }
@@ -5990,6 +5997,16 @@ struct FloaterStatusView: View {
                 )
         )
         .overlay {
+            if statusState != nil {
+                persistentRowShape
+                    .strokeBorder(
+                        accentColor.opacity(stylePreset.components.row.statusBorderOpacity),
+                        lineWidth: stylePreset.components.row.statusBorderWidth
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
+        .overlay {
             if showsFancyFloaterEffects {
                 ZStack {
                     if showsRunningSheen {
@@ -5999,6 +6016,7 @@ struct FloaterStatusView: View {
                             renderMode: effectiveRenderMode,
                             effectTuning: effectTuning
                         )
+                        .opacity(min(max(stylePreset.components.row.runningSheenIntensity, 0), 2))
                     }
 
                     if showsRainbowBorder {
@@ -6026,6 +6044,12 @@ struct FloaterStatusView: View {
             radius: isPersistent ? 0 : (isHovering ? floaterSize.cardShadowRadius + 4 : floaterSize.cardShadowRadius),
             x: 0,
             y: isHovering ? 10 : 6
+        )
+        .shadow(
+            color: accentColor.opacity(persistentStatusGlowOpacity),
+            radius: persistentStatusGlowRadius,
+            x: 0,
+            y: 0
         )
         .shadow(
             color: accentColor.opacity(isPersistent ? 0 : (isRunning ? 0.12 : 0.05)),
@@ -6288,19 +6312,48 @@ struct FloaterStatusView: View {
     @ViewBuilder
     private var persistentAvatarBackgroundStaticLayers: some View {
         let avatarTokens = stylePreset.components.avatarStage
+        let statusTint = statusTintState
 
         ZStack {
-            avatarBackgroundShape
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            cardTheme.stageTop,
-                            cardTheme.stageBottom
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if let statusTint {
+                avatarBackgroundShape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accentColor.opacity(statusTint.primaryOpacity),
+                                accentColor.opacity(statusTint.secondaryOpacity)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-                )
+
+                avatarBackgroundShape
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                .black.opacity(0.20),
+                                .clear
+                            ],
+                            center: UnitPoint(x: 0.5, y: 1.08),
+                            startRadius: floaterSize.avatarHitSize * 0.12,
+                            endRadius: floaterSize.avatarHitSize * 0.95
+                        )
+                    )
+                    .blendMode(.multiply)
+            } else {
+                avatarBackgroundShape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                cardTheme.stageTop,
+                                cardTheme.stageBottom
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
 
             avatarBackgroundShape
                 .fill(
@@ -6335,6 +6388,12 @@ struct FloaterStatusView: View {
                 .inset(by: 3)
                 .stroke(.white.opacity(avatarTokens.innerStrokeOpacity), lineWidth: avatarTokens.innerStrokeWidth)
         }
+    }
+
+    private var statusTintState: FloaterAvatarStatusTintStateTokens? {
+        let statusTintTokens = stylePreset.components.avatarStatusTint
+        guard statusTintTokens.enabled, let statusState else { return nil }
+        return statusTintTokens.tokens(for: statusState)
     }
 
     private var avatarBackgroundShape: some InsettableShape {

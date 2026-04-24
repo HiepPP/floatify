@@ -158,9 +158,9 @@ struct FloaterStylePaletteTokens: Hashable {
         strokeStrong: .init(red: 0.720, green: 0.790, blue: 0.930),
         strokeSoft: .init(red: 0.280, green: 0.330, blue: 0.430),
         highlight: .init(red: 0.980, green: 0.990, blue: 1.000),
-        running: .init(red: 0.965, green: 0.470, blue: 0.410),
-        idle: .init(red: 0.915, green: 0.705, blue: 0.320),
-        complete: .init(red: 0.330, green: 0.845, blue: 0.645),
+        running: .init(hex: "#FF3B30"),
+        idle: .init(hex: "#FFD60A"),
+        complete: .init(hex: "#30D158"),
         warning: .init(red: 0.948, green: 0.598, blue: 0.360),
         chipFill: .init(red: 0.145, green: 0.165, blue: 0.230),
         closeHover: .init(red: 0.240, green: 0.280, blue: 0.390)
@@ -174,9 +174,9 @@ struct FloaterStylePaletteTokens: Hashable {
         strokeStrong: .init(red: 0.722, green: 0.769, blue: 0.847),
         strokeSoft: .init(red: 0.835, green: 0.867, blue: 0.922),
         highlight: .init(red: 1.000, green: 1.000, blue: 1.000),
-        running: .init(red: 0.847, green: 0.302, blue: 0.255),
-        idle: .init(red: 0.773, green: 0.541, blue: 0.082),
-        complete: .init(red: 0.133, green: 0.541, blue: 0.384),
+        running: .init(hex: "#FF2D20"),
+        idle: .init(hex: "#F5B800"),
+        complete: .init(hex: "#149E3B"),
         warning: .init(red: 0.851, green: 0.467, blue: 0.227),
         chipFill: .init(red: 0.914, green: 0.933, blue: 0.969),
         closeHover: .init(red: 0.863, green: 0.894, blue: 0.945)
@@ -925,6 +925,13 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
     var borderWidth: CGFloat = 1.2
     var innerStrokeOpacity: Double = 0.12
     var innerStrokeWidth: CGFloat = 0.7
+    var runningSheenEnabled: Bool = true
+    var runningSheenIntensity: Double = 1.0
+    var statusBorderOpacity: Double = 0.62
+    var statusBorderWidth: CGFloat = 1.2
+    var statusGlowOpacity: Double = 0.42
+    var statusGlowRadius: CGFloat = 12
+    var runningGlowBoost: Double = 1.25
 
     init() {}
 
@@ -942,6 +949,13 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
         borderWidth = container.decodeStyleValue(CGFloat.self, forKey: .borderWidth, default: base.borderWidth)
         innerStrokeOpacity = container.decodeStyleValue(Double.self, forKey: .innerStrokeOpacity, default: base.innerStrokeOpacity)
         innerStrokeWidth = container.decodeStyleValue(CGFloat.self, forKey: .innerStrokeWidth, default: base.innerStrokeWidth)
+        runningSheenEnabled = container.decodeStyleValue(Bool.self, forKey: .runningSheenEnabled, default: base.runningSheenEnabled)
+        runningSheenIntensity = container.decodeStyleValue(Double.self, forKey: .runningSheenIntensity, default: base.runningSheenIntensity)
+        statusBorderOpacity = container.decodeStyleValue(Double.self, forKey: .statusBorderOpacity, default: base.statusBorderOpacity)
+        statusBorderWidth = container.decodeStyleValue(CGFloat.self, forKey: .statusBorderWidth, default: base.statusBorderWidth)
+        statusGlowOpacity = container.decodeStyleValue(Double.self, forKey: .statusGlowOpacity, default: base.statusGlowOpacity)
+        statusGlowRadius = container.decodeStyleValue(CGFloat.self, forKey: .statusGlowRadius, default: base.statusGlowRadius)
+        runningGlowBoost = container.decodeStyleValue(Double.self, forKey: .runningGlowBoost, default: base.runningGlowBoost)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -956,6 +970,96 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
         case borderWidth
         case innerStrokeOpacity
         case innerStrokeWidth
+        case runningSheenEnabled
+        case runningSheenIntensity
+        case statusBorderOpacity
+        case statusBorderWidth
+        case statusGlowOpacity
+        case statusGlowRadius
+        case runningGlowBoost
+    }
+}
+
+struct FloaterAvatarStatusTintStateTokens: Hashable {
+    var primaryOpacity: Double
+    var secondaryOpacity: Double
+    var borderOpacity: Double
+    var edgeStripeOpacity: Double
+}
+
+private struct FloaterAvatarStatusTintStateManifest: Decodable {
+    var primaryOpacity: Double?
+    var secondaryOpacity: Double?
+    var borderOpacity: Double?
+    var edgeStripeOpacity: Double?
+
+    func resolved(default base: FloaterAvatarStatusTintStateTokens) -> FloaterAvatarStatusTintStateTokens {
+        FloaterAvatarStatusTintStateTokens(
+            primaryOpacity: primaryOpacity ?? base.primaryOpacity,
+            secondaryOpacity: secondaryOpacity ?? base.secondaryOpacity,
+            borderOpacity: borderOpacity ?? base.borderOpacity,
+            edgeStripeOpacity: edgeStripeOpacity ?? base.edgeStripeOpacity
+        )
+    }
+}
+
+struct FloaterAvatarStatusTintTokens: Hashable, Decodable {
+    var enabled: Bool = true
+    var edgeStripeWidth: CGFloat = 0
+    var innerRadiusScale: Double = 0.04
+    var outerRadiusScale: Double = 0.78
+    var running: FloaterAvatarStatusTintStateTokens = .init(
+        primaryOpacity: 1.0,
+        secondaryOpacity: 0.88,
+        borderOpacity: 0,
+        edgeStripeOpacity: 0
+    )
+    var idle: FloaterAvatarStatusTintStateTokens = .init(
+        primaryOpacity: 1.0,
+        secondaryOpacity: 0.86,
+        borderOpacity: 0,
+        edgeStripeOpacity: 0
+    )
+    var complete: FloaterAvatarStatusTintStateTokens = .init(
+        primaryOpacity: 1.0,
+        secondaryOpacity: 0.86,
+        borderOpacity: 0,
+        edgeStripeOpacity: 0
+    )
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let base = Self()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = container.decodeStyleValue(Bool.self, forKey: .enabled, default: base.enabled)
+        edgeStripeWidth = container.decodeStyleValue(CGFloat.self, forKey: .edgeStripeWidth, default: base.edgeStripeWidth)
+        innerRadiusScale = container.decodeStyleValue(Double.self, forKey: .innerRadiusScale, default: base.innerRadiusScale)
+        outerRadiusScale = container.decodeStyleValue(Double.self, forKey: .outerRadiusScale, default: base.outerRadiusScale)
+        running = ((try? container.decode(FloaterAvatarStatusTintStateManifest.self, forKey: .running)) ?? .init())
+            .resolved(default: base.running)
+        idle = ((try? container.decode(FloaterAvatarStatusTintStateManifest.self, forKey: .idle)) ?? .init())
+            .resolved(default: base.idle)
+        complete = ((try? container.decode(FloaterAvatarStatusTintStateManifest.self, forKey: .complete)) ?? .init())
+            .resolved(default: base.complete)
+    }
+
+    func tokens(for state: ClaudeStatusState) -> FloaterAvatarStatusTintStateTokens {
+        switch state {
+        case .running: return running
+        case .idle: return idle
+        case .complete: return complete
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case enabled
+        case edgeStripeWidth
+        case innerRadiusScale
+        case outerRadiusScale
+        case running
+        case idle
+        case complete
     }
 }
 
@@ -1062,6 +1166,7 @@ struct FloaterComponentStyleTokens: Hashable, Decodable {
     var header = FloaterHeaderStyleTokens()
     var row = FloaterRowStyleTokens()
     var avatarStage = FloaterAvatarStageStyleTokens()
+    var avatarStatusTint = FloaterAvatarStatusTintTokens()
     var statusPill = FloaterStatusPillStyleTokens()
     var closeButton = FloaterCloseButtonStyleTokens()
 
@@ -1073,6 +1178,7 @@ struct FloaterComponentStyleTokens: Hashable, Decodable {
         header = container.decodeStyleValue(FloaterHeaderStyleTokens.self, forKey: .header, default: base.header)
         row = container.decodeStyleValue(FloaterRowStyleTokens.self, forKey: .row, default: base.row)
         avatarStage = container.decodeStyleValue(FloaterAvatarStageStyleTokens.self, forKey: .avatarStage, default: base.avatarStage)
+        avatarStatusTint = container.decodeStyleValue(FloaterAvatarStatusTintTokens.self, forKey: .avatarStatusTint, default: base.avatarStatusTint)
         statusPill = container.decodeStyleValue(FloaterStatusPillStyleTokens.self, forKey: .statusPill, default: base.statusPill)
         closeButton = container.decodeStyleValue(FloaterCloseButtonStyleTokens.self, forKey: .closeButton, default: base.closeButton)
     }
@@ -1081,6 +1187,7 @@ struct FloaterComponentStyleTokens: Hashable, Decodable {
         case header
         case row
         case avatarStage
+        case avatarStatusTint
         case statusPill
         case closeButton
     }

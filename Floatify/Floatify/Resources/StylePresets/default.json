@@ -11,9 +11,9 @@
       "strokeStrong": "#B8C9ED",
       "strokeSoft": "#47546E",
       "highlight": "#FAFCFF",
-      "running": "#F67868",
-      "idle": "#E9B452",
-      "complete": "#54D8A4",
+      "running": "#F0463B",
+      "idle": "#F5C518",
+      "complete": "#3DC971",
       "warning": "#F2985C",
       "chipFill": "#252A3B",
       "closeHover": "#3D4763"
@@ -26,9 +26,9 @@
       "strokeStrong": "#B8C4D8",
       "strokeSoft": "#D5DDEC",
       "highlight": "#FFFFFF",
-      "running": "#D84D41",
-      "idle": "#C58A15",
-      "complete": "#228A62",
+      "running": "#D93B2E",
+      "idle": "#D6A500",
+      "complete": "#1D9E52",
       "warning": "#D9773A",
       "chipFill": "#E9EEF7",
       "closeHover": "#DCE4F1"
@@ -232,12 +232,19 @@
       "topHighlightOpacity": 0.14,
       "bottomShadowOpacity": 0.12,
       "radialHighlightOpacity": 0.10,
-      "runningAccentOpacity": 0.10,
+      "runningAccentOpacity": 0.18,
       "restingAccentOpacity": 0.04,
       "borderOpacity": 0.90,
       "borderWidth": 1.2,
       "innerStrokeOpacity": 0.12,
-      "innerStrokeWidth": 0.7
+      "innerStrokeWidth": 0.7,
+      "runningSheenEnabled": true,
+      "runningSheenIntensity": 1.0,
+      "statusBorderOpacity": 0.62,
+      "statusBorderWidth": 1.2,
+      "statusGlowOpacity": 0.42,
+      "statusGlowRadius": 12,
+      "runningGlowBoost": 1.25
     },
     "avatarStage": {
       "topHighlightOpacity": 0.22,
@@ -247,6 +254,30 @@
       "borderWidth": 1.1,
       "innerStrokeOpacity": 0.14,
       "innerStrokeWidth": 0.7
+    },
+    "avatarStatusTint": {
+      "enabled": true,
+      "edgeStripeWidth": 0,
+      "innerRadiusScale": 0.04,
+      "outerRadiusScale": 0.78,
+      "running": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.88,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      },
+      "idle": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.86,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      },
+      "complete": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.86,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      }
     },
     "statusPill": {
       "darkLabelOpacity": 0.96,

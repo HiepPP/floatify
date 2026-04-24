@@ -54,7 +54,9 @@ Use a unique `id`.
 - `card` controls floater row gradient, avatar stage, border, and shadow.
 - `sizes` controls layout, spacing, typography sizes, radii, and hit targets.
 - `typography` controls font family, font size override, weight, and design.
-- `components` controls header, row, avatar stage, status pill, and close button tokens.
+- `components` controls header, row, avatar stage, avatar status tint, status pill, and close button tokens.
+- `components.avatarStatusTint` colors the avatar background with the palette `running`, `idle`, and `complete` colors when a status is set.
+- `components.row.runningSheenEnabled` turns the running panel sheen on or off.
 - `variants.effects.entryEffects` controls entry animation choices.
 
 ## Typography Tokens

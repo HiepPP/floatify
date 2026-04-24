@@ -11,9 +11,9 @@
       "strokeStrong": "#4DFF88",
       "strokeSoft": "#1F5F36",
       "highlight": "#E9FFF0",
-      "running": "#FF6A4D",
-      "idle": "#F5D94D",
-      "complete": "#35F078",
+      "running": "#F2463A",
+      "idle": "#EBD542",
+      "complete": "#35D66A",
       "warning": "#FF9A45",
       "chipFill": "#102418",
       "closeHover": "#244D34"
@@ -26,9 +26,9 @@
       "strokeStrong": "#36B866",
       "strokeSoft": "#BDE9CA",
       "highlight": "#FFFFFF",
-      "running": "#C8432F",
-      "idle": "#9A7B06",
-      "complete": "#147B3D",
+      "running": "#C83A2E",
+      "idle": "#B29100",
+      "complete": "#1B9946",
       "warning": "#C26A24",
       "chipFill": "#E2F6E8",
       "closeHover": "#C9EFD5"
@@ -117,11 +117,43 @@
       "hoverStrokeOpacity": 0.32,
       "restingStrokeOpacity": 0.20,
       "radialHighlightOpacity": 0.08,
-      "borderOpacity": 0.96
+      "borderOpacity": 0.96,
+      "runningAccentOpacity": 0.22,
+      "runningSheenEnabled": true,
+      "runningSheenIntensity": 1.1,
+      "statusBorderOpacity": 0.72,
+      "statusBorderWidth": 1.3,
+      "statusGlowOpacity": 0.50,
+      "statusGlowRadius": 14,
+      "runningGlowBoost": 1.35
     },
     "avatarStage": {
       "borderOpacity": 0.82,
       "radialHighlightOpacity": 0.10
+    },
+    "avatarStatusTint": {
+      "enabled": true,
+      "edgeStripeWidth": 0,
+      "innerRadiusScale": 0.04,
+      "outerRadiusScale": 0.80,
+      "running": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.88,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      },
+      "idle": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.86,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      },
+      "complete": {
+        "primaryOpacity": 1.0,
+        "secondaryOpacity": 0.86,
+        "borderOpacity": 0,
+        "edgeStripeOpacity": 0
+      }
     },
     "statusPill": {
       "darkFillOpacity": 0.14,
