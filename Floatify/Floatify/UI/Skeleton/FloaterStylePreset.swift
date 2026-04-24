@@ -862,7 +862,16 @@ struct FloaterHeaderStyleTokens: Hashable, Decodable {
     var darkText: FloaterStyleColorToken = .init(hex: "#FFFFFF", alpha: 0.98)
     var lightText: FloaterStyleColorToken = .init(red: 0.082, green: 0.106, blue: 0.165, alpha: 0.94)
     var buttonForeground: FloaterStyleColorToken = .init(hex: "#FFFFFF", alpha: 0.96)
+    var inactiveButtonOpacity: Double = 0.72
     var buttonHoverFillOpacity: Double = 0.12
+    var chipFillOpacity: Double = 0.85
+    var itemCountTextOpacity: Double = 0.80
+    var dividerOpacity: Double = 0.55
+    var shellTopOpacity: Double = 0.96
+    var shellBottomOpacity: Double = 0.92
+    var materialOverlayOpacity: Double = 0.14
+    var strokeOpacity: Double = 0.42
+    var shadowOpacity: Double = 0.18
     var metricChipTop: FloaterStyleColorToken = .init(hex: "#FFFFFF", alpha: 0.09)
     var metricChipBottom: FloaterStyleColorToken = .init(red: 0.054, green: 0.122, blue: 0.286, alpha: 0.92)
     var metricChipStrokeOpacity: Double = 0.14
@@ -882,7 +891,16 @@ struct FloaterHeaderStyleTokens: Hashable, Decodable {
         darkText = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .darkText, default: base.darkText)
         lightText = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .lightText, default: base.lightText)
         buttonForeground = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .buttonForeground, default: base.buttonForeground)
+        inactiveButtonOpacity = container.decodeStyleValue(Double.self, forKey: .inactiveButtonOpacity, default: base.inactiveButtonOpacity)
         buttonHoverFillOpacity = container.decodeStyleValue(Double.self, forKey: .buttonHoverFillOpacity, default: base.buttonHoverFillOpacity)
+        chipFillOpacity = container.decodeStyleValue(Double.self, forKey: .chipFillOpacity, default: base.chipFillOpacity)
+        itemCountTextOpacity = container.decodeStyleValue(Double.self, forKey: .itemCountTextOpacity, default: base.itemCountTextOpacity)
+        dividerOpacity = container.decodeStyleValue(Double.self, forKey: .dividerOpacity, default: base.dividerOpacity)
+        shellTopOpacity = container.decodeStyleValue(Double.self, forKey: .shellTopOpacity, default: base.shellTopOpacity)
+        shellBottomOpacity = container.decodeStyleValue(Double.self, forKey: .shellBottomOpacity, default: base.shellBottomOpacity)
+        materialOverlayOpacity = container.decodeStyleValue(Double.self, forKey: .materialOverlayOpacity, default: base.materialOverlayOpacity)
+        strokeOpacity = container.decodeStyleValue(Double.self, forKey: .strokeOpacity, default: base.strokeOpacity)
+        shadowOpacity = container.decodeStyleValue(Double.self, forKey: .shadowOpacity, default: base.shadowOpacity)
         metricChipTop = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .metricChipTop, default: base.metricChipTop)
         metricChipBottom = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .metricChipBottom, default: base.metricChipBottom)
         metricChipStrokeOpacity = container.decodeStyleValue(Double.self, forKey: .metricChipStrokeOpacity, default: base.metricChipStrokeOpacity)
@@ -899,7 +917,16 @@ struct FloaterHeaderStyleTokens: Hashable, Decodable {
         case darkText
         case lightText
         case buttonForeground
+        case inactiveButtonOpacity
         case buttonHoverFillOpacity
+        case chipFillOpacity
+        case itemCountTextOpacity
+        case dividerOpacity
+        case shellTopOpacity
+        case shellBottomOpacity
+        case materialOverlayOpacity
+        case strokeOpacity
+        case shadowOpacity
         case metricChipTop
         case metricChipBottom
         case metricChipStrokeOpacity
@@ -927,6 +954,12 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
     var innerStrokeWidth: CGFloat = 0.7
     var runningSheenEnabled: Bool = true
     var runningSheenIntensity: Double = 1.0
+    var minimalFillRestOpacity: Double = 0.90
+    var minimalFillHoverOpacity: Double = 0.94
+    var panelShadowRestOpacity: Double = 0.16
+    var panelShadowHoverOpacity: Double = 0.22
+    var statusShadowRestOpacity: Double = 0.03
+    var statusShadowRunningOpacity: Double = 0.08
     var statusBorderOpacity: Double = 0.62
     var statusBorderWidth: CGFloat = 1.2
     var statusGlowOpacity: Double = 0.42
@@ -951,6 +984,12 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
         innerStrokeWidth = container.decodeStyleValue(CGFloat.self, forKey: .innerStrokeWidth, default: base.innerStrokeWidth)
         runningSheenEnabled = container.decodeStyleValue(Bool.self, forKey: .runningSheenEnabled, default: base.runningSheenEnabled)
         runningSheenIntensity = container.decodeStyleValue(Double.self, forKey: .runningSheenIntensity, default: base.runningSheenIntensity)
+        minimalFillRestOpacity = container.decodeStyleValue(Double.self, forKey: .minimalFillRestOpacity, default: base.minimalFillRestOpacity)
+        minimalFillHoverOpacity = container.decodeStyleValue(Double.self, forKey: .minimalFillHoverOpacity, default: base.minimalFillHoverOpacity)
+        panelShadowRestOpacity = container.decodeStyleValue(Double.self, forKey: .panelShadowRestOpacity, default: base.panelShadowRestOpacity)
+        panelShadowHoverOpacity = container.decodeStyleValue(Double.self, forKey: .panelShadowHoverOpacity, default: base.panelShadowHoverOpacity)
+        statusShadowRestOpacity = container.decodeStyleValue(Double.self, forKey: .statusShadowRestOpacity, default: base.statusShadowRestOpacity)
+        statusShadowRunningOpacity = container.decodeStyleValue(Double.self, forKey: .statusShadowRunningOpacity, default: base.statusShadowRunningOpacity)
         statusBorderOpacity = container.decodeStyleValue(Double.self, forKey: .statusBorderOpacity, default: base.statusBorderOpacity)
         statusBorderWidth = container.decodeStyleValue(CGFloat.self, forKey: .statusBorderWidth, default: base.statusBorderWidth)
         statusGlowOpacity = container.decodeStyleValue(Double.self, forKey: .statusGlowOpacity, default: base.statusGlowOpacity)
@@ -972,6 +1011,12 @@ struct FloaterRowStyleTokens: Hashable, Decodable {
         case innerStrokeWidth
         case runningSheenEnabled
         case runningSheenIntensity
+        case minimalFillRestOpacity
+        case minimalFillHoverOpacity
+        case panelShadowRestOpacity
+        case panelShadowHoverOpacity
+        case statusShadowRestOpacity
+        case statusShadowRunningOpacity
         case statusBorderOpacity
         case statusBorderWidth
         case statusGlowOpacity
@@ -1064,6 +1109,7 @@ struct FloaterAvatarStatusTintTokens: Hashable, Decodable {
 }
 
 struct FloaterAvatarStageStyleTokens: Hashable, Decodable {
+    var shapeCornerRadius: CGFloat = 0
     var topHighlightOpacity: Double = 0.22
     var bottomShadowOpacity: Double = 0.10
     var radialHighlightOpacity: Double = 0.16
@@ -1071,12 +1117,18 @@ struct FloaterAvatarStageStyleTokens: Hashable, Decodable {
     var borderWidth: CGFloat = 1.1
     var innerStrokeOpacity: Double = 0.14
     var innerStrokeWidth: CGFloat = 0.7
+    var minimalHaloOpacity: Double = 0.18
+    var minimalDotOpacity: Double = 0.94
+    var minimalHaloScale: CGFloat = 0.58
+    var minimalDotScale: CGFloat = 0.22
+    var minimalDotSizeMultiplier: CGFloat = 1.8
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let base = Self()
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        shapeCornerRadius = container.decodeStyleValue(CGFloat.self, forKey: .shapeCornerRadius, default: base.shapeCornerRadius)
         topHighlightOpacity = container.decodeStyleValue(Double.self, forKey: .topHighlightOpacity, default: base.topHighlightOpacity)
         bottomShadowOpacity = container.decodeStyleValue(Double.self, forKey: .bottomShadowOpacity, default: base.bottomShadowOpacity)
         radialHighlightOpacity = container.decodeStyleValue(Double.self, forKey: .radialHighlightOpacity, default: base.radialHighlightOpacity)
@@ -1084,9 +1136,15 @@ struct FloaterAvatarStageStyleTokens: Hashable, Decodable {
         borderWidth = container.decodeStyleValue(CGFloat.self, forKey: .borderWidth, default: base.borderWidth)
         innerStrokeOpacity = container.decodeStyleValue(Double.self, forKey: .innerStrokeOpacity, default: base.innerStrokeOpacity)
         innerStrokeWidth = container.decodeStyleValue(CGFloat.self, forKey: .innerStrokeWidth, default: base.innerStrokeWidth)
+        minimalHaloOpacity = container.decodeStyleValue(Double.self, forKey: .minimalHaloOpacity, default: base.minimalHaloOpacity)
+        minimalDotOpacity = container.decodeStyleValue(Double.self, forKey: .minimalDotOpacity, default: base.minimalDotOpacity)
+        minimalHaloScale = container.decodeStyleValue(CGFloat.self, forKey: .minimalHaloScale, default: base.minimalHaloScale)
+        minimalDotScale = container.decodeStyleValue(CGFloat.self, forKey: .minimalDotScale, default: base.minimalDotScale)
+        minimalDotSizeMultiplier = container.decodeStyleValue(CGFloat.self, forKey: .minimalDotSizeMultiplier, default: base.minimalDotSizeMultiplier)
     }
 
     private enum CodingKeys: String, CodingKey {
+        case shapeCornerRadius
         case topHighlightOpacity
         case bottomShadowOpacity
         case radialHighlightOpacity
@@ -1094,6 +1152,11 @@ struct FloaterAvatarStageStyleTokens: Hashable, Decodable {
         case borderWidth
         case innerStrokeOpacity
         case innerStrokeWidth
+        case minimalHaloOpacity
+        case minimalDotOpacity
+        case minimalHaloScale
+        case minimalDotScale
+        case minimalDotSizeMultiplier
     }
 }
 
@@ -1103,6 +1166,9 @@ struct FloaterStatusPillStyleTokens: Hashable, Decodable {
     var darkFillOpacity: Double = 0.16
     var lightFillOpacity: Double = 0.12
     var strokeOpacity: Double = 0.30
+    var dotShadowOpacity: Double = 0.60
+    var dotShadowRestRadius: CGFloat = 1.5
+    var dotShadowPulseRadius: CGFloat = 3
 
     init() {}
 
@@ -1114,6 +1180,9 @@ struct FloaterStatusPillStyleTokens: Hashable, Decodable {
         darkFillOpacity = container.decodeStyleValue(Double.self, forKey: .darkFillOpacity, default: base.darkFillOpacity)
         lightFillOpacity = container.decodeStyleValue(Double.self, forKey: .lightFillOpacity, default: base.lightFillOpacity)
         strokeOpacity = container.decodeStyleValue(Double.self, forKey: .strokeOpacity, default: base.strokeOpacity)
+        dotShadowOpacity = container.decodeStyleValue(Double.self, forKey: .dotShadowOpacity, default: base.dotShadowOpacity)
+        dotShadowRestRadius = container.decodeStyleValue(CGFloat.self, forKey: .dotShadowRestRadius, default: base.dotShadowRestRadius)
+        dotShadowPulseRadius = container.decodeStyleValue(CGFloat.self, forKey: .dotShadowPulseRadius, default: base.dotShadowPulseRadius)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1122,12 +1191,19 @@ struct FloaterStatusPillStyleTokens: Hashable, Decodable {
         case darkFillOpacity
         case lightFillOpacity
         case strokeOpacity
+        case dotShadowOpacity
+        case dotShadowRestRadius
+        case dotShadowPulseRadius
     }
 }
 
 struct FloaterCloseButtonStyleTokens: Hashable, Decodable {
     var foreground: FloaterStyleColorToken = .init(hex: "#FFFFFF", alpha: 0.96)
     var fill: FloaterStyleColorToken = .init(red: 0.082, green: 0.118, blue: 0.242)
+    var foregroundRestOpacity: Double = 0.74
+    var iconSizeScale: CGFloat = 0.54
+    var restScale: CGFloat = 1.0
+    var hoverScale: CGFloat = 1.06
     var persistentHoverFillOpacity: Double = 0.18
     var persistentRestFillOpacity: Double = 0
     var floatingHoverFillOpacity: Double = 0.96
@@ -1142,6 +1218,10 @@ struct FloaterCloseButtonStyleTokens: Hashable, Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         foreground = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .foreground, default: base.foreground)
         fill = container.decodeStyleValue(FloaterStyleColorToken.self, forKey: .fill, default: base.fill)
+        foregroundRestOpacity = container.decodeStyleValue(Double.self, forKey: .foregroundRestOpacity, default: base.foregroundRestOpacity)
+        iconSizeScale = container.decodeStyleValue(CGFloat.self, forKey: .iconSizeScale, default: base.iconSizeScale)
+        restScale = container.decodeStyleValue(CGFloat.self, forKey: .restScale, default: base.restScale)
+        hoverScale = container.decodeStyleValue(CGFloat.self, forKey: .hoverScale, default: base.hoverScale)
         persistentHoverFillOpacity = container.decodeStyleValue(Double.self, forKey: .persistentHoverFillOpacity, default: base.persistentHoverFillOpacity)
         persistentRestFillOpacity = container.decodeStyleValue(Double.self, forKey: .persistentRestFillOpacity, default: base.persistentRestFillOpacity)
         floatingHoverFillOpacity = container.decodeStyleValue(Double.self, forKey: .floatingHoverFillOpacity, default: base.floatingHoverFillOpacity)
@@ -1153,6 +1233,10 @@ struct FloaterCloseButtonStyleTokens: Hashable, Decodable {
     private enum CodingKeys: String, CodingKey {
         case foreground
         case fill
+        case foregroundRestOpacity
+        case iconSizeScale
+        case restScale
+        case hoverScale
         case persistentHoverFillOpacity
         case persistentRestFillOpacity
         case floatingHoverFillOpacity

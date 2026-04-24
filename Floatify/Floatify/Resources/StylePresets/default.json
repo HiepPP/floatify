@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "Default",
-  "description": "Current Floatify UI baseline.",
+  "description": "Pre-55df compact Floatify UI baseline.",
   "palette": {
     "dark": {
       "panelTint": "#13151E",
@@ -11,9 +11,9 @@
       "strokeStrong": "#B8C9ED",
       "strokeSoft": "#47546E",
       "highlight": "#FAFCFF",
-      "running": "#F0463B",
-      "idle": "#F5C518",
-      "complete": "#3DC971",
+      "running": "#F67869",
+      "idle": "#E9B452",
+      "complete": "#54D8A4",
       "warning": "#F2985C",
       "chipFill": "#252A3B",
       "closeHover": "#3D4763"
@@ -26,9 +26,9 @@
       "strokeStrong": "#B8C4D8",
       "strokeSoft": "#D5DDEC",
       "highlight": "#FFFFFF",
-      "running": "#D93B2E",
-      "idle": "#D6A500",
-      "complete": "#1D9E52",
+      "running": "#D84D41",
+      "idle": "#C58A15",
+      "complete": "#228A62",
       "warning": "#D9773A",
       "chipFill": "#E9EEF7",
       "closeHover": "#DCE4F1"
@@ -180,33 +180,33 @@
   "typography": {
     "panelHeaderTitle": {
       "family": "system",
-      "weight": "heavy",
-      "design": "rounded"
+      "weight": "medium",
+      "design": "default"
     },
     "panelHeaderChip": {
       "family": "system",
-      "weight": "bold",
-      "design": "rounded"
+      "weight": "medium",
+      "design": "default"
     },
     "panelHeaderChipValue": {
       "family": "system",
-      "weight": "black",
-      "design": "rounded"
+      "weight": "semibold",
+      "design": "default"
     },
     "rowTitle": {
       "family": "system",
-      "weight": "heavy",
-      "design": "rounded"
+      "weight": "semibold",
+      "design": "default"
     },
     "rowMeta": {
       "family": "system",
-      "weight": "bold",
-      "design": "rounded"
+      "weight": "regular",
+      "design": "default"
     },
     "statusPill": {
       "family": "system",
-      "weight": "bold",
-      "design": "rounded"
+      "weight": "regular",
+      "design": "default"
     }
   },
   "components": {
@@ -214,7 +214,16 @@
       "darkText": { "hex": "#FFFFFF", "alpha": 0.98 },
       "lightText": { "red": 0.082, "green": 0.106, "blue": 0.165, "alpha": 0.94 },
       "buttonForeground": { "hex": "#FFFFFF", "alpha": 0.96 },
+      "inactiveButtonOpacity": 0.72,
       "buttonHoverFillOpacity": 0.12,
+      "chipFillOpacity": 0.85,
+      "itemCountTextOpacity": 0.80,
+      "dividerOpacity": 0.55,
+      "shellTopOpacity": 0.96,
+      "shellBottomOpacity": 0.92,
+      "materialOverlayOpacity": 0.14,
+      "strokeOpacity": 0.42,
+      "shadowOpacity": 0.18,
       "metricChipTop": { "hex": "#FFFFFF", "alpha": 0.09 },
       "metricChipBottom": { "red": 0.054, "green": 0.122, "blue": 0.286, "alpha": 0.92 },
       "metricChipStrokeOpacity": 0.14,
@@ -227,36 +236,48 @@
       "cloudShadowOpacity": 0.26
     },
     "row": {
-      "hoverStrokeOpacity": 0.24,
-      "restingStrokeOpacity": 0.14,
-      "topHighlightOpacity": 0.14,
-      "bottomShadowOpacity": 0.12,
-      "radialHighlightOpacity": 0.10,
-      "runningAccentOpacity": 0.18,
-      "restingAccentOpacity": 0.04,
-      "borderOpacity": 0.90,
-      "borderWidth": 1.2,
-      "innerStrokeOpacity": 0.12,
-      "innerStrokeWidth": 0.7,
-      "runningSheenEnabled": true,
-      "runningSheenIntensity": 1.0,
-      "statusBorderOpacity": 0.62,
-      "statusBorderWidth": 1.2,
-      "statusGlowOpacity": 0.42,
-      "statusGlowRadius": 12,
-      "runningGlowBoost": 1.25
+      "hoverStrokeOpacity": 0.18,
+      "restingStrokeOpacity": 0.10,
+      "topHighlightOpacity": 0.03,
+      "bottomShadowOpacity": 0.03,
+      "radialHighlightOpacity": 0.00,
+      "runningAccentOpacity": 0.06,
+      "restingAccentOpacity": 0.00,
+      "borderOpacity": 0.42,
+      "borderWidth": 0.8,
+      "innerStrokeOpacity": 0.00,
+      "innerStrokeWidth": 0.0,
+      "runningSheenEnabled": false,
+      "runningSheenIntensity": 0.0,
+      "minimalFillRestOpacity": 0.90,
+      "minimalFillHoverOpacity": 0.94,
+      "panelShadowRestOpacity": 0.16,
+      "panelShadowHoverOpacity": 0.22,
+      "statusShadowRestOpacity": 0.03,
+      "statusShadowRunningOpacity": 0.08,
+      "statusBorderOpacity": 0.20,
+      "statusBorderWidth": 0.8,
+      "statusGlowOpacity": 0.00,
+      "statusGlowRadius": 0,
+      "runningGlowBoost": 1.0
     },
     "avatarStage": {
+      "shapeCornerRadius": 0,
       "topHighlightOpacity": 0.22,
       "bottomShadowOpacity": 0.10,
       "radialHighlightOpacity": 0.16,
       "borderOpacity": 0.70,
       "borderWidth": 1.1,
       "innerStrokeOpacity": 0.14,
-      "innerStrokeWidth": 0.7
+      "innerStrokeWidth": 0.7,
+      "minimalHaloOpacity": 0.18,
+      "minimalDotOpacity": 0.94,
+      "minimalHaloScale": 0.58,
+      "minimalDotScale": 0.22,
+      "minimalDotSizeMultiplier": 1.8
     },
     "avatarStatusTint": {
-      "enabled": true,
+      "enabled": false,
       "edgeStripeWidth": 0,
       "innerRadiusScale": 0.04,
       "outerRadiusScale": 0.78,
@@ -284,11 +305,18 @@
       "lightLabelOpacity": 0.84,
       "darkFillOpacity": 0.16,
       "lightFillOpacity": 0.12,
-      "strokeOpacity": 0.30
+      "strokeOpacity": 0.30,
+      "dotShadowOpacity": 0.60,
+      "dotShadowRestRadius": 1.5,
+      "dotShadowPulseRadius": 3
     },
     "closeButton": {
       "foreground": { "hex": "#FFFFFF", "alpha": 0.96 },
       "fill": { "red": 0.082, "green": 0.118, "blue": 0.242 },
+      "foregroundRestOpacity": 0.74,
+      "iconSizeScale": 0.54,
+      "restScale": 1.0,
+      "hoverScale": 1.06,
       "persistentHoverFillOpacity": 0.18,
       "persistentRestFillOpacity": 0,
       "floatingHoverFillOpacity": 0.96,
