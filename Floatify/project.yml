@@ -26,6 +26,7 @@ targets:
           - "cli/**"
       - path: Floatify/Resources
         buildPhase: resources
+        # Includes bundled UI style presets under Resources/StylePresets.
       - path: Floatify/Assets.xcassets
         buildPhase: resources
       - path: ../animate-source/output/avatar-sprite-sheet.png
