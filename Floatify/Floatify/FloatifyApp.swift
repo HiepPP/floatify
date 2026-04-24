@@ -80,12 +80,9 @@ private struct MenuBarAvatarIcon: View {
 }
 
 private struct FloatifyMenuBarContent: View {
-    @Environment(\.openSettings) private var openSettings
-
     var body: some View {
         Button("Settings...") {
-            NSApp.activate(ignoringOtherApps: true)
-            openSettings()
+            FloatifySettingsWindowPresenter.shared.show()
         }
         .keyboardShortcut(",", modifiers: [.command])
 
@@ -101,5 +98,43 @@ private struct FloatifyMenuBarContent: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q", modifiers: [.command])
+    }
+}
+
+final class FloatifySettingsWindowPresenter {
+    static let shared = FloatifySettingsWindowPresenter()
+
+    private var window: NSWindow?
+    private let settings = FloatifySettings.shared
+    private let visualCatalog = FloaterVisualCatalog.shared
+
+    private init() {}
+
+    func show() {
+        let settingsWindow = window ?? makeWindow()
+        window = settingsWindow
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow.makeKeyAndOrderFront(nil)
+        settingsWindow.orderFrontRegardless()
+    }
+
+    private func makeWindow() -> NSWindow {
+        let contentView = SettingsView()
+            .environment(settings)
+            .environment(visualCatalog)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 700),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Floatify Settings"
+        window.contentView = NSHostingView(rootView: contentView)
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.level = .floating
+        window.isReleasedWhenClosed = false
+        window.center()
+        return window
     }
 }

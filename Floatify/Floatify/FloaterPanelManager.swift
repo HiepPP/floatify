@@ -223,6 +223,9 @@ class FloaterPanelManager {
             onToggleCollapsed: { [weak self] in
                 self?.toggleFloaterPanelCollapsed()
             },
+            onOpenSettings: {
+                FloatifySettingsWindowPresenter.shared.show()
+            },
             onItemTap: { [weak self] item in
                 self?.openProjectInVSCode(for: item)
             },
@@ -455,10 +458,7 @@ class FloaterPanelManager {
     }
 
     private func resizeFloaterPanel(_ panel: FloatPanel, to size: CGSize, animated: Bool = false) {
-        let origin = clampedFloaterPanelOrigin(
-            CGPoint(x: panel.frame.maxX - size.width, y: panel.frame.minY),
-            size: size
-        )
+        let origin = CGPoint(x: panel.frame.maxX - size.width, y: panel.frame.minY)
         let frame = NSRect(origin: origin, size: size)
 
         if animated {
@@ -489,7 +489,7 @@ class FloaterPanelManager {
             return defaultOrigin
         }
 
-        return clampedFloaterPanelOrigin(CGPoint(x: x, y: y), size: size)
+        return CGPoint(x: x, y: y)
     }
 
     private func saveFloaterPanelOrigin(_ origin: CGPoint) {
@@ -501,27 +501,6 @@ class FloaterPanelManager {
         return CGPoint(
             x: screen.maxX - size.width - 10,
             y: screen.minY + 10
-        )
-    }
-
-    private func clampedFloaterPanelOrigin(_ origin: CGPoint, size: CGSize) -> CGPoint {
-        let candidateRect = CGRect(origin: origin, size: size)
-        let screen = NSScreen.screens.first { $0.visibleFrame.contains(candidateRect) }
-            ?? NSScreen.screens.first { $0.visibleFrame.intersects(candidateRect) }
-            ?? NSScreen.main
-        guard let screen else {
-            return origin
-        }
-
-        let frame = screen.visibleFrame
-        let minX = frame.minX
-        let maxX = max(minX, frame.maxX - size.width)
-        let minY = frame.minY
-        let maxY = max(minY, frame.maxY - size.height)
-
-        return CGPoint(
-            x: min(max(origin.x, minX), maxX),
-            y: min(max(origin.y, minY), maxY)
         )
     }
 
