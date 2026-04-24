@@ -10,7 +10,9 @@
 		0A1456C5A82A2D05D537A2C7 /* SessionMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DC372D41CBFEF2C11D2483 /* SessionMonitoring.swift */; };
 		105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440F612B0DBA815B721CCD32 /* FloatEffects.swift */; };
 		11C58FF874EFE69F055B4A8D /* FloaterVisualCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5625AC91F75B69EEFB20AC /* FloaterVisualCatalog.swift */; };
+		1A6F55355FB10EFFC90CA660 /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341B670609F29BDBE911A9EE /* SettingsComponents.swift */; };
 		1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2573557764743955144C86DA /* FloatifyPipePayload.swift */; };
+		248A79FCABE3BE09A53252C1 /* AvatarsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44CB0FFBBEF13D3CEEE99669 /* AvatarsTab.swift */; };
 		263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */; };
 		2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */; };
 		38B748E447FF06EC65D3FC02 /* dropdown_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 329A7A9B66196600C706A371 /* dropdown_entry.json */; };
@@ -25,8 +27,12 @@
 		9DE80D514179ABED111C809E /* AddStylePreset.md in Resources */ = {isa = PBXBuildFile; fileRef = 5567358A5C766E1E4D871CD3 /* AddStylePreset.md */; };
 		B30711D21D567F22226BE83C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D5384F019B036F95A28E65D7 /* Assets.xcassets */; };
 		B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */; };
+		C462EF6897B3B4B07D5F7783 /* HooksCLITab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D4CD0DAECAEC9D52BD53C6E /* HooksCLITab.swift */; };
+		C988079B4A231C5C7BE240A8 /* GeneralTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4223DFE3886C4709001771 /* GeneralTab.swift */; };
+		CB657C07E887B09F97FC68FD /* SettingsHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1ED13D783DF870540E0D22 /* SettingsHealth.swift */; };
 		CB7C73F6C9BF4FB5CFE53039 /* marquee_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = E8C725CAD9973074015DB996 /* marquee_entry.json */; };
 		D848384797D3EEC627B875C1 /* slide_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */; };
+		D9AE6E9F49DC3C5C4114703E /* AppearanceTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13DBB3FE765631F58568529 /* AppearanceTab.swift */; };
 		DEC543A6D8097FF90025D3E8 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 66EF78CC817ABB5716BC5E0D /* Lottie */; };
 		E2D967EF728278025832D30D /* exit_slide.json in Resources */ = {isa = PBXBuildFile; fileRef = C99E350187EB98B959FBA420 /* exit_slide.json */; };
 		E809983A24A30669CA13B384 /* FloatifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B356A433DF882DBFC363E0 /* FloatifyApp.swift */; };
@@ -49,9 +55,12 @@
 		2705746D8D076DE72DD5D3BE /* terminal.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = terminal.json; sourceTree = "<group>"; };
 		2C3F2B11FC7FF79DA70546B5 /* FloaterStyleCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStyleCatalog.swift; sourceTree = "<group>"; };
 		329A7A9B66196600C706A371 /* dropdown_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dropdown_entry.json; sourceTree = "<group>"; };
+		341B670609F29BDBE911A9EE /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
 		3486C751C77E07CF2BC60B50 /* trail_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trail_entry.json; sourceTree = "<group>"; };
 		3C4DF20CF43E3154D05BFEF2 /* FloaterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStatusView.swift; sourceTree = "<group>"; };
 		440F612B0DBA815B721CCD32 /* FloatEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatEffects.swift; sourceTree = "<group>"; };
+		44CB0FFBBEF13D3CEEE99669 /* AvatarsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarsTab.swift; sourceTree = "<group>"; };
+		4D4CD0DAECAEC9D52BD53C6E /* HooksCLITab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HooksCLITab.swift; sourceTree = "<group>"; };
 		4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		5567358A5C766E1E4D871CD3 /* AddStylePreset.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AddStylePreset.md; sourceTree = "<group>"; };
 		5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = slide_entry.json; sourceTree = "<group>"; };
@@ -66,9 +75,12 @@
 		B91F9957D208E97FAFD7F4C1 /* FloaterStylePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterStylePreset.swift; sourceTree = "<group>"; };
 		BA2C118AE486426AC91FA6EB /* LottieAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimator.swift; sourceTree = "<group>"; };
 		C99E350187EB98B959FBA420 /* exit_slide.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = exit_slide.json; sourceTree = "<group>"; };
+		CB1ED13D783DF870540E0D22 /* SettingsHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHealth.swift; sourceTree = "<group>"; };
+		CB4223DFE3886C4709001771 /* GeneralTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralTab.swift; sourceTree = "<group>"; };
 		D5384F019B036F95A28E65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D63DAD4239E10639F6510535 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E8C725CAD9973074015DB996 /* marquee_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = marquee_entry.json; sourceTree = "<group>"; };
+		F13DBB3FE765631F58568529 /* AppearanceTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceTab.swift; sourceTree = "<group>"; };
 		F260DB397F54633F789EA1BA /* default.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = default.json; sourceTree = "<group>"; };
 		F43808F2A57BEAB8E3F9D500 /* FloatifySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatifySettings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -91,6 +103,19 @@
 				5567358A5C766E1E4D871CD3 /* AddStylePreset.md */,
 			);
 			path = Docs;
+			sourceTree = "<group>";
+		};
+		11478CBC1FB8BD9B69FC59AB /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F13DBB3FE765631F58568529 /* AppearanceTab.swift */,
+				44CB0FFBBEF13D3CEEE99669 /* AvatarsTab.swift */,
+				CB4223DFE3886C4709001771 /* GeneralTab.swift */,
+				4D4CD0DAECAEC9D52BD53C6E /* HooksCLITab.swift */,
+				341B670609F29BDBE911A9EE /* SettingsComponents.swift */,
+				CB1ED13D783DF870540E0D22 /* SettingsHealth.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		24751368E8D0CEDBF89EFC56 /* output */ = {
@@ -190,6 +215,7 @@
 				218110A9AFFB0BD8BBBF2B8D /* SettingsView.swift */,
 				4DEFE1B73525741A71CA3DE3 /* SoundManager.swift */,
 				DF3AD548F6AE135DB258AE2A /* Resources */,
+				11478CBC1FB8BD9B69FC59AB /* Settings */,
 				F40DD075C10A84C07AD84B22 /* UI */,
 			);
 			path = Floatify;
@@ -321,6 +347,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F2C2CF84F2AF4D6427BC1600 /* AppDelegate.swift in Sources */,
+				D9AE6E9F49DC3C5C4114703E /* AppearanceTab.swift in Sources */,
+				248A79FCABE3BE09A53252C1 /* AvatarsTab.swift in Sources */,
 				105688FB95824CFE2774E209 /* FloatEffects.swift in Sources */,
 				FE981D499458D363A6BAB241 /* FloaterPanelManager.swift in Sources */,
 				F5A086420B5495DB5BD415E0 /* FloaterStatusView.swift in Sources */,
@@ -330,9 +358,13 @@
 				E809983A24A30669CA13B384 /* FloatifyApp.swift in Sources */,
 				1B9BA769D99A758F83D09AE4 /* FloatifyPipePayload.swift in Sources */,
 				B37D31FF101A12BC4EFD9A0B /* FloatifySettings.swift in Sources */,
+				C988079B4A231C5C7BE240A8 /* GeneralTab.swift in Sources */,
+				C462EF6897B3B4B07D5F7783 /* HooksCLITab.swift in Sources */,
 				F53714895F8A794904AFE214 /* IdleAnimations.swift in Sources */,
 				263A2F718AE03016809F41CC /* LottieAnimator.swift in Sources */,
 				0A1456C5A82A2D05D537A2C7 /* SessionMonitoring.swift in Sources */,
+				1A6F55355FB10EFFC90CA660 /* SettingsComponents.swift in Sources */,
+				CB657C07E887B09F97FC68FD /* SettingsHealth.swift in Sources */,
 				2A1C2ACDD55A7CABD6D9AEFB /* SettingsView.swift in Sources */,
 				4DF1E2C00D13115C9933D6A9 /* SoundManager.swift in Sources */,
 			);
