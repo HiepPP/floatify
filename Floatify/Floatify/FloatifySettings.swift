@@ -133,7 +133,7 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var persistentPanelWidth: CGFloat {
         switch self {
-        case .compact: return 188
+        case .compact: return 236
         case .regular: return 236
         case .large: return 560
         case .larger: return 660

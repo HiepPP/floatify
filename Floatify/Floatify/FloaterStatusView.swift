@@ -5414,11 +5414,7 @@ private struct FloaterPanelHeaderView: View {
     }
 
     private var chipFontSize: CGFloat {
-        14.5 * sizeScale
-    }
-
-    private var usesCondensedMetrics: Bool {
-        floaterSize == .compact
+        16 * sizeScale
     }
 
     private var showsHeaderTitle: Bool {
@@ -5426,11 +5422,11 @@ private struct FloaterPanelHeaderView: View {
     }
 
     private var chipHorizontalPadding: CGFloat {
-        (usesCondensedMetrics ? 9 : 15) * sizeScale
+        (floaterSize == .compact ? 9 : 15) * sizeScale
     }
 
     private var chipVerticalPadding: CGFloat {
-        (usesCondensedMetrics ? 6 : 10) * sizeScale
+        (floaterSize == .compact ? 6 : 10) * sizeScale
     }
 
     private var chipCornerRadius: CGFloat {
@@ -5486,7 +5482,7 @@ private struct FloaterPanelHeaderView: View {
                 if showsCPUInHeader {
                     HeaderMetricChip(
                         icon: "waveform.path.ecg",
-                        title: usesCondensedMetrics ? cpuValueText : "\(cpuValueText) CPU",
+                        title: "\(cpuValueText) CPU",
                         value: nil,
                         tint: Color(red: 0.533, green: 0.945, blue: 0.514),
                         fontSize: chipFontSize,
@@ -5594,6 +5590,11 @@ struct FloaterPanelView: View {
         return cardRadius + 10
     }
 
+    private var projectPanelVerticalInset: CGFloat {
+        let baseHeight = items.first?.floaterSize.rowHeight ?? FloaterSize.regular.rowHeight
+        return max(2, min(7, baseHeight * 0.035))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             FloaterPanelHeaderView(
@@ -5618,9 +5619,9 @@ struct FloaterPanelView: View {
                     )
                     .padding(.horizontal, max(2, shellPadding * 0.2))
                     .padding(.top, max(4, shellPadding * 0.50))
-                    .padding(.bottom, max(5, spacing * 0.75))
+                    .padding(.bottom, 0)
 
-                VStack(alignment: .leading, spacing: spacing) {
+                VStack(alignment: .leading, spacing: 0) {
                     ForEach(items) { item in
                         FloaterStatusView(
                             message: item.item.state.message,
@@ -5645,6 +5646,7 @@ struct FloaterPanelView: View {
                             shouldShake: item.shouldShake,
                             dismissController: item.dismissController
                         )
+                        .padding(.vertical, projectPanelVerticalInset)
                     }
                 }
                 .transition(
@@ -5929,24 +5931,20 @@ struct FloaterStatusView: View {
         max(floaterSize == .compact ? 7 : 8, floaterSize.cornerRadius * 0.82)
     }
 
-    private var persistentLayoutScale: CGFloat {
-        min(max(floaterSize.rowHeight / 118, 0.72), 1.42)
+    private var persistentRowCornerRadius: CGFloat {
+        isPersistent ? max(7, floaterSize.cornerRadius * 0.72) : floaterSize.cornerRadius
     }
 
-    private var persistentAvatarFrameSize: CGFloat {
-        max(floaterSize.stageSize, floaterSize.rowHeight * 0.62)
+    private var persistentRowShape: some InsettableShape {
+        RoundedRectangle(cornerRadius: persistentRowCornerRadius, style: .continuous)
     }
 
     private var persistentStageRenderSize: CGFloat {
-        min(floaterSize.persistentStageSize, persistentAvatarFrameSize)
+        floaterSize.persistentStageSize
     }
 
     private var persistentSpriteRenderSize: CGFloat {
-        min(floaterSize.persistentSpriteSize, max(22, persistentAvatarFrameSize - 6))
-    }
-
-    private var titleBeaconSize: CGFloat {
-        max(8, floaterSize.dotSize * 1.06)
+        floaterSize.persistentSpriteSize
     }
 
     private var persistentTitleFontSize: CGFloat {
@@ -5957,43 +5955,19 @@ struct FloaterStatusView: View {
         floaterSize.metaFontSize
     }
 
-    private var persistentHorizontalPadding: CGFloat {
-        switch floaterSize {
-        case .compact:
-            return 7
-        case .regular:
-            return 8
-        case .large, .larger, .superLarge:
-            break
-        }
-
-        return floaterSize.horizontalPadding
-    }
-
-    private var persistentVerticalPadding: CGFloat {
-        switch floaterSize {
-        case .compact:
-            return 4
-        case .regular:
-            return 5
-        case .large, .larger, .superLarge:
-            break
-        }
-
-        return max(10, floaterSize.rowHeight * 0.11)
-    }
-
     private var persistentBodySpacing: CGFloat {
         switch floaterSize {
         case .compact:
             return 1
         case .regular:
             return 2
-        case .large, .larger, .superLarge:
-            break
+        case .large:
+            return 12
+        case .larger:
+            return 14
+        case .superLarge:
+            return 16
         }
-
-        return floaterSize.bodySpacing
     }
 
     private var persistentLineSpacing: CGFloat {
@@ -6009,16 +5983,27 @@ struct FloaterStatusView: View {
         return max(7, floaterSize.contentSpacing * 0.50)
     }
 
-    private var usesCondensedPersistentLayout: Bool {
-        floaterSize == .compact || floaterSize == .regular
-    }
-
     private var condensedCloseButtonInset: CGFloat {
-        floaterSize == .compact ? 4 : 5
+        max(floaterSize == .compact ? 4 : 5, floaterSize.rowHeight * 0.13)
     }
 
     private var condensedTrailingReserve: CGFloat {
-        usesCondensedPersistentLayout ? floaterSize.closeButtonSize + 1 : 0
+        floaterSize.closeButtonSize + max(1, floaterSize.rowHeight * 0.05)
+    }
+
+    private var persistentBodyVerticalInset: CGFloat {
+        switch floaterSize {
+        case .compact:
+            return 3
+        case .regular:
+            return 4
+        case .large:
+            return 20
+        case .larger:
+            return 22
+        case .superLarge:
+            return 24
+        }
     }
 
     private var primaryContentColor: Color {
@@ -6036,24 +6021,6 @@ struct FloaterStatusView: View {
             return .white.opacity(0.74)
         case .light:
             return Color(red: 0.150, green: 0.188, blue: 0.282).opacity(0.76)
-        }
-    }
-
-    private var sectionDividerColor: Color {
-        switch FloaterTheme.current {
-        case .dark:
-            return .white.opacity(0.12)
-        case .light:
-            return Color.black.opacity(0.10)
-        }
-    }
-
-    private var footerDividerColor: Color {
-        switch FloaterTheme.current {
-        case .dark:
-            return .white.opacity(0.16)
-        case .light:
-            return Color.black.opacity(0.12)
         }
     }
 
@@ -6078,7 +6045,7 @@ struct FloaterStatusView: View {
             panelBackground
             persistentContent
 
-            if usesCondensedPersistentLayout, isPersistent, onClose != nil {
+            if isPersistent, onClose != nil {
                 closeButton
                     .padding(.top, condensedCloseButtonInset)
                     .padding(.trailing, condensedCloseButtonInset)
@@ -6088,10 +6055,10 @@ struct FloaterStatusView: View {
             width: floaterSize.persistentPanelWidth,
             height: floaterSize.rowHeight
         )
-        .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous))
+        .clipShape(persistentRowShape)
         .overlay(
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
-                .strokeBorder(.white.opacity(isHovering ? 0.22 : 0.12), lineWidth: 1)
+            persistentRowShape
+                .strokeBorder(.white.opacity(isHovering ? 0.24 : 0.14), lineWidth: 1)
         )
         .overlay {
             if showsFancyFloaterEffects {
@@ -6099,7 +6066,7 @@ struct FloaterStatusView: View {
                     if showsRunningSheen {
                         SlayRunningSheenView(
                             color: accentColor,
-                            cornerRadius: floaterSize.cornerRadius,
+                            cornerRadius: persistentRowCornerRadius,
                             renderMode: effectiveRenderMode,
                             effectTuning: effectTuning
                         )
@@ -6107,14 +6074,14 @@ struct FloaterStatusView: View {
 
                     if showsRainbowBorder {
                         RainbowStarPowerBorder(
-                            cornerRadius: floaterSize.cornerRadius,
+                            cornerRadius: persistentRowCornerRadius,
                             intensity: 0.55
                         )
                     }
 
                     SlayCompletionFlashView(
                         color: accentColor,
-                        cornerRadius: floaterSize.cornerRadius,
+                        cornerRadius: persistentRowCornerRadius,
                         renderMode: effectiveRenderMode,
                         effectTuning: effectTuning,
                         trigger: panelVictoryFlashTrigger
@@ -6122,18 +6089,18 @@ struct FloaterStatusView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .compositingGroup()
-                .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous))
+                .clipShape(persistentRowShape)
             }
         }
         .shadow(
-            color: cardTheme.shadow.opacity(isHovering ? 0.42 : 0.30),
-            radius: isHovering ? floaterSize.cardShadowRadius + 4 : floaterSize.cardShadowRadius,
+            color: cardTheme.shadow.opacity(isPersistent ? 0 : (isHovering ? 0.42 : 0.30)),
+            radius: isPersistent ? 0 : (isHovering ? floaterSize.cardShadowRadius + 4 : floaterSize.cardShadowRadius),
             x: 0,
             y: isHovering ? 10 : 6
         )
         .shadow(
-            color: accentColor.opacity(isRunning ? 0.12 : 0.05),
-            radius: isRunning ? 12 : 6,
+            color: accentColor.opacity(isPersistent ? 0 : (isRunning ? 0.12 : 0.05)),
+            radius: isPersistent ? 0 : (isRunning ? 12 : 6),
             x: 0,
             y: 2
         )
@@ -6166,7 +6133,7 @@ struct FloaterStatusView: View {
     private var panelBackground: some View {
         ZStack {
             if usesMinimalRenderMode {
-                RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+                persistentRowShape
                     .fill(
                         LinearGradient(
                             colors: [
@@ -6184,7 +6151,7 @@ struct FloaterStatusView: View {
                 if showsPowerLEDStrip {
                     AnimatedPowerLEDStrip(
                         accentColor: accentColor,
-                        cornerRadius: floaterSize.cornerRadius
+                        cornerRadius: persistentRowCornerRadius
                     )
                 }
             }
@@ -6221,16 +6188,6 @@ struct FloaterStatusView: View {
     private var persistentBody: some View {
         VStack(alignment: .leading, spacing: persistentBodySpacing) {
             HStack(spacing: persistentLineSpacing) {
-                ZStack {
-                    Circle()
-                        .fill(accentColor.opacity(0.16))
-                        .frame(width: titleBeaconSize * 1.6, height: titleBeaconSize * 1.6)
-
-                    Circle()
-                        .fill(accentColor)
-                        .frame(width: titleBeaconSize, height: titleBeaconSize)
-                }
-
                 Text(projectName)
                     .font(.system(size: persistentTitleFontSize, weight: .heavy, design: .rounded))
                     .foregroundStyle(primaryContentColor)
@@ -6241,21 +6198,14 @@ struct FloaterStatusView: View {
                     .help(projectName)
 
                 Spacer(minLength: 4)
-
-                if !usesCondensedPersistentLayout, isPersistent, onClose != nil {
-                    closeButton
-                }
             }
 
             if hasFooterContent {
-                Spacer(minLength: usesCondensedPersistentLayout ? 2 : 0)
-                if !usesCondensedPersistentLayout {
-                    persistentSectionDivider
-                }
                 persistentFooterLine
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.vertical, persistentBodyVerticalInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var fileChangeLabel: some View {
@@ -6268,13 +6218,6 @@ struct FloaterStatusView: View {
                 .monospacedDigit()
                 .lineLimit(1)
         }
-    }
-
-    private var persistentSectionDivider: some View {
-        Rectangle()
-            .fill(sectionDividerColor)
-            .frame(height: 1)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -6305,15 +6248,15 @@ struct FloaterStatusView: View {
                 RoundedRectangle(cornerRadius: avatarCornerRadius * 0.8, style: .continuous)
                     .fill(accentColor.opacity(0.22))
                     .frame(
-                        width: floaterSize.persistentStageSize * 0.60,
-                        height: floaterSize.persistentStageSize * 0.60
+                        width: persistentStageRenderSize * 0.60,
+                        height: persistentStageRenderSize * 0.60
                     )
 
                 Circle()
                     .fill(accentColor)
                     .frame(
-                        width: max(floaterSize.dotSize * 2.0, floaterSize.persistentStageSize * 0.24),
-                        height: max(floaterSize.dotSize * 2.0, floaterSize.persistentStageSize * 0.24)
+                        width: max(floaterSize.dotSize * 2.0, persistentStageRenderSize * 0.24),
+                        height: max(floaterSize.dotSize * 2.0, persistentStageRenderSize * 0.24)
                     )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -6321,8 +6264,8 @@ struct FloaterStatusView: View {
             SlaySpriteStageView(
                 avatar: avatar,
                 statusColor: accentColor,
-                stageSize: floaterSize.persistentStageSize,
-                spriteSize: floaterSize.persistentSpriteSize,
+                stageSize: persistentStageRenderSize,
+                spriteSize: persistentSpriteRenderSize,
                 renderMode: effectiveRenderMode,
                 effectTuning: effectTuning,
                 isAnimating: animatesPersistentStatus,
@@ -6339,7 +6282,7 @@ struct FloaterStatusView: View {
     @ViewBuilder
     private var panelBackgroundStaticLayers: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+            persistentRowShape
                 .fill(
                     LinearGradient(
                         colors: [
@@ -6352,7 +6295,7 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+            persistentRowShape
                 .fill(
                     LinearGradient(
                         colors: [
@@ -6365,7 +6308,7 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+            persistentRowShape
                 .fill(
                     RadialGradient(
                         colors: [
@@ -6378,7 +6321,7 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+            persistentRowShape
                 .fill(
                     LinearGradient(
                         colors: [
@@ -6390,10 +6333,10 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius, style: .continuous)
+            persistentRowShape
                 .strokeBorder(cardTheme.border.opacity(0.90), lineWidth: 1.2)
 
-            RoundedRectangle(cornerRadius: floaterSize.cornerRadius - 2, style: .continuous)
+            RoundedRectangle(cornerRadius: max(0, persistentRowCornerRadius - 2), style: .continuous)
                 .inset(by: 2)
                 .stroke(.white.opacity(0.12), lineWidth: 0.7)
         }
@@ -6413,7 +6356,7 @@ struct FloaterStatusView: View {
     @ViewBuilder
     private var persistentAvatarBackgroundStaticLayers: some View {
         ZStack {
-            Rectangle()
+            avatarBackgroundShape
                 .fill(
                     LinearGradient(
                         colors: [
@@ -6425,7 +6368,7 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            Rectangle()
+            avatarBackgroundShape
                 .fill(
                     LinearGradient(
                         colors: [
@@ -6438,7 +6381,7 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            Rectangle()
+            avatarBackgroundShape
                 .fill(
                     RadialGradient(
                         colors: [
@@ -6451,31 +6394,35 @@ struct FloaterStatusView: View {
                     )
                 )
 
-            Rectangle()
+            avatarBackgroundShape
                 .strokeBorder(cardTheme.border.opacity(0.70), lineWidth: 1.1)
 
-            Rectangle()
+            avatarBackgroundShape
                 .inset(by: 3)
                 .stroke(.white.opacity(0.14), lineWidth: 0.7)
         }
     }
 
+    private var avatarBackgroundShape: some InsettableShape {
+        RoundedRectangle(cornerRadius: 0, style: .continuous)
+    }
+
     private var closeButton: some View {
         Button(action: { onClose?() }) {
             Image(systemName: "xmark")
-                .font(.system(size: max(6, floaterSize.metaFontSize - 1), weight: .black))
+                .font(.system(size: isPersistent ? max(8, floaterSize.closeButtonSize * 0.68) : max(6, floaterSize.metaFontSize - 1), weight: .black))
                 .foregroundStyle(.white.opacity(0.96))
                 .frame(width: floaterSize.closeButtonSize, height: floaterSize.closeButtonSize)
                 .background(
                     Circle()
                         .fill(
                             Color(red: 0.082, green: 0.118, blue: 0.242)
-                                .opacity(isCloseHovering ? 0.96 : 0.90)
+                                .opacity(isPersistent ? (isCloseHovering ? 0.18 : 0.0) : (isCloseHovering ? 0.96 : 0.90))
                         )
                 )
                 .overlay(
                     Circle()
-                        .strokeBorder(cardTheme.border.opacity(isCloseHovering ? 0.56 : 0.34), lineWidth: 1)
+                        .strokeBorder(cardTheme.border.opacity(isPersistent ? 0 : (isCloseHovering ? 0.56 : 0.34)), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
