@@ -75,9 +75,6 @@ struct FloaterPanelItem: Identifiable {
     let stylePreset: FloaterStylePreset
     let floaterSize: FloaterSize
     let renderMode: FloaterRenderMode
-    let runningPanelCount: Int
-    let runningPanelIndex: Int?
-
     var id: String { item.id }
 }
 
@@ -177,10 +174,6 @@ class FloaterPanelManager {
             return
         }
 
-        let runningIDs = items
-            .filter { $0.state == .running }
-            .map(\.id)
-        let runningIndexByID = Dictionary(uniqueKeysWithValues: runningIDs.enumerated().map { ($0.element, $0.offset) })
         let stylePreset = styleCatalog.resolvedPreset(id: settings.selectedFloaterStyleID)
 
         let floaterItems = items.map { item in
@@ -195,9 +188,7 @@ class FloaterPanelManager {
                 effectPreset: style.effectPreset,
                 stylePreset: stylePreset,
                 floaterSize: floaterSize,
-                renderMode: settings.floaterRenderMode,
-                runningPanelCount: runningIDs.count,
-                runningPanelIndex: runningIndexByID[item.id]
+                renderMode: settings.floaterRenderMode
             )
         }
 

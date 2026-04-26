@@ -5658,8 +5658,6 @@ struct FloaterPanelView: View {
                             renderMode: item.renderMode,
                             effectPreset: item.effectPreset,
                             stylePreset: item.stylePreset,
-                            runningPanelCount: item.runningPanelCount,
-                            runningPanelIndex: item.runningPanelIndex,
                             lastActivity: item.item.lastActivity,
                             modifiedFilesCount: item.item.modifiedFilesCount,
                             shouldShake: item.shouldShake,
@@ -5707,8 +5705,6 @@ struct FloaterStatusView: View {
     var renderMode: FloaterRenderMode = .slay
     var effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0]
     var stylePreset: FloaterStylePreset = .defaultPreset
-    var runningPanelCount: Int = 0
-    var runningPanelIndex: Int?
     var isCompact: Bool = false
     var lastActivity: Date?
     var modifiedFilesCount: Int = 0
@@ -5743,8 +5739,6 @@ struct FloaterStatusView: View {
         renderMode: FloaterRenderMode = .slay,
         effectPreset: FloaterEffectPreset = FloaterEffectPreset.builtInPresets[0],
         stylePreset: FloaterStylePreset = .defaultPreset,
-        runningPanelCount: Int = 0,
-        runningPanelIndex: Int? = nil,
         isCompact: Bool = false,
         lastActivity: Date? = nil,
         modifiedFilesCount: Int = 0,
@@ -5768,8 +5762,6 @@ struct FloaterStatusView: View {
         self.renderMode = renderMode
         self.effectPreset = effectPreset
         self.stylePreset = stylePreset
-        self.runningPanelCount = runningPanelCount
-        self.runningPanelIndex = runningPanelIndex
         self.isCompact = isCompact || floaterSize == .compact
         self.lastActivity = lastActivity
         self.modifiedFilesCount = modifiedFilesCount
@@ -5781,13 +5773,6 @@ struct FloaterStatusView: View {
         _completionTrigger = State(initialValue: nil)
         _lastObservedStatusState = State(initialValue: statusState)
         _panelVictoryFlashTrigger = State(initialValue: nil)
-    }
-
-    private enum RunningEffectBudget {
-        case focus
-        case standard
-        case reduced
-        case minimal
     }
 
     private var effectiveSound: String? {
@@ -5810,35 +5795,8 @@ struct FloaterStatusView: View {
         statusState?.isProgressState == true
     }
 
-    private var runningEffectBudget: RunningEffectBudget {
-        guard isRunning else { return .focus }
-
-        let count = runningPanelCount
-        let index = runningPanelIndex ?? 0
-
-        switch count {
-        case 0...1:
-            return .focus
-        case 2:
-            return index == 0 ? .standard : .minimal
-        case 3...4:
-            return index == 0 ? .reduced : .minimal
-        default:
-            return .minimal
-        }
-    }
-
     private var effectiveRenderMode: FloaterRenderMode {
-        guard isRunning else { return renderMode }
-
-        switch runningEffectBudget {
-        case .focus:
-            return renderMode
-        case .standard:
-            return renderMode == .superSlay ? .slay : renderMode
-        case .reduced, .minimal:
-            return .lame
-        }
+        renderMode
     }
 
     private var accentColor: Color {
