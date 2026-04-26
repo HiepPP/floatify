@@ -182,6 +182,7 @@ final class FloatifySettings {
         static let floaterSize = "FloaterSize"
         static let floaterTheme = "FloaterTheme"
         static let floaterRenderMode = "FloaterRenderMode"
+        static let limitRunningRenderEffects = "LimitRunningRenderEffects"
         static let floaterHeaderCPUDisplay = "FloaterHeaderCPUDisplay"
         static let selectedFloaterStyleID = "SelectedFloaterStyleID"
         static let selectedVisualPackID = "SelectedVisualPackID"
@@ -208,6 +209,12 @@ final class FloatifySettings {
     var floaterRenderMode: FloaterRenderMode {
         didSet {
             defaults.set(floaterRenderMode.rawValue, forKey: Key.floaterRenderMode)
+        }
+    }
+
+    var limitRunningRenderEffects: Bool {
+        didSet {
+            defaults.set(limitRunningRenderEffects, forKey: Key.limitRunningRenderEffects)
         }
     }
 
@@ -262,6 +269,7 @@ final class FloatifySettings {
         self.floaterTheme = FloaterTheme(rawValue: defaults.string(forKey: Key.floaterTheme) ?? FloaterTheme.dark.rawValue) ?? .dark
         self.floaterSize = FloaterSize(rawValue: defaults.string(forKey: Key.floaterSize) ?? FloaterSize.regular.rawValue) ?? .regular
         self.floaterRenderMode = FloaterRenderMode(rawValue: defaults.string(forKey: Key.floaterRenderMode) ?? FloaterRenderMode.slay.rawValue) ?? .slay
+        self.limitRunningRenderEffects = defaults.object(forKey: Key.limitRunningRenderEffects) as? Bool ?? true
         self.floaterHeaderCPUDisplay = FloaterHeaderCPUDisplay(rawValue: defaults.string(forKey: Key.floaterHeaderCPUDisplay) ?? FloaterHeaderCPUDisplay.off.rawValue) ?? .off
         self.selectedFloaterStyleID = defaults.string(forKey: Key.selectedFloaterStyleID) ?? FloaterStyleConstants.defaultStyleID
         self.selectedVisualPackID = defaults.string(forKey: Key.selectedVisualPackID) ?? FloaterVisualConstants.builtInPackID

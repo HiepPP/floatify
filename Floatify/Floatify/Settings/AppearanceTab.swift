@@ -71,6 +71,8 @@ struct AppearanceTab: View {
                             }
                         }
                         .pickerStyle(.segmented)
+
+                        Toggle("Limit running effects when many floaters are active", isOn: $settings.limitRunningRenderEffects)
                     } header: {
                         SectionHeader("Render Mode")
                     } footer: {
