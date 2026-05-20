@@ -67,10 +67,27 @@ struct PersistentStatusItem: Identifiable {
 struct PersistentStatusStateResolver {
     static func rawState(
         storedState: ClaudeStatusState?,
+        storedActivity: Date? = nil,
         monitoredState: ClaudeStatusState,
+        monitoredActivity: Date? = nil,
         isTaskStateKnown: Bool
     ) -> ClaudeStatusState {
         if isTaskStateKnown {
+            if let storedState,
+               let storedActivity,
+               let monitoredActivity,
+               (storedState == .running || monitoredState == .running) {
+                return storedActivity >= monitoredActivity ? storedState : monitoredState
+            }
+
+            if monitoredState == .running {
+                return .running
+            }
+
+            if storedState == .running {
+                return .running
+            }
+
             return monitoredState
         }
 

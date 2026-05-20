@@ -109,7 +109,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = statusItemsByID[session.id]
         let rawState = PersistentStatusStateResolver.rawState(
             storedState: item?.state,
+            storedActivity: item?.lastActivity,
             monitoredState: fallbackState(for: session),
+            monitoredActivity: session.lastActivity,
             isTaskStateKnown: session.isTaskStateKnown
         )
 
@@ -134,7 +136,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         return PersistentStatusStateResolver.rawState(
             storedState: statusItemsByID[item.id]?.state,
+            storedActivity: statusItemsByID[item.id]?.lastActivity,
             monitoredState: fallbackState(for: session),
+            monitoredActivity: session.lastActivity,
             isTaskStateKnown: session.isTaskStateKnown
         )
     }

@@ -49,4 +49,64 @@ final class StatusAcknowledgementTests: XCTestCase {
 
         XCTAssertEqual(resolvedState, .running)
     }
+
+    func testNewerStoredRunningStateOverridesStaleMonitoredCompleteState() {
+        let storedActivity = Date(timeIntervalSinceReferenceDate: 20)
+        let monitoredActivity = Date(timeIntervalSinceReferenceDate: 10)
+
+        let resolvedState = PersistentStatusStateResolver.rawState(
+            storedState: .running,
+            storedActivity: storedActivity,
+            monitoredState: .complete,
+            monitoredActivity: monitoredActivity,
+            isTaskStateKnown: true
+        )
+
+        XCTAssertEqual(resolvedState, .running)
+    }
+
+    func testNewerStoredRunningStateOverridesStaleMonitoredIdleState() {
+        let storedActivity = Date(timeIntervalSinceReferenceDate: 20)
+        let monitoredActivity = Date(timeIntervalSinceReferenceDate: 10)
+
+        let resolvedState = PersistentStatusStateResolver.rawState(
+            storedState: .running,
+            storedActivity: storedActivity,
+            monitoredState: .idle,
+            monitoredActivity: monitoredActivity,
+            isTaskStateKnown: true
+        )
+
+        XCTAssertEqual(resolvedState, .running)
+    }
+
+    func testNewerMonitoredCompleteStateOverridesOlderStoredRunningState() {
+        let storedActivity = Date(timeIntervalSinceReferenceDate: 10)
+        let monitoredActivity = Date(timeIntervalSinceReferenceDate: 20)
+
+        let resolvedState = PersistentStatusStateResolver.rawState(
+            storedState: .running,
+            storedActivity: storedActivity,
+            monitoredState: .complete,
+            monitoredActivity: monitoredActivity,
+            isTaskStateKnown: true
+        )
+
+        XCTAssertEqual(resolvedState, .complete)
+    }
+
+    func testNewerStoredCompleteStateOverridesStaleMonitoredRunningState() {
+        let storedActivity = Date(timeIntervalSinceReferenceDate: 20)
+        let monitoredActivity = Date(timeIntervalSinceReferenceDate: 10)
+
+        let resolvedState = PersistentStatusStateResolver.rawState(
+            storedState: .complete,
+            storedActivity: storedActivity,
+            monitoredState: .running,
+            monitoredActivity: monitoredActivity,
+            isTaskStateKnown: true
+        )
+
+        XCTAssertEqual(resolvedState, .complete)
+    }
 }
