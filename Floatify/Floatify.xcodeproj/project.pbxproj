@@ -32,6 +32,7 @@
 		CB657C07E887B09F97FC68FD /* SettingsHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1ED13D783DF870540E0D22 /* SettingsHealth.swift */; };
 		CB7C73F6C9BF4FB5CFE53039 /* marquee_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = E8C725CAD9973074015DB996 /* marquee_entry.json */; };
 		D848384797D3EEC627B875C1 /* slide_entry.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */; };
+		D95C518DBFE0CDA55FE6F092 /* StatusAcknowledgementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77409DE690DECA2EFF7560D2 /* StatusAcknowledgementTests.swift */; };
 		D9AE6E9F49DC3C5C4114703E /* AppearanceTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13DBB3FE765631F58568529 /* AppearanceTab.swift */; };
 		DEC543A6D8097FF90025D3E8 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 66EF78CC817ABB5716BC5E0D /* Lottie */; };
 		E2D967EF728278025832D30D /* exit_slide.json in Resources */ = {isa = PBXBuildFile; fileRef = C99E350187EB98B959FBA420 /* exit_slide.json */; };
@@ -43,6 +44,16 @@
 		F6CCF2164687869393B36160 /* exit_fade.json in Resources */ = {isa = PBXBuildFile; fileRef = 14CB93C3AFE94711410CCED7 /* exit_fade.json */; };
 		FE981D499458D363A6BAB241 /* FloaterPanelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698839FB1C9995D8556AE4B2 /* FloaterPanelManager.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		954DAA01A2EC33107CD03EC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BAB3750650B0459D07BE79ED /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8679BC14733EB04B5108C057;
+			remoteInfo = Floatify;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		04830C59EC2F08805CED8332 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -66,6 +77,7 @@
 		5D29D6C3831BDAEAA6A57F50 /* slide_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = slide_entry.json; sourceTree = "<group>"; };
 		696097BA1731283FE8A7584F /* Floatify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Floatify.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		698839FB1C9995D8556AE4B2 /* FloaterPanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterPanelManager.swift; sourceTree = "<group>"; };
+		77409DE690DECA2EFF7560D2 /* StatusAcknowledgementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusAcknowledgementTests.swift; sourceTree = "<group>"; };
 		7D0CFF7F45B818C87EFDF510 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		889D2E95327A399171312B59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		892D7A3BE27C74A86726CD5D /* IdleAnimations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleAnimations.swift; sourceTree = "<group>"; };
@@ -79,6 +91,7 @@
 		CB4223DFE3886C4709001771 /* GeneralTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralTab.swift; sourceTree = "<group>"; };
 		D5384F019B036F95A28E65D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D63DAD4239E10639F6510535 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D740F3CE88FC4880DC1487E5 /* FloatifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FloatifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E8C725CAD9973074015DB996 /* marquee_entry.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = marquee_entry.json; sourceTree = "<group>"; };
 		F13DBB3FE765631F58568529 /* AppearanceTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceTab.swift; sourceTree = "<group>"; };
 		F260DB397F54633F789EA1BA /* default.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = default.json; sourceTree = "<group>"; };
@@ -132,6 +145,7 @@
 			children = (
 				B0FB1358410034C55CF7BF79 /* floatify */,
 				696097BA1731283FE8A7584F /* Floatify.app */,
+				D740F3CE88FC4880DC1487E5 /* FloatifyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -155,11 +169,20 @@
 			path = Floatify/cli;
 			sourceTree = "<group>";
 		};
+		6BE8CD48BA45745DE8BFC8C9 /* FloatifyTests */ = {
+			isa = PBXGroup;
+			children = (
+				77409DE690DECA2EFF7560D2 /* StatusAcknowledgementTests.swift */,
+			);
+			path = FloatifyTests;
+			sourceTree = "<group>";
+		};
 		751DFE3A98D80BAF157667D1 = {
 			isa = PBXGroup;
 			children = (
 				688110CEE6DF412BC5AC24C6 /* cli */,
 				A3A235D9D57C050153F3037B /* Floatify */,
+				6BE8CD48BA45745DE8BFC8C9 /* FloatifyTests */,
 				24751368E8D0CEDBF89EFC56 /* output */,
 				37A2BBC9F04EC4B583915000 /* Products */,
 			);
@@ -242,6 +265,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		672092C87A3C2EE188AAB696 /* FloatifyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 36519DCA3E5271024246FA87 /* Build configuration list for PBXNativeTarget "FloatifyTests" */;
+			buildPhases = (
+				2B068C754CD095FFB51E2E2C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B5D2D78BAE51949CE3AD570F /* PBXTargetDependency */,
+			);
+			name = FloatifyTests;
+			packageProductDependencies = (
+			);
+			productName = FloatifyTests;
+			productReference = D740F3CE88FC4880DC1487E5 /* FloatifyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		7ADCF5B42B329578AE70968F /* floatify */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4A6165BB599144AFF6FDF76C /* Build configuration list for PBXNativeTarget "floatify" */;
@@ -288,6 +329,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
+					672092C87A3C2EE188AAB696 = {
+						ProvisioningStyle = Automatic;
+					};
 					7ADCF5B42B329578AE70968F = {
 						ProvisioningStyle = Automatic;
 					};
@@ -314,6 +358,7 @@
 			projectRoot = "";
 			targets = (
 				8679BC14733EB04B5108C057 /* Floatify */,
+				672092C87A3C2EE188AAB696 /* FloatifyTests */,
 				7ADCF5B42B329578AE70968F /* floatify */,
 			);
 		};
@@ -342,6 +387,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2B068C754CD095FFB51E2E2C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D95C518DBFE0CDA55FE6F092 /* StatusAcknowledgementTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2FD410FA59565145EC6878AF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -379,6 +432,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B5D2D78BAE51949CE3AD570F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8679BC14733EB04B5108C057 /* Floatify */;
+			targetProxy = 954DAA01A2EC33107CD03EC0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		212B8B6356CB67B45943EF8B /* Release */ = {
@@ -541,6 +602,24 @@
 			};
 			name = Debug;
 		};
+		7434932BE68AE53ED8979871 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.floatify.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Floatify.app/Contents/MacOS/Floatify";
+			};
+			name = Debug;
+		};
 		DE4A0F263245B89429E2CEB6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -554,6 +633,24 @@
 			};
 			name = Release;
 		};
+		E24D7E9717768A77052230A1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.floatify.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Floatify.app/Contents/MacOS/Floatify";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -562,6 +659,15 @@
 			buildConfigurations = (
 				71D8A515F8B1B72E0619B4AB /* Debug */,
 				212B8B6356CB67B45943EF8B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		36519DCA3E5271024246FA87 /* Build configuration list for PBXNativeTarget "FloatifyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7434932BE68AE53ED8979871 /* Debug */,
+				E24D7E9717768A77052230A1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

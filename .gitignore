@@ -1,5 +1,6 @@
 .gitnexus
 .remember
+*.profraw
 node_modules/
 website/dist/
 website/.astro/

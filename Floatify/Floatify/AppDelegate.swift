@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var codexSessionsByID: [String: SessionDescriptor] = [:]
     private var statusItemsByID: [String: PersistentStatusItem] = [:]
     private var standaloneStatusItemIDs: Set<String> = []
-    private var idleTransitionTimers: [String: Timer] = [:]
+    private var completionAcknowledgementTracker = CompletionAcknowledgementTracker()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if ProcessInfo.processInfo.environment["FLOATIFY_PREBUILD_EFFECTS"] == "1" {
@@ -45,7 +45,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         claudeSessionMonitor.stop()
         codexActivityMonitor.stop()
-        idleTransitionTimers.values.forEach { $0.invalidate() }
     }
 
     private func setupPersistentStatusFloater() {
@@ -71,23 +70,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pruneInactiveStatuses(activeIDs: Set(sessionsByID.keys))
 
         var items = sessionsByID.values.map { session in
-            let item = statusItemsByID[session.id]
-            return PersistentStatusItem(
-                id: session.id,
-                project: session.project,
-                projectPath: session.projectPath,
-                state: item?.state ?? fallbackState(for: session),
-                lastActivity: item?.lastActivity ?? session.lastActivity,
-                modifiedFilesCount: session.modifiedFilesCount
-            )
+            visibleStatusItem(rawStatusItem(for: session))
         }
         items.append(
             contentsOf: statusItemsByID.values.filter {
                 standaloneStatusItemIDs.contains($0.id) && sessionsByID[$0.id] == nil
-            }
+            }.map(visibleStatusItem(_:))
         )
 
-        FloaterPanelManager.shared.showPersistentStatuses(items)
+        FloaterPanelManager.shared.showPersistentStatuses(
+            items,
+            onItemAvatarTap: { [weak self] item in
+                self?.acknowledgeCompletionIfFinished(for: item)
+            }
+        )
+    }
+
+    private func visibleStatusItem(_ item: PersistentStatusItem) -> PersistentStatusItem {
+        PersistentStatusItem(
+            id: item.id,
+            project: item.project,
+            projectPath: item.projectPath,
+            state: completionAcknowledgementTracker.visibleState(for: item.state, sessionID: item.id),
+            lastActivity: item.lastActivity,
+            modifiedFilesCount: item.modifiedFilesCount
+        )
+    }
+
+    private func acknowledgeCompletionIfFinished(for item: PersistentStatusItem) {
+        let rawState = resolvedRawState(for: item)
+        guard rawState != .running else { return }
+
+        completionAcknowledgementTracker.acknowledge(sessionID: item.id)
+        refreshPersistentStatuses()
+    }
+
+    private func rawStatusItem(for session: SessionDescriptor) -> PersistentStatusItem {
+        let item = statusItemsByID[session.id]
+        let rawState = PersistentStatusStateResolver.rawState(
+            storedState: item?.state,
+            monitoredState: fallbackState(for: session),
+            isTaskStateKnown: session.isTaskStateKnown
+        )
+
+        if rawState == .running {
+            completionAcknowledgementTracker.markRunning(sessionID: session.id)
+        }
+
+        return PersistentStatusItem(
+            id: session.id,
+            project: session.project,
+            projectPath: session.projectPath,
+            state: rawState,
+            lastActivity: item?.lastActivity ?? session.lastActivity,
+            modifiedFilesCount: session.modifiedFilesCount
+        )
+    }
+
+    private func resolvedRawState(for item: PersistentStatusItem) -> ClaudeStatusState {
+        guard let session = monitoredSession(for: item.id) else {
+            return statusItemsByID[item.id]?.state ?? item.state
+        }
+
+        return PersistentStatusStateResolver.rawState(
+            storedState: statusItemsByID[item.id]?.state,
+            monitoredState: fallbackState(for: session),
+            isTaskStateKnown: session.isTaskStateKnown
+        )
     }
 
     private func activeSessionsByID() -> [String: SessionDescriptor] {
@@ -95,18 +144,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func pruneInactiveStatuses(activeIDs: Set<String>) {
-        for (sessionID, timer) in idleTransitionTimers
-            where !activeIDs.contains(sessionID) && !standaloneStatusItemIDs.contains(sessionID) {
-            timer.invalidate()
-        }
-
-        idleTransitionTimers = idleTransitionTimers.filter {
-            activeIDs.contains($0.key) || standaloneStatusItemIDs.contains($0.key)
-        }
         statusItemsByID = statusItemsByID.filter {
             activeIDs.contains($0.key) || standaloneStatusItemIDs.contains($0.key)
         }
         standaloneStatusItemIDs.formIntersection(statusItemsByID.keys)
+        completionAcknowledgementTracker.prune(activeIDs: activeIDs.union(standaloneStatusItemIDs))
     }
 
     private func monitoredSession(for sessionID: String) -> SessionDescriptor? {
@@ -212,40 +254,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sessionID = payload.statusSessionID
         let now = Date()
 
-        idleTransitionTimers[sessionID]?.invalidate()
-        idleTransitionTimers.removeValue(forKey: sessionID)
+        if state == .running {
+            completionAcknowledgementTracker.markRunning(sessionID: sessionID)
+        } else {
+            completionAcknowledgementTracker.markCompleted(sessionID: sessionID)
+        }
+
         if payload.session == nil && monitoredSession(for: sessionID) == nil {
             standaloneStatusItemIDs.insert(sessionID)
         } else {
             standaloneStatusItemIDs.remove(sessionID)
         }
 
-        let displayState: ClaudeStatusState = state == .complete ? .idle : state
         statusItemsByID[sessionID] = makeStatusItem(
             sessionID: sessionID,
             project: payload.statusProject,
             projectPath: payload.normalizedProjectPath,
-            state: displayState,
+            state: state,
             lastActivity: now
         )
         refreshPersistentStatuses()
-
-        guard state == .idle || state == .complete else { return }
-
-        idleTransitionTimers[sessionID] = Timer.scheduledTimer(withTimeInterval: settings.idleTimeoutSeconds, repeats: false) { [weak self] _ in
-            guard let self, let currentItem = self.statusItemsByID[sessionID] else { return }
-
-            self.statusItemsByID[sessionID] = PersistentStatusItem(
-                id: currentItem.id,
-                project: currentItem.project,
-                projectPath: self.monitoredSession(for: sessionID)?.projectPath ?? currentItem.projectPath,
-                state: .complete,
-                lastActivity: currentItem.lastActivity,
-                modifiedFilesCount: self.monitoredSession(for: sessionID)?.modifiedFilesCount ?? currentItem.modifiedFilesCount
-            )
-            self.idleTransitionTimers.removeValue(forKey: sessionID)
-            self.refreshPersistentStatuses()
-        }
     }
 
     private func claudeStatusState(from rawValue: String) -> ClaudeStatusState? {

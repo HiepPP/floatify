@@ -64,6 +64,49 @@ struct PersistentStatusItem: Identifiable {
     let modifiedFilesCount: Int
 }
 
+struct PersistentStatusStateResolver {
+    static func rawState(
+        storedState: ClaudeStatusState?,
+        monitoredState: ClaudeStatusState,
+        isTaskStateKnown: Bool
+    ) -> ClaudeStatusState {
+        if isTaskStateKnown {
+            return monitoredState
+        }
+
+        return storedState ?? monitoredState
+    }
+}
+
+struct CompletionAcknowledgementTracker {
+    private var acknowledgedCompletionIDs: Set<String> = []
+
+    mutating func markRunning(sessionID: String) {
+        acknowledgedCompletionIDs.remove(sessionID)
+    }
+
+    mutating func markCompleted(sessionID: String) {
+        acknowledgedCompletionIDs.remove(sessionID)
+    }
+
+    mutating func acknowledge(sessionID: String) {
+        acknowledgedCompletionIDs.insert(sessionID)
+    }
+
+    mutating func prune(activeIDs: Set<String>) {
+        acknowledgedCompletionIDs.formIntersection(activeIDs)
+    }
+
+    func visibleState(for state: ClaudeStatusState, sessionID: String) -> ClaudeStatusState {
+        switch state {
+        case .running:
+            return .running
+        case .idle, .complete:
+            return acknowledgedCompletionIDs.contains(sessionID) ? .complete : .idle
+        }
+    }
+}
+
 struct FloaterPanelItem: Identifiable {
     let item: PersistentStatusItem
     let dismissController: DismissController
@@ -103,6 +146,7 @@ class FloaterPanelManager {
     private var floaterDismissControllers: [String: DismissController] = [:]
     private var hiddenStatusPanelIDs: Set<String> = []
     private var closingStatusPanelIDs: Set<String> = []
+    private var onItemAvatarTap: ((PersistentStatusItem) -> Void)?
     private let floaterPanelSpacing: CGFloat = 6
     private let floaterPanelOriginKey = "FloaterPanelOrigin"
     private let floaterPanelCollapsedKey = "FloaterPanelCollapsed"
@@ -127,8 +171,12 @@ class FloaterPanelManager {
         }
     }
 
-    func showPersistentStatuses(_ items: [PersistentStatusItem]) {
+    func showPersistentStatuses(
+        _ items: [PersistentStatusItem],
+        onItemAvatarTap: ((PersistentStatusItem) -> Void)? = nil
+    ) {
         DispatchQueue.main.async {
+            self.onItemAvatarTap = onItemAvatarTap
             let activeIDs = Set(items.map(\.id))
             self.hiddenStatusPanelIDs.formIntersection(activeIDs)
             self.closingStatusPanelIDs.formIntersection(activeIDs)
@@ -171,7 +219,11 @@ class FloaterPanelManager {
         return lhs.project.localizedCaseInsensitiveCompare(rhs.project) == .orderedAscending
     }
 
-    private func refreshFloaterPanel(animatedItemIDs: Set<String> = [], shakingItemIDs: Set<String> = [], animated: Bool = false) {
+    private func refreshFloaterPanel(
+        animatedItemIDs: Set<String> = [],
+        shakingItemIDs: Set<String> = [],
+        animated: Bool = false
+    ) {
         let items = currentStatusItemsByID.values.sorted(by: Self.sortPersistentItems(_:_:))
         guard !items.isEmpty else {
             removeFloaterPanel()
@@ -203,7 +255,10 @@ class FloaterPanelManager {
             )
         }
 
-        let hostingView = makeFloaterPanelHostingView(items: floaterItems, stylePreset: stylePreset)
+        let hostingView = makeFloaterPanelHostingView(
+            items: floaterItems,
+            stylePreset: stylePreset
+        )
         let size = fittingPanelSize(for: hostingView)
 
         if let panel = floaterPanel {
@@ -241,6 +296,7 @@ class FloaterPanelManager {
                 FloatifySettingsWindowPresenter.shared.show()
             },
             onItemTap: { [weak self] item in
+                self?.onItemAvatarTap?(item)
                 self?.openProjectInVSCode(for: item)
             },
             onItemClose: { [weak self] item in

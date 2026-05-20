@@ -58,3 +58,18 @@ targets:
         CODE_SIGN_STYLE: Automatic
         SKIP_INSTALL: YES
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+
+  FloatifyTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: FloatifyTests
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.floatify.tests
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Floatify
