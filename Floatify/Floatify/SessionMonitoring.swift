@@ -161,6 +161,16 @@ private func projectName(for path: String) -> String {
     return name.isEmpty ? path : name
 }
 
+private func isClaudeSessionCommand(_ command: String) -> Bool {
+    if command.hasPrefix("claude --ide") {
+        return true
+    }
+
+    let desktopClaudeCodePrefix = "\(NSHomeDirectory())/Library/Application Support/Claude/claude-code/"
+    return command.hasPrefix(desktopClaudeCodePrefix)
+        && command.contains("/claude.app/Contents/MacOS/claude")
+}
+
 final class ClaudeSessionMonitor {
     var onSessionsChange: (([SessionDescriptor]) -> Void)?
 
@@ -234,7 +244,7 @@ final class ClaudeSessionMonitor {
             }
 
             let command = String(parts[2])
-            guard command.hasPrefix("claude --ide") else {
+            guard isClaudeSessionCommand(command) else {
                 continue
             }
 

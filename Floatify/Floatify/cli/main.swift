@@ -38,6 +38,16 @@ let pipePath = "/var/tmp/floatify.pipe"
 
 var payload: [String: Any] = [:]
 
+func isClaudeSessionCommand(_ command: String) -> Bool {
+    if command.hasPrefix("claude ") {
+        return true
+    }
+
+    let desktopClaudeCodePrefix = "\(NSHomeDirectory())/Library/Application Support/Claude/claude-code/"
+    return command.hasPrefix(desktopClaudeCodePrefix)
+        && command.contains("/claude.app/Contents/MacOS/claude")
+}
+
 func inferSessionContext() -> (source: String, session: String)? {
     var pid = Int(getppid())
     var hopCount = 0
@@ -72,7 +82,7 @@ func inferSessionContext() -> (source: String, session: String)? {
 
         let command = String(parts[1])
 
-        if command.hasPrefix("claude ") {
+        if isClaudeSessionCommand(command) {
             return ("claude", "claude:\(pid)")
         }
 
