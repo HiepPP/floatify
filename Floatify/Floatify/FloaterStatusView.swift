@@ -5029,11 +5029,13 @@ private struct StatusPill: View {
             }
             .frame(width: dotSize + 4, height: dotSize + 4)
 
-            Text(label)
-                .font(typography.font(defaultSize: fontSize))
-                .foregroundStyle(color.opacity(labelOpacity))
-                .lineLimit(1)
-                .fixedSize()
+            if !label.isEmpty {
+                Text(label)
+                    .font(typography.font(defaultSize: fontSize))
+                    .foregroundStyle(color.opacity(labelOpacity))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
 
             if showsTypingDots {
                 Group {
@@ -5625,10 +5627,12 @@ struct FloaterPanelView: View {
     )
 
     var body: some View {
+        let panelFloaterSize = items.first?.floaterSize ?? .regular
+
         VStack(alignment: .leading, spacing: 0) {
             FloaterPanelHeaderView(
                 itemCount: items.count,
-                floaterSize: items.first?.floaterSize ?? .regular,
+                floaterSize: panelFloaterSize,
                 isCollapsed: isCollapsed,
                 showsCPUInHeader: showsCPUInHeader,
                 stylePreset: stylePreset,
@@ -5898,7 +5902,11 @@ struct FloaterStatusView: View {
     }
 
     private var usesConstrainedMetaLayout: Bool {
-        floaterSize == .compact || floaterSize == .regular
+        floaterSize == .tini || floaterSize == .compact || floaterSize == .regular
+    }
+
+    private var isTiniMode: Bool {
+        floaterSize == .tini
     }
 
     private var showsStatusTypingDots: Bool {
@@ -5916,6 +5924,9 @@ struct FloaterStatusView: View {
     private var trailingContentInset: CGFloat {
         guard isPersistent else { return floaterSize.trailingInset }
         guard onClose != nil else { return floaterSize.trailingInset }
+        if isTiniMode {
+            return floaterSize.closeButtonSize + 6
+        }
         return floaterSize.hoverTrailingInset
     }
 
@@ -5955,8 +5966,11 @@ struct FloaterStatusView: View {
             persistentContent
         }
         .frame(
-            width: floaterSize.persistentPanelWidth,
-            height: floaterSize.rowHeight
+            minWidth: floaterSize.persistentPanelWidth,
+            idealWidth: floaterSize.persistentPanelWidth,
+            maxWidth: .infinity,
+            minHeight: floaterSize.rowHeight,
+            maxHeight: floaterSize.rowHeight
         )
         .clipShape(RoundedRectangle(cornerRadius: floaterSize.cornerRadius))
         .overlay(
@@ -6087,7 +6101,7 @@ struct FloaterStatusView: View {
 
     @ViewBuilder
     private var persistentBody: some View {
-        VStack(alignment: .leading, spacing: floaterSize.bodySpacing) {
+        if isTiniMode {
             Text(projectName)
                 .font(stylePreset.typography.rowTitle.font(defaultSize: floaterSize.projectFontSize))
                 .foregroundStyle(primaryContentColor)
@@ -6095,8 +6109,18 @@ struct FloaterStatusView: View {
                 .truncationMode(.tail)
                 .layoutPriority(1)
                 .help(projectName)
+        } else {
+            VStack(alignment: .leading, spacing: floaterSize.bodySpacing) {
+                Text(projectName)
+                    .font(stylePreset.typography.rowTitle.font(defaultSize: floaterSize.projectFontSize))
+                    .foregroundStyle(primaryContentColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
+                    .help(projectName)
 
-            persistentMetaLine
+                persistentMetaLine
+            }
         }
     }
 
@@ -6106,10 +6130,10 @@ struct FloaterStatusView: View {
             if let stateLabel {
                 StatusPill(
                     color: accentColor,
-                    label: stateLabel,
+                    label: floaterSize == .tini ? "" : stateLabel,
                     dotSize: floaterSize.dotSize,
                     fontSize: floaterSize.metaFontSize,
-                    minWidth: floaterSize.statusPillMinWidth,
+                    minWidth: floaterSize == .tini ? 0 : floaterSize.statusPillMinWidth,
                     renderMode: effectiveRenderMode,
                     effectTuning: effectTuning,
                     stylePreset: stylePreset,

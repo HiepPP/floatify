@@ -20,6 +20,7 @@ enum FloaterTheme: String, CaseIterable {
 }
 
 enum FloaterSize: String, CaseIterable, Equatable {
+    case tini
     case compact
     case regular
     case large
@@ -28,6 +29,8 @@ enum FloaterSize: String, CaseIterable, Equatable {
 
     var displayName: String {
         switch self {
+        case .tini:
+            return "Tini"
         case .compact:
             return "Compact"
         case .regular:

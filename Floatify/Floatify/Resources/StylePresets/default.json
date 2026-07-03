@@ -71,6 +71,27 @@
     }
   },
   "sizes": {
+    "tini": {
+      "rowHeight": 38,
+      "spriteSize": 18,
+      "stageSize": 24,
+      "dotSize": 5,
+      "cornerRadius": 9,
+      "horizontalPadding": 7,
+      "projectFontSize": 11.5,
+      "metaFontSize": 9,
+      "panelWidth": 150,
+      "persistentPanelWidth": 168,
+      "contentSpacing": 6,
+      "statusRailWidth": 4,
+      "closeButtonSize": 12,
+      "cardShadowRadius": 9,
+      "statusPillMinWidth": 42,
+      "bodySpacing": 1,
+      "persistentBodySpacing": 1,
+      "persistentLineSpacing": 4,
+      "persistentBodyVerticalInset": 3
+    },
     "compact": {
       "rowHeight": 38,
       "spriteSize": 18,

@@ -424,6 +424,28 @@ struct FloaterStyleSizeTokens: Hashable {
 
     static func defaultTokens(for size: FloaterSize) -> FloaterStyleSizeTokens {
         switch size {
+        case .tini:
+            return FloaterStyleSizeTokens(
+                rowHeight: 38,
+                spriteSize: 18,
+                stageSize: 24,
+                dotSize: 5,
+                cornerRadius: 9,
+                horizontalPadding: 7,
+                projectFontSize: 11.5,
+                metaFontSize: 9,
+                panelWidth: 150,
+                persistentPanelWidth: 168,
+                contentSpacing: 6,
+                statusRailWidth: 4,
+                closeButtonSize: 12,
+                cardShadowRadius: 9,
+                statusPillMinWidth: 42,
+                bodySpacing: 1,
+                persistentBodySpacing: 1,
+                persistentLineSpacing: 4,
+                persistentBodyVerticalInset: 3
+            )
         case .compact:
             return FloaterStyleSizeTokens(
                 rowHeight: 38,
@@ -595,6 +617,7 @@ private struct FloaterStyleSizeManifest: Decodable {
 }
 
 struct FloaterStyleSizes: Hashable, Decodable {
+    let tini: FloaterStyleSizeTokens
     let compact: FloaterStyleSizeTokens
     let regular: FloaterStyleSizeTokens
     let large: FloaterStyleSizeTokens
@@ -602,6 +625,7 @@ struct FloaterStyleSizes: Hashable, Decodable {
     let superLarge: FloaterStyleSizeTokens
 
     static let defaultSizes = FloaterStyleSizes(
+        tini: .defaultTokens(for: .tini),
         compact: .defaultTokens(for: .compact),
         regular: .defaultTokens(for: .regular),
         large: .defaultTokens(for: .large),
@@ -610,12 +634,14 @@ struct FloaterStyleSizes: Hashable, Decodable {
     )
 
     init(
+        tini: FloaterStyleSizeTokens,
         compact: FloaterStyleSizeTokens,
         regular: FloaterStyleSizeTokens,
         large: FloaterStyleSizeTokens,
         larger: FloaterStyleSizeTokens,
         superLarge: FloaterStyleSizeTokens
     ) {
+        self.tini = tini
         self.compact = compact
         self.regular = regular
         self.large = large
@@ -625,6 +651,8 @@ struct FloaterStyleSizes: Hashable, Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        tini = ((try? container.decode(FloaterStyleSizeManifest.self, forKey: .tini)) ?? .init())
+            .resolved(default: .defaultTokens(for: .tini))
         compact = ((try? container.decode(FloaterStyleSizeManifest.self, forKey: .compact)) ?? .init())
             .resolved(default: .defaultTokens(for: .compact))
         regular = ((try? container.decode(FloaterStyleSizeManifest.self, forKey: .regular)) ?? .init())
@@ -639,6 +667,7 @@ struct FloaterStyleSizes: Hashable, Decodable {
 
     func tokens(for size: FloaterSize) -> FloaterStyleSizeTokens {
         switch size {
+        case .tini: return tini
         case .compact: return compact
         case .regular: return regular
         case .large: return large
@@ -648,6 +677,7 @@ struct FloaterStyleSizes: Hashable, Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case tini
         case compact
         case regular
         case large
