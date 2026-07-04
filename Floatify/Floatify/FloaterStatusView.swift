@@ -5506,10 +5506,18 @@ private struct FloaterPanelHeaderView: View {
                         .background(Capsule().fill(paletteTokens.chipFill.color.opacity(headerTokens.chipFillOpacity)))
 
                     if showsCPUInHeader {
-                        Text(cpuText)
+                        // Widest possible value reserves the chip width so live CPU
+                        // updates never change the panel's fitting size.
+                        Text("100.0%CPU")
                             .font(stylePreset.typography.panelHeaderChip.font(defaultSize: chipFontSize))
                             .monospacedDigit()
-                            .foregroundStyle(headerTokens.cpuTint.color)
+                            .hidden()
+                            .overlay(alignment: .trailing) {
+                                Text(cpuText)
+                                    .font(stylePreset.typography.panelHeaderChip.font(defaultSize: chipFontSize))
+                                    .monospacedDigit()
+                                    .foregroundStyle(headerTokens.cpuTint.color)
+                            }
                             .padding(.horizontal, chipHorizontalPadding)
                             .padding(.vertical, chipVerticalPadding)
                             .background(Capsule().fill(paletteTokens.chipFill.color.opacity(headerTokens.chipFillOpacity)))
