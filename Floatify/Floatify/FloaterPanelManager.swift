@@ -19,6 +19,18 @@ enum ClaudeStatusState: Equatable {
     case idle
     case complete
 
+    // Lower value wins when merging sessions of the same project into one tab.
+    var mergePriority: Int {
+        switch self {
+        case .running:
+            return 0
+        case .idle:
+            return 1
+        case .complete:
+            return 2
+        }
+    }
+
     var isProgressState: Bool {
         switch self {
         case .running:
@@ -194,6 +206,7 @@ class FloaterPanelManager {
     ) {
         DispatchQueue.main.async {
             self.onItemAvatarTap = onItemAvatarTap
+            let items = Self.mergedItemsByProject(items)
             let activeIDs = Set(items.map(\.id))
             self.hiddenStatusPanelIDs.formIntersection(activeIDs)
             self.closingStatusPanelIDs.formIntersection(activeIDs)
@@ -226,6 +239,42 @@ class FloaterPanelManager {
             panel.setFrameOrigin(origin)
             self.saveFloaterPanelOrigin(origin)
             panel.orderFrontRegardless()
+        }
+    }
+
+    // One tab per project name. The session with the worst state
+    // (running > idle > complete) represents the project; ties pick the
+    // latest activity. The representative keeps its own id so tap and
+    // close-by-id still work.
+    private static func mergedItemsByProject(_ items: [PersistentStatusItem]) -> [PersistentStatusItem] {
+        var representativeByProject: [String: PersistentStatusItem] = [:]
+        var maxModifiedFilesByProject: [String: Int] = [:]
+
+        for item in items {
+            let key = item.project.localizedLowercase
+            maxModifiedFilesByProject[key] = max(maxModifiedFilesByProject[key] ?? 0, item.modifiedFilesCount)
+
+            guard let current = representativeByProject[key] else {
+                representativeByProject[key] = item
+                continue
+            }
+
+            if item.state.mergePriority < current.state.mergePriority
+                || (item.state.mergePriority == current.state.mergePriority
+                    && item.lastActivity > current.lastActivity) {
+                representativeByProject[key] = item
+            }
+        }
+
+        return representativeByProject.map { key, item in
+            PersistentStatusItem(
+                id: item.id,
+                project: item.project,
+                projectPath: item.projectPath,
+                state: item.state,
+                lastActivity: item.lastActivity,
+                modifiedFilesCount: maxModifiedFilesByProject[key] ?? item.modifiedFilesCount
+            )
         }
     }
 
