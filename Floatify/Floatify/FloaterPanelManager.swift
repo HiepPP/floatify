@@ -363,7 +363,7 @@ class FloaterPanelManager {
             },
             onItemTap: { [weak self] item in
                 self?.onItemAvatarTap?(item)
-                self?.openProjectInVSCode(for: item)
+                self?.openProjectInHostApp(for: item)
             },
             onItemClose: { [weak self] item in
                 self?.closePersistentStatusPanel(id: item.id)
@@ -480,6 +480,84 @@ class FloaterPanelManager {
             hash = ((hash << 5) &+ hash) &+ Int(scalar.value)
         }
         return abs(hash)
+    }
+
+    /// Route a floater click to the app that hosts the session's terminal.
+    /// Atelier gets a deep link, VS Code gets the folder, any other host app is
+    /// activated. Unknown hosts fall back to the historical VS Code behavior.
+    private func openProjectInHostApp(for item: PersistentStatusItem) {
+        let hostApp = sessionHostApplication(for: item)
+        let hostBundleID = hostApp?.bundleIdentifier
+
+        if hostBundleID == "app.atelier.Atelier", let hostApp,
+           openProjectInAtelier(for: item, runningInstance: hostApp) {
+            return
+        }
+
+        let vsCodeBundleIDs = ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.vscodium"]
+        if let hostBundleID, !vsCodeBundleIDs.contains(hostBundleID) {
+            if let hostApp {
+                NSLog("Floatify: Activating host app %@ for %@", hostBundleID, item.id)
+                hostApp.activate()
+                return
+            }
+        }
+
+        openProjectInVSCode(for: item)
+    }
+
+    /// Walk the session's parent-process chain to the first GUI application.
+    private func sessionHostApplication(for item: PersistentStatusItem) -> NSRunningApplication? {
+        guard let pidText = item.id.split(separator: ":").last,
+              let sessionPID = pid_t(pidText) else {
+            return nil
+        }
+        var pid = sessionPID
+        for _ in 0..<15 {
+            guard let parent = Self.parentPID(of: pid), parent > 1 else { return nil }
+            if let app = NSRunningApplication(processIdentifier: parent),
+               let bundleID = app.bundleIdentifier,
+               bundleID != Bundle.main.bundleIdentifier {
+                return app
+            }
+            pid = parent
+        }
+        return nil
+    }
+
+    private static func parentPID(of pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        let ppid = info.kp_eproc.e_ppid
+        return ppid > 0 ? ppid : nil
+    }
+
+    /// Open the project via the atelier:// deep link, delivered to the bundle of
+    /// the already-running instance. Letting Launch Services pick the handler can
+    /// resolve to a different Atelier copy on disk and spawn a second instance.
+    private func openProjectInAtelier(
+        for item: PersistentStatusItem,
+        runningInstance: NSRunningApplication
+    ) -> Bool {
+        guard let projectPath = item.projectPath,
+              FileManager.default.fileExists(atPath: projectPath),
+              let appURL = runningInstance.bundleURL,
+              var components = URLComponents(string: "atelier://open") else {
+            return false
+        }
+        components.queryItems = [URLQueryItem(name: "path", value: projectPath)]
+        guard let url = components.url else { return false }
+        NSLog("Floatify: Opening %@ in running Atelier at %@", projectPath, appURL.path)
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration) { _, error in
+            if let error {
+                NSLog("Floatify: Atelier deep link failed for %@ - %@", item.id, error.localizedDescription)
+            }
+        }
+        return true
     }
 
     private func openProjectInVSCode(for item: PersistentStatusItem) {
